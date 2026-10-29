@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Classroom Physics Sandbox</title>
+    <title>Matrix Terrain Editor</title>
     <style>
         body { 
             background-color: #0d1117; 
@@ -19,258 +19,219 @@
         }
         header {
             text-align: center;
-            padding: 15px;
+            padding: 12px;
             border-bottom: 1px solid #21262d;
             width: 100%;
             background: #161b22;
         }
-        h1 { margin: 0; color: #58a6ff; font-size: 22px; }
+        h1 { margin: 0; color: #58a6ff; font-size: 20px; }
         .ui-panel {
-            margin: 15px 0;
-            font-size: 16px;
+            margin: 10px 0;
+            font-size: 15px;
             font-weight: bold;
+            display: flex;
+            gap: 20px;
         }
-        #score-val { color: #58a6ff; }
-        #status { color: #8b949e; font-size: 14px; margin-top: 5px; text-align: center;}
+        #inventory { color: #ff9800; }
+        #status { color: #8b949e; }
         canvas {
-            background-color: #1a233a;
+            background-color: #74b9ff; /* Sky color */
             border: 2px solid #30363d;
             border-radius: 6px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            cursor: pointer;
+            cursor: crosshair;
         }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>Vector Velocity Sandbox</h1>
+        <h1>Terrain Matrix Simulation Workspace</h1>
     </header>
 
     <div class="ui-panel">
-        Targets Eliminated: <span id="score-val">0</span> / 3
-        <div id="status">Click and Drag the Yellow Duck to Launch! Press 'R' to Reset.</div>
+        <div>Active Block: <span id="inventory">DIRT</span> (Press 'Q' to swap)</div>
+        <div id="status">A/D = Move | SPACE = Jump | LEFT CLICK = Mine | RIGHT CLICK = Place</div>
     </div>
 
-    <canvas id="gameCanvas" width="700" height="400"></canvas>
+    <canvas id="gameCanvas" width="720" height="416"></canvas>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        const scoreDisplay = document.getElementById('score-val');
-        const statusDisplay = document.getElementById('status');
+        const invDisplay = document.getElementById('inventory');
 
-        const gravity = 0.25;
-        const groundY = 360;
-        const slingX = 130;
-        const slingY = 260;
-        const maxPull = 80;
+        // Prevent browser right-click menu popping up on the screen canvas
+        canvas.addEventListener('contextmenu', e => e.preventDefault());
 
-        let score = 0;
-        let isDragging = false;
-        let mouseX = 0;
-        let mouseY = 0;
+        const blockSize = 32;
+        const gravity = 0.4;
 
-        let duck = {
-            x: slingX,
-            y: slingY,
-            vx: 0,
-            vy: 0,
-            radius: 15,
-            isLaunched: false,
+        // Player Variable definitions
+        let player = {
+            x: 100, y: 100,
+            vx: 0, vy: 0,
+            w: 20, h: 28,
             onGround: false
         };
 
-        let entities = [];
+        // Key states tracker
+        let keys = {};
+        let activeBlockType = 1; // 1 = Dirt, 2 = Stone, 3 = WoodPlanks
+        const blockNames = { 1: "DIRT", 2: "STONE", 3: "WOOD PLANKS" };
 
-        function initGame() {
-            score = 0;
-            scoreDisplay.innerText = score;
-            statusDisplay.innerText = "Click and Drag the Yellow Duck to Launch! Press 'R' to Reset.";
-            
-            duck.x = slingX;
-            duck.y = slingY;
-            duck.vx = 0;
-            duck.vy = 0;
-            duck.isLaunched = false;
-            duck.onGround = false;
+        // Generate map grid matrix arrays
+        const mapCols = 23; // 726 / 32
+        const mapRows = 13; // 416 / 32
+        let grid = [];
 
-            entities = [
-                { x: 480, y: groundY - 80, w: 20, h: 80, type: 'structure', hp: 2 },
-                { x: 560, y: groundY - 80, w: 20, h: 80, type: 'structure', hp: 2 },
-                { x: 470, y: groundY - 100, w: 120, h: 20, type: 'structure', hp: 2 },
-                { x: 510, y: groundY - 180, w: 20, h: 80, type: 'structure', hp: 2 },
-                { x: 520, y: groundY - 30, r: 16, type: 'enemy', alive: true },
-                { x: 520, y: groundY - 130, r: 14, type: 'enemy', alive: true },
-                { x: 620, y: groundY - 25, r: 18, type: 'enemy', alive: true }
-            ];
+        function initMap() {
+            for (let r = 0; r < mapRows; r++) {
+                grid[r] = [];
+                for (let c = 0; c < mapCols; c++) {
+                    if (r > 8) {
+                        grid[r][c] = 2; // Deep stone layer layers
+                    } else if (r >= 6) {
+                        grid[r][c] = 1; // Dirt surface layers
+                    } else {
+                        grid[r][c] = 0; // Empty air space
+                    }
+                }
+            }
         }
 
+        // Keyboard interaction events
+        window.addEventListener('keydown', function(e) {
+            keys[e.code] = true;
+            if (e.code === 'KeyQ') {
+                activeBlockType = activeBlockType === 3 ? 1 : activeBlockType + 1;
+                invDisplay.innerText = blockNames[activeBlockType];
+            }
+        });
+        window.addEventListener('keyup', e => keys[e.code] = false);
+
+        // Click interaction triggers
         canvas.addEventListener('mousedown', function(e) {
-            if (duck.isLaunched) return;
             const rect = canvas.getBoundingClientRect();
             const mX = e.clientX - rect.left;
             const mY = e.clientY - rect.top;
-            let dx = mX - duck.x;
-            let dy = mY - duck.y;
-            if (Math.sqrt(dx * dx + dy * dy) < 30) {
-                isDragging = true;
-            }
-        });
 
-        canvas.addEventListener('mousemove', function(e) {
-            const rect = canvas.getBoundingClientRect();
-            mouseX = e.clientX - rect.left;
-            mouseY = e.clientY - rect.top;
-            if (isDragging) {
-                let dx = mouseX - slingX;
-                let dy = mouseY - slingY;
-                let distance = Math.sqrt(dx * dx + dy * dy);
-                if (distance > maxPull) {
-                    let angle = Math.atan2(dy, dx);
-                    duck.x = slingX + Math.cos(angle) * maxPull;
-                    duck.y = slingY + Math.sin(angle) * maxPull;
-                } else {
-                    duck.x = mouseX;
-                    duck.y = mouseY;
+            // Figure out exactly which row/col array position was clicked
+            let col = Math.floor(mX / blockSize);
+            let row = Math.floor(mY / blockSize);
+
+            if (row >= 0 && row < mapRows && col >= 0 && col < mapCols) {
+                if (e.button === 0) {
+                    // Left Click: Mine block away to Air (0)
+                    grid[row][col] = 0;
+                } else if (e.button === 2) {
+                    // Right Click: Place current block item if it is empty air space
+                    if (grid[row][col] === 0) {
+                        grid[row][col] = activeBlockType;
+                    }
                 }
             }
         });
 
-        window.addEventListener('mouseup', function() {
-            if (isDragging) {
-                isDragging = false;
-                duck.isLaunched = true;
-                duck.vx = (slingX - duck.x) * 0.16;
-                duck.vy = (slingY - duck.y) * 0.16;
-                statusDisplay.innerText = "Duck tracking outbound physics vector...";
-            }
-        });
+        // Box bounding collider checks
+        function checkCollision(x, y) {
+            let left = Math.floor(x / blockSize);
+            let right = Math.floor((x + player.w) / blockSize);
+            let top = Math.floor(y / blockSize);
+            let bottom = Math.floor((y + player.h) / blockSize);
 
-        window.addEventListener('keydown', function(e) {
-            if (e.key === 'r' || e.key === 'R') {
-                initGame();
-            }
-        });
+            if (left < 0 || right >= mapCols || top < 0 || bottom >= mapRows) return true;
 
-        function checkBallBoxCollision(ball, box) {
-            let closestX = Math.max(box.x, Math.min(ball.x, box.x + box.w));
-            let closestY = Math.max(box.y, Math.min(ball.y, box.y + box.h));
-            let dx = ball.x - closestX;
-            let dy = ball.y - closestY;
-            let distance = Math.sqrt(dx * dx + dy * dy);
-            return distance < ball.radius;
+            for (let r = top; r <= bottom; r++) {
+                for (let c = left; c <= right; c++) {
+                    if (grid[r][c] > 0) return true; // Collides with any solid block
+                }
+            }
+            return false;
         }
 
+        // Logic processing engines loop updates
         function update() {
-            if (duck.isLaunched && !duck.onGround) {
-                duck.vy += gravity;
-                duck.x += duck.vx;
-                duck.y += duck.vy;
+            // Horizontal Velocity movement checks
+            player.vx = 0;
+            if (keys['KeyA']) player.vx = -3;
+            if (keys['KeyD']) player.vx = 3;
 
-                if (duck.x > canvas.width + 100 || duck.x < -100) {
-                    duck.onGround = true;
-                    statusDisplay.innerText = "Duck went out of bounds! Press 'R' to load next shot.";
+            // X Axis move and resolve hits
+            player.x += player.vx;
+            if (checkCollision(player.x, player.y)) {
+                player.x -= player.vx;
+            }
+
+            // Y Axis Apply Gravity calculations
+            player.vy += gravity;
+            player.y += player.vy;
+            player.onGround = false;
+
+            if (checkCollision(player.x, player.y)) {
+                player.y -= player.vy;
+                if (player.vy > 0) {
+                    player.onGround = true;
                 }
+                player.vy = 0;
+            }
 
-                if (duck.y + duck.radius >= groundY) {
-                    duck.y = groundY - duck.radius;
-                    duck.vx *= 0.5;
-                    duck.vy = 0;
-                    if (Math.abs(duck.vx) < 0.2) {
-                        duck.onGround = true;
-                        statusDisplay.innerText = "Shot concluded. Press 'R' to load the next duck.";
-                    }
-                }
-
-                entities.forEach(function(ent) {
-                    if (ent.type === 'structure' && ent.hp > 0) {
-                        if (checkBallBoxCollision(duck, ent)) {
-                            ent.hp -= 1;
-                            duck.vx *= -0.4;
-                            duck.vy *= 0.5;
-                        }
-                    } else if (ent.type === 'enemy' && ent.alive) {
-                        let dx = duck.x - ent.x;
-                        let dy = duck.y - ent.y;
-                        let dist = Math.sqrt(dx * dx + dy * dy);
-                        if (dist < (duck.radius + ent.r)) {
-                            ent.alive = false;
-                            score++;
-                            scoreDisplay.innerText = score;
-                            if (score >= 3) {
-                                statusDisplay.innerText = "VICTORY! All targets cleared. Press 'R' to play again!";
-                            }
-                        }
-                    }
-                });
+            // Jump Mechanic trigger handler
+            if (keys['Space'] && player.onGround) {
+                player.vy = -6.5;
+                player.onGround = false;
             }
         }
 
+        // Display Painter Screen Engine loop loops
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            ctx.fillStyle = '#4a3319';
-            ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
-            ctx.fillStyle = '#27ae60';
-            ctx.fillRect(0, groundY, canvas.width, 10);
-
-            ctx.strokeStyle = '#6e4720';
-            ctx.lineWidth = 6;
-            ctx.beginPath();
-            ctx.moveTo(slingX, slingY);
-            ctx.lineTo(slingX, groundY);
-            ctx.stroke();
-
-            if (isDragging) {
-                ctx.strokeStyle = '#e67e22';
-                ctx.lineWidth = 4;
-                ctx.beginPath();
-                ctx.moveTo(slingX - 10, slingY);
-                ctx.lineTo(duck.x, duck.y);
-                ctx.moveTo(slingX + 10, slingY);
-                ctx.lineTo(duck.x, duck.y);
-                ctx.stroke();
+            // 1. Render Map Blocks from Grid Array Matrix configurations
+            for (let r = 0; r < mapRows; r++) {
+                for (let c = 0; c < mapCols; c++) {
+                    let type = grid[r][c];
+                    if (type === 1) {
+                        // Dirt block styling colors
+                        ctx.fillStyle = '#8b5a2b';
+                        ctx.fillRect(c * blockSize, r * blockSize, blockSize, blockSize);
+                        ctx.fillStyle = '#2ecc71'; // Grass top rim
+                        ctx.fillRect(c * blockSize, r * blockSize, blockSize, 6);
+                    } else if (type === 2) {
+                        // Stone block colors styling
+                        ctx.fillStyle = '#7f8c8d';
+                        ctx.fillRect(c * blockSize, r * blockSize, blockSize, blockSize);
+                    } else if (type === 3) {
+                        // Wood Plank styled colors
+                        ctx.fillStyle = '#d35400';
+                        ctx.fillRect(c * blockSize, r * blockSize, blockSize, blockSize);
+                    }
+                    
+                    if (type > 0) {
+                        ctx.strokeStyle = '#1a242f';
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(c * blockSize, r * blockSize, blockSize, blockSize);
+                    }
+                }
             }
 
-            entities.forEach(function(ent) {
-                if (ent.type === 'structure' && ent.hp > 0) {
-                    ctx.fillStyle = ent.hp === 2 ? '#c0392b' : '#e74c3c';
-                    ctx.fillRect(ent.x, ent.y, ent.w, ent.h);
-                    ctx.strokeStyle = '#1a1a1a';
-                    ctx.lineWidth = 2;
-                    ctx.strokeRect(ent.x, ent.y, ent.w, ent.h);
-                } else if (ent.type === 'enemy' && ent.alive) {
-                    ctx.fillStyle = '#2ecc71';
-                    ctx.beginPath();
-                    ctx.arc(ent.x, ent.y, ent.r, 0, Math.PI * 2);
-                    ctx.fill();
-                    
-                    ctx.fillStyle = '#ffffff';
-                    ctx.beginPath();
-                    ctx.arc(ent.x - 5, ent.y - 3, 4, 0, Math.PI * 2);
-                    ctx.arc(ent.x + 5, ent.y - 3, 4, 0, Math.PI * 2);
-                    ctx.fill();
-                    
-                    ctx.fillStyle = '#000000';
-                    ctx.beginPath();
-                    ctx.arc(ent.x - 5, ent.y - 3, 1.5, 0, Math.PI * 2);
-                    ctx.arc(ent.x + 5, ent.y - 3, 1.5, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-            });
+            // 2. Render Player Character Model Entity
+            ctx.fillStyle = '#3498db'; // Red/Blue character color profile
+            ctx.fillRect(player.x, player.y, player.w, player.h);
 
-            ctx.fillStyle = '#f1c40f';
-            ctx.beginPath();
-            ctx.arc(duck.x, duck.y, duck.radius, 0, Math.PI * 2);
-            ctx.fill();
+            // Silly detail eyes accent lines
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(player.x + 12, player.y + 4, 6, 6);
+        }
 
-            ctx.fillStyle = '#e67e22';
-            ctx.beginPath();
-            ctx.moveTo(duck.x + 10, duck.y - 4);
-            ctx.lineTo(duck.x + 22, duck.y);
-            ctx.lineTo(duck.x + 10, duck.y + 4);
-            ctx.fill();
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
 
-            ctx.fillStyle = '#000000';
-            ctx.beginPath();
+        initMap();
+        gameLoop();
+    </script>
+</body>
+</html>
