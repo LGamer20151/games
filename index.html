@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Terrain Simulation Matrix</title>
+    <title>Classroom Workspace Module</title>
     <style>
         body { 
             background-color: #0d1117; 
             color: #c9d1d9; 
-            font-family: sans-serif; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; 
             margin: 0; 
             padding: 0; 
             display: flex; 
@@ -19,239 +19,224 @@
         }
         header {
             text-align: center;
-            padding: 12px;
+            padding: 15px;
             border-bottom: 1px solid #21262d;
             width: 100%;
             background: #161b22;
-        }
-        h1 { margin: 0; color: #58a6ff; font-size: 20px; }
-        .ui-panel {
-            margin: 10px 0;
-            font-size: 15px;
-            font-weight: bold;
             display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+        header h1 { margin: 0; color: #58a6ff; font-size: 22px; cursor: pointer; }
+        .back-btn {
+            background: #21262d;
+            border: 1px solid #30363d;
+            color: #c9d1d9;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            display: none;
+        }
+        .back-btn:hover { background: #30363d; }
+        
+        /* Grid list array layout configuration menu deck */
+        .portal-grid { 
+            display: flex; 
+            justify-content: center; 
+            flex-wrap: wrap;
+            gap: 25px; 
+            margin: 50px 20px; 
+            max-width: 900px;
+        }
+        .game-card { 
+            border: 1px solid #30363d; 
+            padding: 20px; 
+            border-radius: 8px; 
+            background: #161b22; 
+            width: 240px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+            text-align: center;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .game-card:hover {
+            transform: translateY(-4px);
+            border-color: #58a6ff;
+        }
+        .game-card h3 { margin-top: 0; color: #ff7b72; font-size: 18px; }
+        .game-card p { color: #8b949e; font-size: 13px; line-height: 1.4; height: 40px; }
+        
+        .launch-btn { 
+            display: inline-block; 
+            background: #238636; 
+            color: white; 
+            padding: 8px 16px; 
+            text-decoration: none; 
+            font-weight: bold; 
+            border-radius: 6px; 
+            margin-top: 15px; 
+            cursor: pointer;
+        }
+        .launch-btn:hover { background: #2ea043; }
+
+        /* Full sandbox display canvas viewport box styling */
+        .game-container {
+            display: none;
             flex-direction: column;
             align-items: center;
-            gap: 5px;
+            margin-top: 20px;
         }
-        .stats-bar { display: flex; gap: 30px; font-size: 16px; }
-        #hearts { color: #ff2a2a; }
-        #inventory { color: #ff9800; }
-        #status { color: #8b949e; font-size: 13px; }
+        .hud-panel {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            color: #58a6ff;
+        }
         canvas {
-            background-color: #27ae60; /* Grass green world background */
+            background-color: #000;
             border: 2px solid #30363d;
             border-radius: 6px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            cursor: crosshair;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.6);
         }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>Top-Down Adventure Simulation Matrix</h1>
+        <h1 onclick="showMenu()">FreezeNova Simulation Core</h1>
+        <button class="back-btn" id="homeBtn" onclick="showMenu()">EXIT GAME</button>
     </header>
 
-    <div class="ui-panel">
-        <div class="stats-bar">
-            <div>Health: <span id="hearts">❤❤❤❤❤</span></div>
-            <div>Hotbar: <span id="inventory">OAK PLANKS</span> (Press 'Q' to cycle)</div>
+    <!-- Main Navigation Interface Dashboard Deck -->
+    <div class="portal-grid" id="menuDeck">
+        <div class="game-card">
+            <h3>Matrix Plinko</h3>
+            <p>High-density peg scatter matrix featuring a center 3x money slot multiplier payload.</p>
+            <div class="launch-btn" onclick="bootGame('plinko')">PLAY NOW</div>
         </div>
-        <div id="status">W/A/S/D = Walk | LEFT CLICK = Mine | RIGHT CLICK = Place | Defend against the red Zombie Mobs!</div>
+        <div class="game-card">
+            <h3>Vector Jet Stream</h3>
+            <p>Endless side-scroller simulation mapping tilt angles velocity over vertical spike boundaries.</p>
+            <div class="launch-btn" onclick="bootGame('jet')">PLAY NOW</div>
+        </div>
+        <div class="game-card">
+            <h3>Adventure Sandbox</h3>
+            <p>Top-down environment engine featuring building placement blocks, tracking zombie mobs, and heart nodes.</p>
+            <div class="launch-btn" onclick="bootGame('sandbox')">PLAY NOW</div>
+        </div>
     </div>
 
-    <canvas id="gameCanvas" width="768" height="480"></canvas>
+    <!-- Active Single Canvas Frame Applier Window -->
+    <div class="game-container" id="playerWindow">
+        <div class="hud-panel" id="hudTracker">Balance: $100</div>
+        <canvas id="coreCanvas" width="640" height="400"></canvas>
+    </div>
 
     <script>
-        const canvas = document.getElementById('gameCanvas');
+        const menuDeck = document.getElementById('menuDeck');
+        const playerWindow = document.getElementById('playerWindow');
+        const homeBtn = document.getElementById('homeBtn');
+        const hudTracker = document.getElementById('hudTracker');
+        const canvas = document.getElementById('coreCanvas');
         const ctx = canvas.getContext('2d');
-        const invDisplay = document.getElementById('inventory');
-        const heartsDisplay = document.getElementById('hearts');
 
-        // Block right-clicks from throwing standard popups
         canvas.addEventListener('contextmenu', e => e.preventDefault());
 
-        const tileSize = 32;
-        const cols = 24; // 768 / 32
-        const rows = 15; // 480 / 32
-
-        // Player configuration profile
-        let player = {
-            x: 120, y: 120,
-            w: 22, h: 22,
-            speed: 3,
-            health: 5,
-            damageCooldown: 0
-        };
-
-        // Grid contents tracking matrix array
-        // 0=Grass, 1=Water, 2=Log, 3=Leaves, 4=Planks, 5=Stone, 6=Village Floor, 7=Village Wall
-        let grid = [];
-        const blockNames = { 4: "OAK PLANKS", 5: "STONE", 1: "WATER" };
-        let activeSelection = 4;
-
-        // Interactive entities array list (Wandering Zombies)
-        let mobs = [
-            { x: 500, y: 100, w: 22, h: 22, speed: 1.2, type: 'zombie' },
-            { x: 600, y: 350, w: 22, h: 22, speed: 0.9, type: 'zombie' }
-        ];
-
+        let activeGame = null;
+        let animationFrameId = null;
         let keys = {};
-        window.addEventListener('keydown', function(e) {
-            keys[e.code] = true;
-            if (e.code === 'KeyQ') {
-                if (activeSelection === 4) activeSelection = 5;
-                else if (activeSelection === 5) activeSelection = 1;
-                else activeSelection = 4;
-                invDisplay.innerText = blockNames[activeSelection];
-            }
-        });
+
+        // Tracking global event hooks mappings variables hooks
+        window.addEventListener('keydown', e => keys[e.code] = true);
         window.addEventListener('keyup', e => keys[e.code] = false);
 
-        // Map layout populator scripts
-        function initWorld() {
-            for (let r = 0; r < rows; r++) {
-                grid[r] = [];
-                for (let c = 0; c < cols; c++) {
-                    grid[r][c] = 0; // Natural grass cover baseline
-                    if (Math.random() < 0.03) grid[r][c] = 5; // Rock nodes
+        function showMenu() {
+            if(animationFrameId) cancelAnimationFrame(animationFrameId);
+            activeGame = null;
+            keys = {};
+            menuDeck.style.display = 'flex';
+            playerWindow.style.display = 'none';
+            homeBtn.style.display = 'none';
+        }
+
+        function bootGame(gameType) {
+            menuDeck.style.display = 'none';
+            playerWindow.style.display = 'flex';
+            homeBtn.style.display = 'block';
+            activeGame = gameType;
+            keys = {};
+            
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            if(gameType === 'plinko') initPlinko();
+            else if(gameType === 'jet') initJet();
+            else if(gameType === 'sandbox') initSandbox();
+            
+            runEngineLoop();
+        }
+
+        // ==========================================
+        // GAME MODULE 1: CORE MATRIX PLINKO
+        // ==========================================
+        let pScore, pState, pBallX, pBallY, pBallVX, pBallVY, pPegs, pBuckets;
+        function initPlinko() {
+            pScore = 100; pState = 1; pBallX = 0; pBallY = 20; pBallVX = 0; pBallVY = 0; pPegs = [];
+            hudTracker.innerText = `Balance: $${pScore} | Press SPACEBAR to drop ball ($10 bet)`;
+            for (let r = 0; r < 10; r++) {
+                let y = 60 + r * 28;
+                let startX = 320 - (r * 36) / 2;
+                for (let i = 0; i <= r; i++) {
+                    let x = startX + i * 36;
+                    if(x > 20 && x < 620) pPegs.push({x:x, y:y});
                 }
             }
-
-            // Spawn standard tree configurations
-            spawnTree(2, 4);
-            spawnTree(10, 3);
-
-            // Procedurally assemble a small Villager House cluster structure (Village)
-            buildVillageHouse(4, 12);
-            buildVillageHouse(4, 18);
+            pBuckets = [
+                {s:0, e:180, c:'#404040', l:'0.5x', m:0.5},
+                {s:180, e:280, c:'#FF8000', l:'1x', m:1},
+                {s:280, e:360, c:'#00FF00', l:'3x', m:3},
+                {s:360, e:460, c:'#FF8000', l:'1x', m:1},
+                {s:460, e:640, c:'#404040', l:'0.5x', m:0.5}
+            ];
         }
-
-        function spawnTree(rootR, rootC) {
-            if (rootR >= 2 && rootR < rows && rootC >= 1 && rootC < cols - 1) {
-                grid[rootR][rootC] = 2; // Trunk wood
-                grid[rootR-1][rootC] = 2;
-                grid[rootR-1][rootC-1] = 3; // Leaf canopy structures
-                grid[rootR-1][rootC+1] = 3;
-                grid[rootR-2][rootC] = 3;
+        function updatePlinko() {
+            if (keys['Space'] && pState === 1 && pScore >= 10) {
+                pScore -= 10; pBallX = 320 + (Math.random()*20-10); pBallY = 20; pBallVX = 0; pBallVY = 0; pState = 0;
+                hudTracker.innerText = `Balance: $${pScore} | Analyzing vector pathing nodes...`;
             }
-        }
-
-        function buildVillageHouse(startR, startC) {
-            // Generates floor tiles and surrounding wooden security boundaries (Villages)
-            for (let r = startR; r < startR + 4; r++) {
-                for (let c = startC; c < startC + 4; c++) {
-                    if (r >= 0 && r < rows && c >= 0 && c < cols) {
-                        if (r === startR || r === startR + 3 || c === startC || c === startC + 4 - 1) {
-                            // Leave a single gap tile open to act as a front doorway
-                            if (!(r === startR + 3 && c === startC + 1)) {
-                                grid[r][c] = 7; // Cobblestone/Wall block structure
-                            } else {
-                                grid[r][c] = 6; // Inside wood pathway plank floor
-                            }
-                        } else {
-                            grid[r][c] = 6; // Inside wood pathway floor
+            if (pState === 0) {
+                pBallVY += 0.22; pBallVX *= 0.99; pBallX += pBallVX; pBallY += pBallVY;
+                pPegs.forEach(peg => {
+                    let dx = pBallX - peg.x, dy = pBallY - peg.y, d = Math.sqrt(dx*dx+dy*dy);
+                    if (d < 11) { pBallVY = -2.0; pBallVX = (Math.random()*2.4-1.2) + (dx*0.25); }
+                });
+                if(pBallX < 10) { pBallX = 10; pBallVX *= -0.5; }
+                if(pBallX > 630) { pBallX = 630; pBallVX *= -0.5; }
+                if (pBallY >= 350) {
+                    for (let i = 0; i < pBuckets.length; i++) {
+                        if (pBallX >= pBuckets[i].s && pBallX < pBuckets[i].e) {
+                            let win = 10 * pBuckets[i].m; pScore += win; pState = 1;
+                            hudTracker.innerText = `Balance: $${pScore} | Hit ${pBuckets[i].l} slot! (+$${win}). Press SPACE to drop.`;
+                            break;
                         }
                     }
                 }
             }
+            ctx.fillStyle = '#000'; ctx.fillRect(0,0,640,400);
+            pBuckets.forEach(b => { ctx.fillStyle = b.c; ctx.fillRect(b.s,350,b.e-b.s,50); ctx.fillStyle="#fff"; ctx.font="13px sans-serif"; ctx.textAlign="center"; ctx.fillText(b.l, b.s+(b.e-b.s)/2, 380); });
+            ctx.fillStyle = '#fff'; pPegs.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI*2); ctx.fill(); });
+            if(pState === 0) { ctx.fillStyle = '#ff00ff'; ctx.beginPath(); ctx.arc(pBallX, pBallY, 7, 0, Math.PI*2); ctx.fill(); }
         }
 
-        // Action block positioning tools click detectors
-        canvas.addEventListener('mousedown', function(e) {
-            const rect = canvas.getBoundingClientRect();
-            const clickX = e.clientX - rect.left;
-            const clickY = e.clientY - rect.top;
-
-            let c = Math.floor(clickX / tileSize);
-            let r = Math.floor(clickY / tileSize);
-
-            if (r >= 0 && r < rows && c >= 0 && c < cols) {
-                if (e.button === 0) {
-                    grid[r][c] = 0; // Mine block away back to standard grass
-                } else if (e.button === 2) {
-                    if (grid[r][c] === 0) {
-                        grid[r][c] = activeSelection; // Paste block
-                    }
-                }
-            }
-        });
-
-        // Bounding collision checks locator
-        function hitsSolidBlock(x, y, w, h) {
-            let left = Math.floor(x / tileSize);
-            let right = Math.floor((x + w) / tileSize);
-            let top = Math.floor(y / tileSize);
-            let bottom = Math.floor((y + h) / tileSize);
-
-            if (left < 0 || right >= cols || top < 0 || bottom >= rows) return true;
-
-            for (let r = top; r <= bottom; r++) {
-                for (let c = left; c <= right; c++) {
-                    // Block type 1 (water), 2 (log), 3 (leaves), 4 (planks), 5 (stone), and 7 (village walls) block movement pathing
-                    if (grid[r][c] === 1 || grid[r][c] === 2 || grid[r][c] === 3 || grid[r][c] === 4 || grid[r][c] === 5 || grid[r][c] === 7) {
-                        return true;
-                    }
-                }
-            }
-            return false;
+        // ==========================================
+        // GAME MODULE 2: VECTOR JET STREAM RUNNER
+        // ==========================================
+        let jY, jV, jObsX, jObsH, jScore, jLive;
+        function initJet() {
+            jY = 200; jV = 0; jObsX = 640; jObsH = Math.random()*140 + 50; jScore = 0; jLive = true;
+            hudTracker.innerText = `Score: ${jScore} | HOLD SPACEBAR TO FLY UPWARD!`;
         }
-
-        // Processing calculations engine loop loops
-        function update() {
-            if (player.health <= 0) return;
-
-            let nextX = player.x;
-            let nextY = player.y;
-
-            if (keys['KeyW']) nextY -= player.speed;
-            if (keys['KeyS']) nextY += player.speed;
-            if (!hitsSolidBlock(player.x, nextY, player.w, player.h)) player.y = nextY;
-
-            if (keys['KeyA']) nextX -= player.speed;
-            if (keys['KeyD']) nextX += player.speed;
-            if (!hitsSolidBlock(nextX, player.y, player.w, player.h)) player.x = nextX;
-
-            if (player.damageCooldown > 0) player.damageCooldown--;
-
-            // Zombie Mob Tracking AI (Aggressively pursues player player coordinate spaces)
-            mobs.forEach(mob => {
-                let dx = player.x - mob.x;
-                let dy = player.y - mob.y;
-                let distance = Math.sqrt(dx * dx + dy * dy);
-
-                if (distance > 0) {
-                    let moveX = (dx / distance) * mob.speed;
-                    let moveY = (dy / distance) * mob.speed;
-
-                    if (!hitsSolidBlock(mob.x + moveX, mob.y, mob.w, mob.h)) mob.x += moveX;
-                    if (!hitsSolidBlock(mob.x, mob.y + moveY, mob.w, mob.h)) mob.y += moveY;
-                }
-
-                // Check collision directly with player model to deduct health hearts
-                if (Math.abs(player.x - mob.x) < 20 && Math.abs(player.y - mob.y) < 20) {
-                    if (player.damageCooldown === 0) {
-                        player.health--;
-                        player.damageCooldown = 40; // Temporary hit invincibility ticks
-                        
-                        // Redraw hearts indicator text string
-                        let str = "";
-                        for(let h=0; h<player.health; h++) str += "❤";
-                        if(str === "") str = "GAME OVER";
-                        heartsDisplay.innerText = str;
-                    }
-                }
-            });
-        }
-
-        // Screen layout graphics drawer scripts
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // 1. Draw Map Tiles from Grid Array configurations
-            for (let r = 0; r < rows; r++) {
-                for (let c = 0; c < cols; c++) {
-                    let type = grid[r][c];
-                    
-                    if (type === 1) ctx.fillStyle = '#2980b9';      // Water
+        function updateJet() {
+            if(!jLive) { if(keys['Space']) initJet(); return; }
+            jV += keys['Space'] ? 0.35 : -0.28;
+            if(jV > 8) jV = 8; if(jV < -8) jV = -8;
+            jY -= jV; jObsX -= 5.5;
+            if(jObsX < -40) { jObsX = 640; jObsH = Math.random()*140 + 50; jScore++; hudTracker.innerText = `Score: ${jScore} | Flapped cleanly over obstacles!`; }
