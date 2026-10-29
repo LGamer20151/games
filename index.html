@@ -6,9 +6,9 @@
     <title>Classroom Workspace Module</title>
     <style>
         body { 
-            background-color: #0b0f17; 
-            color: #c9d1d9; 
-            font-family: sans-serif; 
+            background: linear-gradient(135deg, #0f172a, #1e1b4b);
+            color: #f8fafc; 
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             margin: 0; 
             padding: 0; 
             display: flex; 
@@ -16,41 +16,65 @@
             align-items: center; 
             min-height: 100vh;
             user-select: none;
+            overflow: hidden;
         }
         header {
             text-align: center;
-            padding: 12px;
-            border-bottom: 2px solid #24292f;
+            padding: 16px;
             width: 100%;
-            background: #161b22;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
         }
-        h1 { margin: 0; color: #58a6ff; font-size: 22px; }
+        h1 { 
+            margin: 0; 
+            color: #38bdf8; 
+            font-size: 24px; 
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            font-weight: 800;
+        }
         .ui-panel {
-            margin: 12px 0;
-            font-size: 16px;
-            font-weight: bold;
+            margin: 16px 0;
+            font-size: 15px;
+            font-weight: 600;
+            background: rgba(30, 41, 59, 0.7);
+            padding: 10px 24px;
+            border-radius: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
         }
-        #hud-keys { color: #f1c40f; }
-        #hud-status { color: #2ecc71; margin-left: 15px; }
+        #hud-keys { color: #fbbf24; font-weight: 800; }
+        #hud-status { color: #4ade80; font-weight: 700; animation: pulse 1.5s infinite; }
         canvas {
-            background-color: #1e272c;
-            border: 2px solid #30363d;
-            border-radius: 8px;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+            background: linear-gradient(to bottom, #1e293b, #0f172a);
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255,255,255,0.1);
+        }
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
         }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>2D Stickman Parkour Simulation</h1>
+        <h1>Stickman Parkour V2 // Vector Core</h1>
     </header>
 
     <div class="ui-panel">
-        Keys Collected: <span id="hud-keys">0</span> / 1 | A/D or Arrows = Move | W/Up = Jump | S/Down = Slide <span id="hud-status"></span>
+        <div>Keys: <span id="hud-keys">0 / 1</span></div>
+        <div>A/D or ◄/► = Run | W or ▲ = Jump | S or ▼ = Slide</div>
+        <div id="hud-status">FIND THE KEY</div>
     </div>
 
-    <canvas id="gameCanvas" width="700" height="400"></canvas>
+    <canvas id="gameCanvas" width="800" height="450"></canvas>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
@@ -58,43 +82,38 @@
         const keysDisplay = document.getElementById('hud-keys');
         const statusDisplay = document.getElementById('hud-status');
 
-        const gravity = 0.35;
-        const friction = 0.85;
+        const gravity = 0.38;
+        const friction = 0.84;
 
         let player = {
-            x: 80,
-            y: 200,
-            vx: 0,
-            vy: 0,
-            width: 16,
-            height: 38,
-            speed: 4,
-            jumpForce: 8.5,
-            grounded: false,
-            sliding: false,
-            slideTimer: 0
+            x: 70, y: 300, vx: 0, vy: 0,
+            width: 18, height: 44,
+            speed: 0.6, maxSpeed: 4.8, jumpForce: 10,
+            grounded: false, sliding: false, slideTimer: 0, facing: 1, animFrame: 0
         };
 
         let hasKey = false;
         let isLevelComplete = false;
 
+        // Modern Geometric Platform Data Configuration
         let platforms = [
-            { x: 0, y: 350, w: 250, h: 50 },
-            { x: 320, y: 290, w: 140, h: 20 },
-            { x: 520, y: 230, w: 180, h: 170 }
+            { x: 0, y: 380, w: 260, h: 70, color: '#334155', topColor: '#0ea5e9' },
+            { x: 340, y: 310, w: 160, h: 25, color: '#475569', topColor: '#38bdf8' },
+            { x: 560, y: 240, w: 240, h: 210, color: '#334155', topColor: '#0ea5e9' }
         ];
 
+        // Animated neon hazard spike profiles 
         let spikes = [
-            { x: 250, y: 380, w: 70, h: 20 }
+            { x: 260, y: 430, w: 80, h: 20 }
         ];
 
-        let goldenKey = { x: 390, y: 240, w: 15, h: 15, collected: false };
-        let ancientGate = { x: 620, y: 150, w: 20, h: 80, open: false };
-        let goalPortal = { x: 660, y: 180, w: 20, h: 50 };
+        let goldenKey = { x: 420, y: 260, w: 16, h: 16, collected: false, pulse: 0 };
+        let ancientGate = { x: 650, y: 140, w: 16, h: 100, open: false, opacity: 1 };
+        let goalPortal = { x: 720, y: 170, w: 35, h: 70, angle: 0 };
 
         let inputKeys = {};
-        window.addEventListener('keydown', function(e) { inputKeys[e.code] = true; });
-        window.addEventListener('keyup', function(e) { inputKeys[e.code] = false; });
+        window.addEventListener('keydown', e => { inputKeys[e.code] = true; });
+        window.addEventListener('keyup', e => { inputKeys[e.code] = false; });
 
         function checkCollision(obj1, obj2) {
             return obj1.x < obj2.x + obj2.w &&
@@ -106,28 +125,39 @@
         function update() {
             if (isLevelComplete) return;
 
+            goldenKey.pulse += 0.05;
+            goalPortal.angle += 0.02;
+
+            // Fluid Sliding Logic Mechanics
             if ((inputKeys['KeyS'] || inputKeys['ArrowDown']) && player.grounded && !player.sliding) {
                 player.sliding = true;
-                player.slideTimer = 25;
-                player.height = 18; 
-                player.y += 20;
+                player.slideTimer = 28;
+                player.height = 22; 
+                player.y += 22;
+                player.vx += player.facing * 3.5; // Instant slide velocity kick
             }
 
             if (player.sliding) {
                 player.slideTimer--;
-                if (inputKeys['KeyA'] || inputKeys['ArrowLeft']) player.vx -= 0.6;
-                if (inputKeys['KeyD'] || inputKeys['ArrowRight']) player.vx += 0.6;
-                
+                player.vx *= 0.95; // Custom high-speed slide friction
                 if (player.slideTimer <= 0) {
                     player.sliding = false;
-                    player.height = 38;
-                    player.y -= 20;
+                    player.height = 44;
+                    player.y -= 22;
                 }
             } else {
-                if (inputKeys['KeyA'] || inputKeys['ArrowLeft']) player.vx -= 0.5;
-                if (inputKeys['KeyD'] || inputKeys['ArrowRight']) player.vx += 0.5;
+                // Running Calculations
+                if (inputKeys['KeyA'] || inputKeys['ArrowLeft']) {
+                    if (player.vx > -player.maxSpeed) player.vx -= player.speed;
+                    player.facing = -1;
+                }
+                if (inputKeys['KeyD'] || inputKeys['ArrowRight']) {
+                    if (player.vx < player.maxSpeed) player.vx += player.speed;
+                    player.facing = 1;
+                }
             }
 
+            // High-Performance Jumping Triggers
             if ((inputKeys['KeyW'] || inputKeys['ArrowUp']) && player.grounded && !player.sliding) {
                 player.vy = -player.jumpForce;
                 player.grounded = false;
@@ -136,25 +166,23 @@
             player.vx *= friction;
             player.vy += gravity;
 
+            // X-Axis Platform Intersection Bounds
             player.x += player.vx;
-            
-            for (let i = 0; i < platforms.length; i++) {
-                let p = platforms[i];
+            platforms.forEach(p => {
                 if (checkCollision(player, p)) {
                     if (player.vx > 0) player.x = p.x - player.width;
                     if (player.vx < 0) player.x = p.x + p.w;
                 }
-            }
+            });
 
             if (!ancientGate.open && checkCollision(player, ancientGate)) {
                 if (player.vx > 0) player.x = ancientGate.x - player.width;
             }
 
+            // Y-Axis Platform Intersection Bounds
             player.y += player.vy;
             player.grounded = false;
-
-            for (let i = 0; i < platforms.length; i++) {
-                let p = platforms[i];
+            platforms.forEach(p => {
                 if (checkCollision(player, p)) {
                     if (player.vy > 0) {
                         player.y = p.y - player.height;
@@ -165,128 +193,80 @@
                         player.vy = 0;
                     }
                 }
+            });
+
+            // Tracking Running Animation Frames
+            if (player.grounded && Math.abs(player.vx) > 0.5) {
+                player.animFrame += 0.22;
+            } else if (!player.grounded) {
+                player.animFrame = 1.5; // Dynamic mid-air vector stance
+            } else {
+                player.animFrame = 0;
             }
 
-            for (let i = 0; i < spikes.length; i++) {
-                let s = spikes[i];
-                let hitBox = { x: player.x, y: player.y, width: player.width, height: player.height };
-                if (checkCollision(hitBox, s)) {
-                    resetPlayer();
-                }
+            // Spike Obstacle Hazards Checks
+            spikes.forEach(s => {
+                if (checkCollision(player, s)) resetPlayer();
+            });
+
+            // Golden Key Collector Bounds
+            if (!goldenKey.collected && checkCollision(player, {x: goldenKey.x, y: goldenKey.y, w: goldenKey.w, h: goldenKey.h})) {
+                goldenKey.collected = true;
+                hasKey = true;
+                keysDisplay.innerText = "1 / 1";
+                statusDisplay.innerText = "GATE MECHANISM ENGAGED";
+                statusDisplay.style.color = '#38bdf8';
             }
 
-            if (!goldenKey.collected) {
-                let coinBox = { x: player.x, y: player.y, width: player.width, height: player.height };
-                let targetKey = { x: goldenKey.x, y: goldenKey.y, width: goldenKey.w, height: goldenKey.h };
-                if (checkCollision(coinBox, targetKey)) {
-                    goldenKey.collected = true;
-                    hasKey = true;
-                    keysDisplay.innerText = '1';
-                    statusDisplay.innerText = 'ANCIENT GATE UNLOCKED!';
-                }
-            }
-
-            if (hasKey && Math.abs(player.x - ancientGate.x) < 40) {
+            // Smooth Gate Dissolve Animations
+            if (hasKey && Math.abs(player.x - ancientGate.x) < 70) {
                 ancientGate.open = true;
             }
+            if (ancientGate.open && ancientGate.opacity > 0) {
+                ancientGate.opacity -= 0.05;
+            }
 
-            let finalGoal = { x: goalPortal.x, y: goalPortal.y, width: goalPortal.w, height: goalPortal.h };
-            if (checkCollision(player, finalGoal)) {
+            // Portal Level Complete Checks
+            if (checkCollision(player, {x: goalPortal.x, y: goalPortal.y, w: goalPortal.w, h: goalPortal.h})) {
                 isLevelComplete = true;
-                statusDisplay.innerText = 'VICTORY!';
+                statusDisplay.innerText = "MISSION OBJECTIVE ACCOMPLISHED";
+                statusDisplay.style.color = '#4ade80';
             }
 
-            if (player.y > canvas.height) {
-                resetPlayer();
-            }
+            if (player.y > canvas.height) resetPlayer();
         }
 
         function resetPlayer() {
-            player.x = 80;
-            player.y = 200;
-            player.vx = 0;
-            player.vy = 0;
-            player.sliding = false;
-            player.height = 38;
+            player.x = 70; player.y = 300; player.vx = 0; player.vy = 0;
+            player.sliding = false; player.height = 44;
         }
 
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            ctx.fillStyle = '#2c3e50';
-            for (let i = 0; i < platforms.length; i++) {
-                ctx.fillRect(platforms[i].x, platforms[i].y, platforms[i].w, platforms[i].h);
-            }
+            // 1. Draw Modern Geometric Platforms
+            platforms.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.fillRect(p.x, p.y, p.w, p.h);
+                ctx.fillStyle = p.topColor;
+                ctx.fillRect(p.x, p.y, p.w, 4); // Neon top lip accent line
+            });
 
-            ctx.fillStyle = '#e74c3c';
-            for (let i = 0; i < spikes.length; i++) {
-                ctx.fillRect(spikes[i].x, spikes[i].y, spikes[i].w, spikes[i].h);
-            }
-
-            if (!goldenKey.collected) {
-                ctx.fillStyle = '#f1c40f';
-                ctx.fillRect(goldenKey.x, goldenKey.y, goldenKey.w, goldenKey.h);
-            }
-
-            if (!ancientGate.open) {
-                ctx.fillStyle = '#7f8c8d';
-                ctx.fillRect(ancientGate.x, ancientGate.y, ancientGate.w, ancientGate.h);
-            }
-
-            ctx.fillStyle = '#2ecc71';
-            ctx.fillRect(goalPortal.x, goalPortal.y, goalPortal.w, goalPortal.h);
-
-            ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 3;
-
-            let centerX = player.x + player.width / 2;
-            let headY = player.y + 6;
-
-            if (player.sliding) {
+            // 2. Draw Glow Hazard Spikes
+            ctx.fillStyle = '#ef4444';
+            spikes.forEach(s => {
                 ctx.beginPath();
-                ctx.arc(player.x + 12, player.y + 6, 5, 0, Math.PI * 2);
-                ctx.fillStyle = '#fff'; ctx.fill();
-                ctx.beginPath();
-                ctx.moveTo(player.x + 12, player.y + 6);
-                ctx.lineTo(player.x, player.y + 12);
-                ctx.stroke();
-            } else {
-                ctx.fillStyle = '#ffffff';
-                ctx.beginPath();
-                ctx.arc(centerX, headY, 5, 0, Math.PI * 2);
+                for (let i = 0; i < s.w; i += 10) {
+                    ctx.moveTo(s.x + i, s.y);
+                    ctx.lineTo(s.x + i + 5, s.y - 12);
+                    ctx.lineTo(s.x + i + 10, s.y);
+                }
                 ctx.fill();
+            });
 
-                ctx.beginPath();
-                ctx.moveTo(centerX, headY + 5);
-                ctx.lineTo(centerX, headY + 20);
-
-                ctx.moveTo(centerX, headY + 8);
-                ctx.lineTo(centerX - 10, headY + 14);
-                ctx.moveTo(centerX, headY + 8);
-                ctx.lineTo(centerX + 10, headY + 14);
-
-                ctx.moveTo(centerX, headY + 20);
-                ctx.lineTo(centerX - 8, headY + 34);
-                ctx.moveTo(centerX, headY + 20);
-                ctx.lineTo(centerX + 8, headY + 34);
-                ctx.stroke();
-            }
-
-            if (isLevelComplete) {
-                ctx.fillStyle = 'rgba(0,0,0,0.7)';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = '#2ecc71'; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'center';
-                ctx.fillText('STAGE COMPLETED!', 350, 200);
-            }
-        }
-
-        function gameLoop() {
-            update();
-            draw();
-            requestAnimationFrame(gameLoop);
-        }
-
-        gameLoop();
-    </script>
-</body>
-</html>
+            // 3. Draw Floating Golden Key
+            if (!goldenKey.collected) {
+                ctx.save();
+                let hoverY = Math.sin(goldenKey.pulse) * 4;
+                ctx.translate(goldenKey.x + 8, goldenKey.y + 8 + hoverY);
+                ctx.fillStyle = '#fbbf24';
