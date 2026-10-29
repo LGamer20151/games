@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Classroom Math Workspace</title>
+    <title>Classroom Physics Sandbox</title>
     <style>
         body { 
             background-color: #0d1117; 
@@ -15,6 +15,7 @@
             flex-direction: column; 
             align-items: center; 
             min-height: 100vh;
+            user-select: none;
         }
         header {
             text-align: center;
@@ -26,175 +27,247 @@
         h1 { margin: 0; color: #58a6ff; font-size: 22px; }
         .ui-panel {
             margin: 15px 0;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: bold;
         }
-        #score { color: #58a6ff; }
+        #score-val { color: #58a6ff; }
         #status { color: #8b949e; font-size: 14px; margin-top: 5px; text-align: center;}
         canvas {
-            background-color: #000000;
+            background-color: #1a233a;
             border: 2px solid #30363d;
             border-radius: 6px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>Web-Based Probability Engine</h1>
+        <h1>Vector Velocity Sandbox</h1>
     </header>
 
     <div class="ui-panel">
-        Balance: $<span id="score">100</span>
-        <div id="status">Press SPACEBAR to Drop Ball ($10)</div>
+        Targets Eliminated: <span id="score-val">0</span> / 3
+        <div id="status">Click and Drag the Yellow Duck to Launch! Press 'R' to Reset.</div>
     </div>
 
-    <canvas id="plinkoCanvas" width="480" height="420"></canvas>
+    <canvas id="gameCanvas" width="700" height="400"></canvas>
 
     <script>
-        const canvas = document.getElementById('plinkoCanvas');
+        const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        const scoreDisplay = document.getElementById('score');
+        const scoreDisplay = document.getElementById('score-val');
         const statusDisplay = document.getElementById('status');
 
-        // Game State Engine Variables
-        let score = 100;
-        let state = 1; // 1 = Waiting, 0 = Ball Falling
-        let ballX = 0;
-        let ballY = 20;
-        let ballVX = 0;
-        let ballVY = 0;
+        // Physics Configurations
         const gravity = 0.25;
-        const friction = 0.99;
+        const groundY = 360;
 
-        // HIGH-DENSITY GRID GENERATOR (Fills the entire frame layout)
-        const pegs = [];
-        const rows = 11;
-        const cols = 13;
-        const startY = 60;
-        const rowSpacing = 28;
-        const pegSpacing = 36;
+        // Slingshot Baseline Position
+        const slingX = 130;
+        const slingY = 260;
+        const maxPull = 80;
 
-        for (let r = 0; r < rows; r++) {
-            let y = startY + r * rowSpacing;
-            // Shift every second row slightly sideways for a perfect zigzag mesh pattern
-            let offsetX = (r % 2 === 0) ? 0 : pegSpacing / 2;
-            let startX = 24 - offsetX;
+        // Game State Variables
+        let score = 0;
+        let isDragging = false;
+        let mouseX = 0;
+        let mouseY = 0;
 
-            for (let c = 0; c <= cols; c++) {
-                let x = startX + c * pegSpacing;
-                // Only add the dot if it fits nicely inside the screen boundaries
-                if (x > 15 && x < 465) {
-                    pegs.push({ x: x, y: y });
-                }
-            }
+        // Duck Object definitions
+        let duck = {
+            x: slingX,
+            y: slingY,
+            vx: 0,
+            vy: 0,
+            radius: 15,
+            isLaunched: false,
+            onGround: false
+        };
+
+        // Targets/Structures list array
+        let entities = [];
+
+        function initGame() {
+            score = 0;
+            scoreDisplay.innerText = score;
+            statusDisplay.innerText = "Click and Drag the Yellow Duck to Launch! Press 'R' to Reset.";
+            
+            duck.x = slingX;
+            duck.y = slingY;
+            duck.vx = 0;
+            duck.vy = 0;
+            duck.isLaunched = false;
+            duck.onGround = false;
+
+            // Generate structural boxes and enemy targets
+            entities = [
+                // Red structural wooden blocks (x, y, width, height, type, active)
+                { x: 480, y: groundY - 80, w: 20, h: 80, type: 'structure', hp: 2 },
+                { x: 560, y: groundY - 80, w: 20, h: 80, type: 'structure', hp: 2 },
+                { x: 470, y: groundY - 100, w: 120, h: 20, type: 'structure', hp: 2 },
+                { x: 510, y: groundY - 180, w: 20, h: 80, type: 'structure', hp: 2 },
+                
+                // Bad Guys (Green targets)
+                { x: 520, y: groundY - 30, r: 16, type: 'enemy', alive: true },
+                { x: 520, y: groundY - 130, r: 14, type: 'enemy', alive: true },
+                { x: 620, y: groundY - 25, r: 18, type: 'enemy', alive: true }
+            ];
         }
 
-        // Expanded Prize Slots (Includes high risk/reward on outer edges)
-        const buckets = [
-            { startX: 0, endX: 80, color: '#ff2a2a', label: '0.1x', mult: 0.1 },    // Dangerous Edges
-            { startX: 80, endX: 160, color: '#404040', label: '0.5x', mult: 0.5 },   
-            { startX: 160, endX: 210, color: '#FF8000', label: '1x', mult: 1 },    
-            { startX: 210, endX: 270, color: '#00FF00', label: '3x', mult: 3 },    // BUFFED THE CENTER SLOT TO 3X!
-            { startX: 270, endX: 320, color: '#FF8000', label: '1x', mult: 1 },    
-            { startX: 320, endX: 400, color: '#404040', label: '0.5x', mult: 0.5 },   
-            { startX: 400, endX: 480, color: '#ff2a2a', label: '0.1x', mult: 0.1 }     
-        ];
+        // Mouse Action Mechanics
+        canvas.addEventListener('mousedown', function(e) {
+            if (duck.isLaunched) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const mX = e.clientX - rect.left;
+            const mY = e.clientY - rect.top;
 
-        // Trigger Ball Drops
-        window.addEventListener('keydown', function(e) {
-            if (e.code === 'Space' && state === 1) {
-                if (score >= 10) {
-                    score -= 10;
-                    scoreDisplay.innerText = score;
-                    statusDisplay.innerText = "Analyzing dense node collisions...";
-                    
-                    // Allows dropping across a wider top entry point
-                    ballX = 240 + (Math.random() * 60 - 30); 
-                    ballY = 20;
-                    ballVX = 0;
-                    ballVY = 0;
-                    state = 0; 
+            // Detect if user clicks near the duck on the slingshot base
+            let dx = mX - duck.x;
+            let dy = mY - duck.y;
+            if (Math.sqrt(dx * dx + dy * dy) < 30) {
+                isDragging = true;
+            }
+        });
+
+        canvas.addEventListener('mousemove', function(e) {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+
+            if (isDragging) {
+                let dx = mouseX - slingX;
+                let dy = mouseY - slingY;
+                let distance = Math.sqrt(dx * dx + dy * dy);
+
+                // Limit how far back the slingshot band can extend
+                if (distance > maxPull) {
+                    let angle = Math.atan2(dy, dx);
+                    duck.x = slingX + Math.cos(angle) * maxPull;
+                    duck.y = slingY + Math.sin(angle) * maxPull;
                 } else {
-                    statusDisplay.innerText = "Insufficient funds! Refresh tab to restart.";
+                    duck.x = mouseX;
+                    duck.y = mouseY;
                 }
             }
         });
 
-        // Math Physics Processing Loop
-        function gameLoop() {
-            if (state === 0) {
-                ballVY += gravity;
-                ballVX *= friction;
-                ballX += ballVX;
-                ballY += ballVY;
+        window.addEventListener('mouseup', function() {
+            if (isDragging) {
+                isDragging = false;
+                duck.isLaunched = true;
 
-                // Collision math loop for the entire grid array
-                pegs.forEach(peg => {
-                    let dx = ballX - peg.x;
-                    let dy = ballY - peg.y;
-                    let distance = Math.sqrt(dx * dx + dy * dy);
-
-                    if (distance < 11) { 
-                        ballVY = -2.0; // Bounces up from hit pins
-                        ballVX = (Math.random() * 2.6 - 1.3) + (dx * 0.28); 
-                    }
-                });
-
-                // Screen border limits
-                if (ballX < 10) { ballX = 10; ballVX *= -0.5; }
-                if (ballX > 470) { ballX = 470; ballVX *= -0.5; }
-
-                // Landing logic at the bottom row (Y value)
-                if (ballY >= 370) {
-                    for (let i = 0; i < buckets.length; i++) {
-                        if (ballX >= buckets[i].startX && ballX < buckets[i].endX) {
-                            let winnings = 10 * buckets[i].mult;
-                            score += winnings;
-                            scoreDisplay.innerText = score;
-                            statusDisplay.innerText = `Landed in ${buckets[i].label} slot! (+$${winnings}). Press SPACEBAR to play again.`;
-                            break;
-                        }
-                    }
-                    state = 1; 
-                }
+                // Fire velocity based heavily on the opposite vector displacement
+                duck.vx = (slingX - duck.x) * 0.16;
+                duck.vy = (slingY - duck.y) * 0.16;
+                statusDisplay.innerText = "Duck tracking outbound physics vector...";
             }
+        });
 
-            // Graphic Painter Render Loops
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Draw prize collection boxes
-            buckets.forEach(b => {
-                ctx.fillStyle = b.color;
-                ctx.fillRect(b.startX, 370, b.endX - b.startX, 50);
-                
-                ctx.fillStyle = "#ffffff";
-                ctx.font = "bold 13px sans-serif";
-                ctx.textAlign = "center";
-                ctx.fillText(b.label, b.startX + (b.endX - b.startX) / 2, 400);
-            });
-
-            // Draw peg nodes array pattern
-            ctx.fillStyle = "#ffffff";
-            pegs.forEach(peg => {
-                ctx.beginPath();
-                ctx.arc(peg.x, peg.y, 4, 0, Math.PI * 2);
-                ctx.fill();
-            });
-
-            // Draw Plinko active matrix ball
-            if (state === 0) {
-                ctx.fillStyle = "#ff00ff";
-                ctx.beginPath();
-                ctx.arc(ballX, ballY, 7, 0, Math.PI * 2);
-                ctx.fill();
+        // Listen for standard keyboard reset tap
+        window.addEventListener('keydown', function(e) {
+            if (e.key === 'r' || e.key === 'R') {
+                initGame();
             }
+        });
 
-            requestAnimationFrame(gameLoop);
+        // Circle-to-Box Collision System Function
+        function checkBallBoxCollision(ball, box) {
+            let closestX = Math.max(box.x, Math.min(ball.x, box.x + box.w));
+            let closestY = Math.max(box.y, Math.min(ball.y, box.y + box.h));
+
+            let dx = ball.x - closestX;
+            let dy = ball.y - closestY;
+            let distance = Math.sqrt(dx * dx + dy * dy);
+
+            return distance < ball.radius;
         }
 
-        gameLoop();
-    </script>
-</body>
-</html>
+        // Main Engine Calculations Loop
+        function update() {
+            if (duck.isLaunched && !duck.onGround) {
+                // Apply Gravity Acceleration
+                duck.vy += gravity;
+                duck.x += duck.vx;
+                duck.y += duck.vy;
+
+                // Stop if goes far off-screen sideways
+                if (duck.x > canvas.width + 100 || duck.x < -100) {
+                    duck.onGround = true;
+                    statusDisplay.innerText = "Duck went out of bounds! Press 'R' to load next shot.";
+                }
+
+                // Ground Crash Bounds Check
+                if (duck.y + duck.radius >= groundY) {
+                    duck.y = groundY - duck.radius;
+                    duck.vx *= 0.5; // High friction slowdown
+                    duck.vy = 0;
+                    if (Math.abs(duck.vx) < 0.2) {
+                        duck.onGround = true;
+                        statusDisplay.innerText = "Shot concluded. Press 'R' to load the next duck.";
+                    }
+                }
+
+                // Check collisions across all structures & targets
+                entities.forEach(ent => {
+                    if (ent.type === 'structure' && ent.hp > 0) {
+                        if (checkBallBoxCollision(duck, ent)) {
+                            ent.hp -= 1; // Damage obstacle structural health
+                            duck.vx *= -0.4; // Bounce duck backward slightly
+                            duck.vy *= 0.5;
+                        }
+                    } else if (ent.type === 'enemy' && ent.alive) {
+                        let dx = duck.x - ent.x;
+                        let dy = duck.y - ent.y;
+                        let dist = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (dist < (duck.radius + ent.r)) {
+                            ent.alive = false; // Destroy bad guy target!
+                            score++;
+                            scoreDisplay.innerText = score;
+                            if (score >= 3) {
+                                statusDisplay.innerText = "VICTORY! All targets cleared. Press 'R' to play again!";
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Graphics Drawing Engine Layout
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. Draw the Sky and Ground Backdrop
+            ctx.fillStyle = '#4a3319';
+            ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
+            ctx.fillStyle = '#27ae60';
+            ctx.fillRect(0, groundY, canvas.width, 10); // Grass layer
+
+            // 2. Draw the Slingshot Post Lines
+            ctx.strokeStyle = '#6e4720';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.moveTo(slingX, slingY);
+            ctx.lineTo(slingX, groundY);
+            ctx.stroke();
+
+            // Draw rubber bands if player is currently aiming
+            if (isDragging) {
+                ctx.strokeStyle = '#e67e22';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(slingX - 10, slingY);
+                ctx.lineTo(duck.x, duck.y);
+                ctx.moveTo(slingX + 10, slingY);
+                ctx.lineTo(duck.x, duck.y);
+                ctx.stroke();
+            }
+
+            // 3. Draw All Entities (Structures & Green Enemies)
+            entities.forEach(ent => {
+                if (ent.type === 'structure' && ent.hp > 0) {
+                    ctx.fillStyle = ent.hp === 2 ? '#c0392b' : '#e74c3c'; // Darker red means full health
+                    ctx.fillRect(ent.x, ent.y, ent.w, ent.h);
