@@ -46,7 +46,7 @@
     </header>
 
     <div class="ui-panel">
-        Coins Collected: <span id="hud-score">0</span> / 6 | WASD / Arrows = Drive | Shift = Nitro | R = Reset Car Position
+        Coins Collected: <span id="hud-score">0</span> / 6 | W/S = Gas/Reverse | A/D = Steer | Shift = Nitro | R = Reset Car
     </div>
 
     <canvas id="gameCanvas" width="700" height="400"></canvas>
@@ -56,27 +56,27 @@
         const ctx = canvas.getContext('2d');
         const scoreDisplay = document.getElementById('hud-score');
 
-        // Pseudo-3D Camera & FOV parameters
         const fov = 300;
         const cx = 350;
         const cy = 250;
 
-        // 3D Sports Car Physics Profile
+        // 3D Physics Vector Profile
         let car = {
             x: 0,
             y: 0,
             z: 100,
             vx: 0,
+            vy: 0,
             vz: 0,
             angle: 0,
             speed: 0,
-            maxSpeed: 10,
+            maxSpeed: 8,
             accel: 0.15,
-            friction: 0.97,
-            turnSpeed: 0.04
+            friction: 0.95,
+            turnSpeed: 0.045,
+            airborne: false
         };
 
-        // 3D Objects Matrix Configuration (World Space Coordinates)
         let coins = [
             {x: -150, z: 400, collected: false},
             {x: 150, z: 400, collected: false},
@@ -86,68 +86,110 @@
             {x: 0, z: 1000, collected: false}
         ];
 
-        // 3D Stunt Obstacle Loops & Ramps Vertices
+        // 3D Stunt Obstacles (Loops & Launch Ramps)
         let loops = [
-            {x: -100, z: 500, size: 40, color: '#bdc3c7'},
-            {x: 100, z: 700, size: 50, color: '#95a5a6'},
-            {x: -200, z: 900, size: 60, color: '#7f8c8d'}
+            {x: -150, z: 500, size: 40, color: '#bdc3c7'},
+            {x: 150, z: 700, size: 50, color: '#95a5a6'}
+        ];
+
+        let ramps = [
+            {x: 0, z: 450, w: 60, h: 40, depth: 80, color: '#e67e22'}
         ];
 
         let score = 0;
         let keys = {};
 
-        window.addEventListener('keydown', e => keys[e.code] = true);
-        window.addEventListener('keyup', e => keys[e.code] = false);
+        // Clean Input Buffers to Prevent Sticking Controls
+        window.addEventListener('keydown', function(e) {
+            keys[e.code] = true;
+        });
+        window.addEventListener('keyup', function(e) {
+            keys[e.code] = false;
+        });
+
+        // Hard reset on tab blur to instantly kill stuck inputs
+        window.addEventListener('blur', function() {
+            keys = {};
+            car.speed = 0;
+        });
 
         function update() {
             let currentAccel = car.accel;
             let currentMaxSpeed = car.maxSpeed;
             
-            // Nitro Trigger
             if (keys['ShiftLeft'] || keys['ShiftRight']) {
                 currentAccel = car.accel * 1.8;
-                currentMaxSpeed = car.maxSpeed * 1.6;
+                currentMaxSpeed = car.maxSpeed * 1.5;
             }
 
-            // Drive inputs
+            // Gas and Reverse Mechanics
             if (keys['KeyW'] || keys['ArrowUp']) {
                 if (car.speed < currentMaxSpeed) car.speed += currentAccel;
             } else if (keys['KeyS'] || keys['ArrowDown']) {
                 if (car.speed > -currentMaxSpeed / 2) car.speed -= currentAccel;
             } else {
                 car.speed *= car.friction;
+                if (Math.abs(car.speed) < 0.05) car.speed = 0;
             }
 
-            // Steering Vectors
+            // Clean Turning Calculations
             if (Math.abs(car.speed) > 0.1) {
                 let reverseTurn = car.speed < 0 ? -1 : 1;
                 if (keys['KeyA'] || keys['ArrowLeft']) car.angle -= car.turnSpeed * reverseTurn;
                 if (keys['KeyD'] || keys['ArrowRight']) car.angle += car.turnSpeed * reverseTurn;
             }
 
-            // Coordinate Updates
-            car.vx = Math.sin(car.angle) * car.speed;
-            car.vz = Math.cos(car.angle) * car.speed;
+            // Ground vs Air Physics
+            if (!car.airborne) {
+                car.vx = Math.sin(car.angle) * car.speed;
+                car.vz = Math.cos(car.angle) * car.speed;
+                car.vy = 0;
+            } else {
+                car.vy += 0.25; // Gravity acceleration
+                car.y += car.vy;
+                if (car.y >= 0) {
+                    car.y = 0;
+                    car.vy = 0;
+                    car.airborne = false;
+                }
+            }
+
             car.x += car.vx;
             car.z += car.vz;
 
-            // Sandbox Arena Boundary Constraints
+            // Check Ramp Collision
+            ramps.forEach(ramp => {
+                if (car.x > ramp.x - ramp.w/2 && car.x < ramp.x + ramp.w/2 &&
+                    car.z > ramp.z && car.z < ramp.z + ramp.depth && car.y >= -ramp.h) {
+                    
+                    // Inside ramp boundary: Drive upwards or launch
+                    let progress = (car.z - ramp.z) / ramp.depth;
+                    car.y = -ramp.h * progress;
+
+                    if (progress >= 0.95 && car.speed > 2) {
+                        car.airborne = true;
+                        car.vy = -car.speed * 0.7; // Jump force vector
+                    }
+                }
+            });
+
+            // Boundary Walls Box
             if (car.x < -600) { car.x = -600; car.speed *= -0.3; }
             if (car.x > 600) { car.x = 600; car.speed *= -0.3; }
             if (car.z < 50) { car.z = 50; car.speed *= -0.3; }
             if (car.z > 1400) { car.z = 1400; car.speed *= -0.3; }
 
-            // Manual Position Recovery Reset
+            // Manual Hard Reset
             if (keys['KeyR']) {
-                car.x = 0; car.z = 100; car.speed = 0; car.angle = 0;
+                car.x = 0; car.y = 0; car.z = 100; car.speed = 0; car.angle = 0; car.airborne = false; car.vy = 0;
             }
 
-            // 3D Intersection Coin Collection Verification
+            // Coin Intersection Loops
             coins.forEach(coin => {
                 if (!coin.collected) {
                     let dx = car.x - coin.x;
                     let dz = car.z - coin.z;
-                    if (Math.sqrt(dx*dx + dz*dz) < 35) {
+                    if (Math.sqrt(dx*dx + dz*dz) < 35 && Math.abs(car.y) < 30) {
                         coin.collected = true;
                         score++;
                         scoreDisplay.innerText = score;
@@ -157,62 +199,61 @@
         }
 
         function project3D(x, y, z) {
-            // Transform World space positions relative to active Camera placement vectors
             let relX = x - car.x;
+            let relY = y - car.y;
             let relZ = z - car.z;
 
-            // Rotate coordinate system opposite of Car direction angle to form Viewport Camera Matrices
             let cos = Math.cos(-car.angle);
             let sin = Math.sin(-car.angle);
             
             let rotX = relX * cos - relZ * sin;
             let rotZ = relX * sin + relZ * cos;
 
-            // Perspective division processing calculations
-            if (rotZ <= 5) return null; // Behind view clip plane limit
+            if (rotZ <= 5) return null;
 
             let scale = fov / rotZ;
             return {
                 x: cx + rotX * scale,
-                y: cy + y * scale,
+                y: cy + (relY - 40) * scale, // Elevated camera position
                 size: scale
             };
         }
 
         function draw() {
-            // Draw sky and floor horizon backdrop panels
+            // Draw Sky and Ground Panels
             ctx.fillStyle = '#1a2436'; ctx.fillRect(0, 0, 700, 200);
             ctx.fillStyle = '#2c3e50'; ctx.fillRect(0, 200, 700, 200);
-
-            // Draw Horizon Boundary Grid strip
             ctx.strokeStyle = '#34495e'; ctx.lineWidth = 2;
             ctx.beginPath(); ctx.moveTo(0, 200); ctx.lineTo(700, 200); ctx.stroke();
 
-            // Build dynamic sorted rendering element queues list array
             let renderQueue = [];
 
-            // A. Populate 3D Coins elements inside sorting indexes
-            coins.forEach((coin, idx) => {
+            // Project Coins
+            coins.forEach(coin => {
                 if (!coin.collected) {
-                    let proj = project3D(coin.x, 30, coin.z);
-                    if (proj) {
-                        renderQueue.push({ z: coin.z - car.z, type: 'coin', p: proj });
-                    }
+                    let proj = project3D(coin.x, 0, coin.z);
+                    if (proj) renderQueue.push({ z: coin.z - car.z, type: 'coin', p: proj });
                 }
             });
 
-            // B. Populate 3D Loop track objects inside rendering queues
+            // Project Loops
             loops.forEach(loop => {
-                let proj = project3D(loop.x, 40, loop.z);
-                if (proj) {
-                    renderQueue.push({ z: loop.z - car.z, type: 'loop', p: proj, orig: loop });
+                let proj = project3D(loop.x, -loop.size, loop.z);
+                if (proj) renderQueue.push({ z: loop.z - car.z, type: 'loop', p: proj, orig: loop });
+            });
+
+            // Project Ramps
+            ramps.forEach(ramp => {
+                let projStart = project3D(ramp.x, 0, ramp.z);
+                let projEnd = project3D(ramp.x, -ramp.h, ramp.z + ramp.depth);
+                if (projStart && projEnd) {
+                    renderQueue.push({ z: ramp.z - car.z, type: 'ramp', p1: projStart, p2: projEnd, orig: ramp });
                 }
             });
 
-            // Sort arrays from furthest elements to closest ones (Painters Depth Rendering Order)
+            // Painters Depth Sorting Loop
             renderQueue.sort((a, b) => b.z - a.z);
 
-            // Execute final screen projection geometry painters
             renderQueue.forEach(obj => {
                 let p = obj.p;
                 if (obj.type === 'coin') {
@@ -224,35 +265,20 @@
                     let size = obj.orig.size * p.size * 0.05;
                     ctx.strokeStyle = obj.orig.color; ctx.lineWidth = Math.max(2, p.size * 0.15);
                     ctx.beginPath(); ctx.arc(p.x, p.y, size, 0, Math.PI * 2); ctx.stroke();
-                    ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.fill();
+                }
+                else if (obj.type === 'ramp') {
+                    let w1 = obj.orig.w * obj.p1.size * 0.05;
+                    let w2 = obj.orig.w * obj.p2.size * 0.05;
+                    ctx.fillStyle = obj.orig.color;
+                    ctx.beginPath();
+                    ctx.moveTo(obj.p1.x - w1, obj.p1.y);
+                    ctx.lineTo(obj.p1.x + w1, obj.p1.y);
+                    ctx.lineTo(obj.p2.x + w2, obj.p2.y);
+                    ctx.lineTo(obj.p2.x - w2, obj.p2.y);
+                    ctx.closePath(); ctx.fill();
+                    ctx.strokeStyle = '#fff'; ctx.stroke();
                 }
             });
 
-            // 5. Draw First-Person Cockpit Dashboard / Hood View Overlay Accent
+            // First Person Hood Overlay
             ctx.fillStyle = '#ff2a2a'; 
-            ctx.beginPath();
-            ctx.moveTo(150, 400); ctx.lineTo(250, 330); ctx.lineTo(450, 330); ctx.lineTo(550, 400);
-            ctx.closePath(); ctx.fill();
-
-            // Carbon trim lines dashboard detail lines
-            ctx.strokeStyle = '#111'; ctx.lineWidth = 4;
-            ctx.beginPath(); ctx.moveTo(250, 330); ctx.lineTo(450, 330); ctx.stroke();
-
-            // Nitro fire indicator overlay indicators flashing panel
-            if ((keys['ShiftLeft'] || keys['ShiftRight']) && Math.abs(car.speed) > 1) {
-                ctx.fillStyle = '#ff9800';
-                ctx.fillRect(280, 345, 140, 15);
-                ctx.fillStyle = '#fff'; ctx.font = 'bold 11px sans-serif'; ctx.fillText("NITRO INJECTION ACTIVE", 350, 357);
-            }
-        }
-
-        function gameLoop() {
-            update();
-            draw();
-            requestAnimationFrame(gameLoop);
-        }
-
-        gameLoop();
-    </script>
-</body>
-</html>
