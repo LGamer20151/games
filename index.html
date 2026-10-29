@@ -68,10 +68,10 @@
         const gravity = 0.16;
         const groundY = 330;
 
-        let gameState = "MENU"; 
+        let gameState = 'MENU'; 
         let currentLevel = 1;
         let totalStars = 0;
-        let activeBikeType = "ORANGE"; 
+        let activeBikeType = 'ORANGE'; 
         
         let timeElapsed = 0;
         let terrainPoints = [];
@@ -85,9 +85,9 @@
         }
 
         const bikesData = {
-            "ORANGE": { color: "#e67e22", speed: 0.20, weight: 1.0, cost: 0, unlocked: true, name: "Default Orange" },
-            "RED_NINJA": { color: "#e74c3c", speed: 0.24, weight: 0.95, cost: 15, unlocked: false, name: "Ninja Red" },
-            "FLAMING_GHOST": { color: "#7f8c8d", speed: 0.28, weight: 0.90, cost: 40, unlocked: false, name: "Ghost Rider" }
+            'ORANGE': { color: '#e67e22', speed: 0.20, weight: 1.0, cost: 0, unlocked: true, name: 'Default Orange' },
+            'RED_NINJA': { color: '#e74c3c', speed: 0.24, weight: 0.95, cost: 15, unlocked: false, name: 'Ninja Red' },
+            'FLAMING_GHOST': { color: '#7f8c8d', speed: 0.28, weight: 0.90, cost: 40, unlocked: false, name: 'Ghost Rider' }
         };
 
         let bike = { x: 80, y: 200, vx: 0, vy: 0, angle: 0, rotVel: 0, radius: 14, onGround: false };
@@ -128,9 +128,9 @@
             const mX = e.clientX - rect.left;
             const mY = e.clientY - rect.top;
 
-            if (gameState === "MENU") {
+            if (gameState === 'MENU') {
                 if (mX > 540 && mX < 660 && mY > 15 && mY < 55) {
-                    gameState = "SHOP";
+                    gameState = 'SHOP';
                     return;
                 }
 
@@ -145,7 +145,7 @@
                         if (mX > bX && mX < bX + btnW && mY > bY && mY < bY + btnH) {
                             if (levelsProgress[lvlIndex].unlocked) {
                                 currentLevel = lvlIndex;
-                                gameState = "PLAYING";
+                                gameState = 'PLAYING';
                                 timeElapsed = 0;
                                 resetBikePosition();
                                 initLevelTerrain(currentLevel);
@@ -155,10 +155,10 @@
                     }
                 }
             } 
-            else if (gameState === "SHOP") {
-                if (mX > 20 && mX < 120 && mY > 20 && mY < 60) gameState = "MENU";
-                if (mX > 80 && mX < 280 && mY > 280 && mY < 320) handleShopPurchase("RED_NINJA");
-                if (mX > 420 && mX < 620 && mY > 280 && mY < 320) handleShopPurchase("FLAMING_GHOST");
+            else if (gameState === 'SHOP') {
+                if (mX > 20 && mX < 120 && mY > 20 && mY < 60) gameState = 'MENU';
+                if (mX > 80 && mX < 280 && mY > 280 && mY < 320) handleShopPurchase('RED_NINJA');
+                if (mX > 420 && mX < 620 && mY > 280 && mY < 320) handleShopPurchase('FLAMING_GHOST');
             }
         });
 
@@ -178,14 +178,14 @@
         }
 
         function update() {
-            if (gameState !== "PLAYING") {
-                if ((gameState === "CRASHED" || gameState === "VICTORY") && keys['Space']) {
-                    if (gameState === "VICTORY") {
+            if (gameState !== 'PLAYING') {
+                if ((gameState === 'CRASHED' || gameState === 'VICTORY') && keys['Space']) {
+                    if (gameState === 'VICTORY') {
                         levelsProgress[currentLevel].cleared = true;
                         if (currentLevel < 22) levelsProgress[currentLevel + 1].unlocked = true;
-                        gameState = "MENU"; 
+                        gameState = 'MENU'; 
                     } else {
-                        gameState = "PLAYING";
+                        gameState = 'PLAYING';
                         resetBikePosition();
                     }
                 }
@@ -216,14 +216,14 @@
             if (!checkpointReached && bike.x >= 600) { checkpointReached = true; checkpointX = 600; checkpointY = getGroundHeight(600) - 30; }
 
             let normalizedAngle = Math.abs((bike.angle + Math.PI) % (Math.PI * 2) - Math.PI);
-            if ((bike.onGround && normalizedAngle > 1.38) || bike.y > 420) gameState = "CRASHED";
-            if (bike.x >= 1350) gameState = "VICTORY";
+            if ((bike.onGround && normalizedAngle > 1.38) || bike.y > 420) gameState = 'CRASHED';
+            if (bike.x >= 1350) gameState = 'VICTORY';
         }
 
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            if (gameState === "MENU") {
+            if (gameState === 'MENU') {
                 ctx.fillStyle = '#161b22'; ctx.fillRect(0, 0, 700, 400);
                 ctx.fillStyle = '#fff'; ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'left'; ctx.fillText('SELECT CHALLENGE STAGE', 50, 45);
                 
