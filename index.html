@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Madalin Sandbox</title>
+    <title>Classroom Workspace Module</title>
     <style>
         body { 
             background-color: #0b0f17; 
@@ -30,9 +30,10 @@
             font-size: 16px;
             font-weight: bold;
         }
-        #hud-score { color: #f1c40f; }
+        #hud-keys { color: #f1c40f; }
+        #hud-status { color: #2ecc71; margin-left: 15px; }
         canvas {
-            background-color: #000;
+            background-color: #1e272c;
             border: 2px solid #30363d;
             border-radius: 8px;
             box-shadow: 0 6px 20px rgba(0,0,0,0.6);
@@ -42,11 +43,11 @@
 <body>
 
     <header>
-        <h1>3D Madalin Stunt Driving Sandbox</h1>
+        <h1>2D Stickman Parkour Simulation</h1>
     </header>
 
     <div class="ui-panel">
-        Coins Collected: <span id="hud-score">0</span> / 6 | W/S = Gas/Reverse | A/D = Steer | Shift = Nitro | R = Reset Car
+        Keys Collected: <span id="hud-keys">0</span> / 1 | A/D or Arrows = Move | W/Up = Jump | S/Down = Slide <span id="hud-status"></span>
     </div>
 
     <canvas id="gameCanvas" width="700" height="400"></canvas>
@@ -54,231 +55,233 @@
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        const scoreDisplay = document.getElementById('hud-score');
+        const keysDisplay = document.getElementById('hud-keys');
+        const statusDisplay = document.getElementById('hud-status');
 
-        const fov = 300;
-        const cx = 350;
-        const cy = 250;
+        const gravity = 0.35;
+        const friction = 0.85;
 
-        // 3D Physics Vector Profile
-        let car = {
-            x: 0,
-            y: 0,
-            z: 100,
+        let player = {
+            x: 80,
+            y: 200,
             vx: 0,
             vy: 0,
-            vz: 0,
-            angle: 0,
-            speed: 0,
-            maxSpeed: 8,
-            accel: 0.15,
-            friction: 0.95,
-            turnSpeed: 0.045,
-            airborne: false
+            width: 16,
+            height: 38,
+            speed: 4,
+            jumpForce: 8.5,
+            grounded: false,
+            sliding: false,
+            slideTimer: 0
         };
 
-        let coins = [
-            {x: -150, z: 400, collected: false},
-            {x: 150, z: 400, collected: false},
-            {x: 0, z: 600, collected: false},
-            {x: -300, z: 800, collected: false},
-            {x: 300, z: 800, collected: false},
-            {x: 0, z: 1000, collected: false}
+        let hasKey = false;
+        let isLevelComplete = false;
+
+        // Custom Static Platform Collision Boundaries
+        let platforms = [
+            { x: 0, y: 350, w: 250, h: 50 },
+            { x: 320, y: 290, w: 140, h: 20 },
+            { x: 520, y: 230, w: 180, h: 170 }
         ];
 
-        // 3D Stunt Obstacles (Loops & Launch Ramps)
-        let loops = [
-            {x: -150, z: 500, size: 40, color: '#bdc3c7'},
-            {x: 150, z: 700, size: 50, color: '#95a5a6'}
+        let spikes = [
+            { x: 250, y: 380, w: 70, h: 20 }
         ];
 
-        let ramps = [
-            {x: 0, z: 450, w: 60, h: 40, depth: 80, color: '#e67e22'}
-        ];
+        let goldenKey = { x: 390, y: 240, w: 15, h: 15, collected: false };
+        let ancientGate = { x: 620, y: 150, w: 20, h: 80, open: false };
+        let goalPortal = { x: 660, y: 180, w: 20, h: 50 };
 
-        let score = 0;
-        let keys = {};
+        let inputKeys = {};
+        window.addEventListener('keydown', e => inputKeys[e.code] = true);
+        window.addEventListener('keyup', e => inputKeys[e.code] = false);
 
-        // Clean Input Buffers to Prevent Sticking Controls
-        window.addEventListener('keydown', function(e) {
-            keys[e.code] = true;
-        });
-        window.addEventListener('keyup', function(e) {
-            keys[e.code] = false;
-        });
-
-        // Hard reset on tab blur to instantly kill stuck inputs
-        window.addEventListener('blur', function() {
-            keys = {};
-            car.speed = 0;
-        });
-
-        function update() {
-            let currentAccel = car.accel;
-            let currentMaxSpeed = car.maxSpeed;
-            
-            if (keys['ShiftLeft'] || keys['ShiftRight']) {
-                currentAccel = car.accel * 1.8;
-                currentMaxSpeed = car.maxSpeed * 1.5;
-            }
-
-            // Gas and Reverse Mechanics
-            if (keys['KeyW'] || keys['ArrowUp']) {
-                if (car.speed < currentMaxSpeed) car.speed += currentAccel;
-            } else if (keys['KeyS'] || keys['ArrowDown']) {
-                if (car.speed > -currentMaxSpeed / 2) car.speed -= currentAccel;
-            } else {
-                car.speed *= car.friction;
-                if (Math.abs(car.speed) < 0.05) car.speed = 0;
-            }
-
-            // Clean Turning Calculations
-            if (Math.abs(car.speed) > 0.1) {
-                let reverseTurn = car.speed < 0 ? -1 : 1;
-                if (keys['KeyA'] || keys['ArrowLeft']) car.angle -= car.turnSpeed * reverseTurn;
-                if (keys['KeyD'] || keys['ArrowRight']) car.angle += car.turnSpeed * reverseTurn;
-            }
-
-            // Ground vs Air Physics
-            if (!car.airborne) {
-                car.vx = Math.sin(car.angle) * car.speed;
-                car.vz = Math.cos(car.angle) * car.speed;
-                car.vy = 0;
-            } else {
-                car.vy += 0.25; // Gravity acceleration
-                car.y += car.vy;
-                if (car.y >= 0) {
-                    car.y = 0;
-                    car.vy = 0;
-                    car.airborne = false;
-                }
-            }
-
-            car.x += car.vx;
-            car.z += car.vz;
-
-            // Check Ramp Collision
-            ramps.forEach(ramp => {
-                if (car.x > ramp.x - ramp.w/2 && car.x < ramp.x + ramp.w/2 &&
-                    car.z > ramp.z && car.z < ramp.z + ramp.depth && car.y >= -ramp.h) {
-                    
-                    // Inside ramp boundary: Drive upwards or launch
-                    let progress = (car.z - ramp.z) / ramp.depth;
-                    car.y = -ramp.h * progress;
-
-                    if (progress >= 0.95 && car.speed > 2) {
-                        car.airborne = true;
-                        car.vy = -car.speed * 0.7; // Jump force vector
-                    }
-                }
-            });
-
-            // Boundary Walls Box
-            if (car.x < -600) { car.x = -600; car.speed *= -0.3; }
-            if (car.x > 600) { car.x = 600; car.speed *= -0.3; }
-            if (car.z < 50) { car.z = 50; car.speed *= -0.3; }
-            if (car.z > 1400) { car.z = 1400; car.speed *= -0.3; }
-
-            // Manual Hard Reset
-            if (keys['KeyR']) {
-                car.x = 0; car.y = 0; car.z = 100; car.speed = 0; car.angle = 0; car.airborne = false; car.vy = 0;
-            }
-
-            // Coin Intersection Loops
-            coins.forEach(coin => {
-                if (!coin.collected) {
-                    let dx = car.x - coin.x;
-                    let dz = car.z - coin.z;
-                    if (Math.sqrt(dx*dx + dz*dz) < 35 && Math.abs(car.y) < 30) {
-                        coin.collected = true;
-                        score++;
-                        scoreDisplay.innerText = score;
-                    }
-                }
-            });
+        function checkCollision(obj1, obj2) {
+            return obj1.x < obj2.x + obj2.w &&
+                   obj1.x + obj1.width > obj2.x &&
+                   obj1.y < obj2.y + obj2.h &&
+                   obj1.y + obj1.height > obj2.y;
         }
 
-        function project3D(x, y, z) {
-            let relX = x - car.x;
-            let relY = y - car.y;
-            let relZ = z - car.z;
+        function update() {
+            if (isLevelComplete) return;
 
-            let cos = Math.cos(-car.angle);
-            let sin = Math.sin(-car.angle);
+            // Slide Logic (S Key or Down Arrow)
+            if ((inputKeys['KeyS'] || inputKeys['ArrowDown']) && player.grounded && !player.sliding) {
+                player.sliding = true;
+                player.slideTimer = 25;
+                player.height = 18; // Lower hitbox footprint
+                player.y += 20;
+            }
+
+            if (player.sliding) {
+                player.slideTimer--;
+                if (inputKeys['KeyA'] || inputKeys['ArrowLeft']) player.vx -= 0.6;
+                if (inputKeys['KeyD'] || inputKeys['ArrowRight']) player.vx += 0.6;
+                
+                if (player.slideTimer <= 0) {
+                    player.sliding = false;
+                    player.height = 38;
+                    player.y -= 20;
+                }
+            } else {
+                // Horizontal Movement Input Mapping
+                if (inputKeys['KeyA'] || inputKeys['ArrowLeft']) player.vx -= 0.5;
+                if (inputKeys['KeyD'] || inputKeys['ArrowRight']) player.vx += 0.5;
+            }
+
+            // Jump Action
+            if ((inputKeys['KeyW'] || inputKeys['ArrowUp']) && player.grounded && !player.sliding) {
+                player.vy = -player.jumpForce;
+                player.grounded = false;
+            }
+
+            // Apply Basic Drag/Gravity Physics Vectors
+            player.vx *= friction;
+            player.vy += gravity;
+
+            player.x += player.vx;
             
-            let rotX = relX * cos - relZ * sin;
-            let rotZ = relX * sin + relZ * cos;
+            // X Axis Platform Collision Intersections
+            platforms.forEach(p => {
+                if (checkCollision(player, p)) {
+                    if (player.vx > 0) player.x = p.x - player.width;
+                    if (player.vx < 0) player.x = p.x + p.w;
+                }
+            });
 
-            if (rotZ <= 5) return null;
+            // Handle closed Gate boundaries
+            if (!ancientGate.open && checkCollision(player, ancientGate)) {
+                if (player.vx > 0) player.x = ancientGate.x - player.width;
+            }
 
-            let scale = fov / rotZ;
-            return {
-                x: cx + rotX * scale,
-                y: cy + (relY - 40) * scale, // Elevated camera position
-                size: scale
-            };
+            player.y += player.vy;
+            player.grounded = false;
+
+            // Y Axis Platform Collision Intersections
+            platforms.forEach(p => {
+                if (checkCollision(player, p)) {
+                    if (player.vy > 0) {
+                        player.y = p.y - player.height;
+                        player.vy = 0;
+                        player.grounded = true;
+                    } else if (player.vy < 0) {
+                        player.y = p.y + p.h;
+                        player.vy = 0;
+                    }
+                }
+            });
+
+            // Spikes Trap Core Intersection Hits
+            spikes.forEach(s => {
+                let hitBox = { x: player.x, y: player.y, width: player.width, height: player.height };
+                if (checkCollision(hitBox, s)) {
+                    resetPlayer();
+                }
+            });
+
+            // Golden Key Pickup Vector Checking
+            if (!goldenKey.collected) {
+                let coinBox = { x: player.x, y: player.y, width: player.width, height: player.height };
+                let targetKey = { x: goldenKey.x, y: goldenKey.y, width: goldenKey.w, height: goldenKey.h };
+                if (checkCollision(coinBox, targetKey)) {
+                    goldenKey.collected = true;
+                    hasKey = true;
+                    keysDisplay.innerText = "1";
+                    statusDisplay.innerText = "ANCIENT GATE UNLOCKED!";
+                }
+            }
+
+            // Unlocking Gate Event Checks
+            if (hasKey && Math.abs(player.x - ancientGate.x) < 40) {
+                ancientGate.open = true;
+            }
+
+            // Goal Completed Level Validation Check
+            let finalGoal = { x: goalPortal.x, y: goalPortal.y, width: goalPortal.w, height: goalPortal.h };
+            if (checkCollision(player, finalGoal)) {
+                isLevelComplete = true;
+                statusDisplay.innerText = "VICTORY! SQUIGGLE PORTAL REACHED!";
+            }
+
+            // Screen Border Bottom Fall Pit Fail
+            if (player.y > canvas.height) {
+                resetPlayer();
+            }
+        }
+
+        function resetPlayer() {
+            player.x = 80;
+            player.y = 200;
+            player.vx = 0;
+            player.vy = 0;
+            player.sliding = false;
+            player.height = 38;
         }
 
         function draw() {
-            // Draw Sky and Ground Panels
-            ctx.fillStyle = '#1a2436'; ctx.fillRect(0, 0, 700, 200);
-            ctx.fillStyle = '#2c3e50'; ctx.fillRect(0, 200, 700, 200);
-            ctx.strokeStyle = '#34495e'; ctx.lineWidth = 2;
-            ctx.beginPath(); ctx.moveTo(0, 200); ctx.lineTo(700, 200); ctx.stroke();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            let renderQueue = [];
-
-            // Project Coins
-            coins.forEach(coin => {
-                if (!coin.collected) {
-                    let proj = project3D(coin.x, 0, coin.z);
-                    if (proj) renderQueue.push({ z: coin.z - car.z, type: 'coin', p: proj });
-                }
+            // 1. Draw Safe Environment Platforms
+            ctx.fillStyle = '#2c3e50';
+            platforms.forEach(p => {
+                ctx.fillRect(p.x, p.y, p.w, p.h);
             });
 
-            // Project Loops
-            loops.forEach(loop => {
-                let proj = project3D(loop.x, -loop.size, loop.z);
-                if (proj) renderQueue.push({ z: loop.z - car.z, type: 'loop', p: proj, orig: loop });
+            // 2. Draw Danger Spike Obstacles
+            ctx.fillStyle = '#e74c3c';
+            spikes.forEach(s => {
+                ctx.fillRect(s.x, s.y, s.w, s.h);
             });
 
-            // Project Ramps
-            ramps.forEach(ramp => {
-                let projStart = project3D(ramp.x, 0, ramp.z);
-                let projEnd = project3D(ramp.x, -ramp.h, ramp.z + ramp.depth);
-                if (projStart && projEnd) {
-                    renderQueue.push({ z: ramp.z - car.z, type: 'ramp', p1: projStart, p2: projEnd, orig: ramp });
-                }
-            });
+            // 3. Draw Golden Key Entity
+            if (!goldenKey.collected) {
+                ctx.fillStyle = '#f1c40f';
+                ctx.fillRect(goldenKey.x, goldenKey.y, goldenKey.w, goldenKey.h);
+            }
 
-            // Painters Depth Sorting Loop
-            renderQueue.sort((a, b) => b.z - a.z);
+            // 4. Draw Interactive Lock Gate Structure
+            if (!ancientGate.open) {
+                ctx.fillStyle = '#7f8c8d';
+                ctx.fillRect(ancientGate.x, ancientGate.y, ancientGate.w, ancientGate.h);
+            }
 
-            renderQueue.forEach(obj => {
-                let p = obj.p;
-                if (obj.type === 'coin') {
-                    let r = Math.max(2, 6 * p.size * 0.05);
-                    ctx.fillStyle = '#58a6ff'; ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.fill();
-                    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.stroke();
-                } 
-                else if (obj.type === 'loop') {
-                    let size = obj.orig.size * p.size * 0.05;
-                    ctx.strokeStyle = obj.orig.color; ctx.lineWidth = Math.max(2, p.size * 0.15);
-                    ctx.beginPath(); ctx.arc(p.x, p.y, size, 0, Math.PI * 2); ctx.stroke();
-                }
-                else if (obj.type === 'ramp') {
-                    let w1 = obj.orig.w * obj.p1.size * 0.05;
-                    let w2 = obj.orig.w * obj.p2.size * 0.05;
-                    ctx.fillStyle = obj.orig.color;
-                    ctx.beginPath();
-                    ctx.moveTo(obj.p1.x - w1, obj.p1.y);
-                    ctx.lineTo(obj.p1.x + w1, obj.p1.y);
-                    ctx.lineTo(obj.p2.x + w2, obj.p2.y);
-                    ctx.lineTo(obj.p2.x - w2, obj.p2.y);
-                    ctx.closePath(); ctx.fill();
-                    ctx.strokeStyle = '#fff'; ctx.stroke();
-                }
-            });
+            // 5. Draw Goal Finish Squiggle Region
+            ctx.fillStyle = '#2ecc71';
+            ctx.fillRect(goalPortal.x, goalPortal.y, goalPortal.w, goalPortal.h);
 
-            // First Person Hood Overlay
-            ctx.fillStyle = '#ff2a2a'; 
+            // 6. Paint Animated Vector Stickman Entity
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 3;
+
+            let centerX = player.x + player.width / 2;
+            let headY = player.y + 6;
+
+            if (player.sliding) {
+                // Modified Sliding Geometry Profiles
+                ctx.beginPath();
+                ctx.arc(player.x + 12, player.y + 6, 5, 0, Math.PI * 2);
+                ctx.fillStyle = '#fff'; ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(player.x + 12, player.y + 6);
+                ctx.lineTo(player.x, player.y + 12);
+                ctx.stroke();
+            } else {
+                // Standing/Jumping Classical Stick Skeleton Vector Layouts
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(centerX, headY, 5, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Spine/Torso Line
+                ctx.beginPath();
+                ctx.moveTo(centerX, headY + 5);
+                ctx.lineTo(centerX, headY + 20);
+
+                // Arm Lines
+                ctx.moveTo(centerX, headY + 8);
+                ctx.lineTo(centerX - 10, headY + 14);
+                ctx.moveTo(centerX, headY + 8);
+                ctx.lineTo(centerX + 10, headY + 14);
+
