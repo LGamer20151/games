@@ -46,7 +46,7 @@
     </header>
 
     <div class="ui-panel">
-        Coins Collected: <span id="hud-score">0</span> / 5 | WASD / Arrows = Drive | SHIFT = Nitro | Space = Handbrake | R = Reset
+        Coins Collected: <span id="hud-score">0</span> / 5 | WASD / Arrows = Drive | Shift = Nitro | Space = Handbrake | R = Reset
     </div>
 
     <canvas id="gameCanvas" width="700" height="400"></canvas>
@@ -56,7 +56,6 @@
         const ctx = canvas.getContext('2d');
         const scoreDisplay = document.getElementById('hud-score');
 
-        // Car Physics Variables
         let car = {
             x: 120, y: 240,
             vx: 0, vy: 0,
@@ -77,17 +76,16 @@
         ];
 
         let ramps = [
-            { x: 300, y: 180, w: 80, h: 40, angle: -0.2 }
+            { x: 300, y: 180, w: 80, h: 40 }
         ];
 
         let score = 0;
         let keys = {};
 
-        window.addEventListener('keydown', e => keys[e.code] = true);
-        window.addEventListener('keyup', e => keys[e.code] = false);
+        window.addEventListener('keydown', function(e) { keys[e.code] = true; });
+        window.addEventListener('keyup', function(e) { keys[e.code] = false; });
 
         function update() {
-            // Nitro Boost
             let currentAccel = car.accel;
             let currentMaxSpeed = car.maxSpeed;
             if (keys['ShiftLeft'] || keys['ShiftRight']) {
@@ -95,7 +93,6 @@
                 currentMaxSpeed = car.maxSpeed * 1.5;
             }
 
-            // Drive Controls
             if (keys['KeyW'] || keys['ArrowUp']) {
                 if (car.speed < currentMaxSpeed) car.speed += currentAccel;
             } else if (keys['KeyS'] || keys['ArrowDown']) {
@@ -104,37 +101,32 @@
                 car.speed *= car.friction;
             }
 
-            // Handbrake Stop
             if (keys['Space']) {
                 car.speed *= 0.85;
             }
 
-            // Steering Logic
             if (Math.abs(car.speed) > 0.2) {
                 let reverseTurn = car.speed < 0 ? -1 : 1;
                 if (keys['KeyA'] || keys['ArrowLeft']) car.angle -= car.turnSpeed * reverseTurn;
                 if (keys['KeyD'] || keys['ArrowRight']) car.angle += car.turnSpeed * reverseTurn;
             }
 
-            // Map Vectors Movement
             car.vx = Math.cos(car.angle) * car.speed;
             car.vy = Math.sin(car.angle) * car.speed;
             car.x += car.vx;
             car.y += car.vy;
 
-            // Screen Border Hard Limits
             if (car.x < 20) { car.x = 20; car.speed *= -0.4; }
             if (car.x > 680) { car.x = 680; car.speed *= -0.4; }
             if (car.y < 20) { car.y = 20; car.speed *= -0.4; }
             if (car.y > 380) { car.y = 380; car.speed *= -0.4; }
 
-            // Manual Car Reset Trigger
             if (keys['KeyR']) {
                 car.x = 120; car.y = 240; car.speed = 0; car.angle = 0;
             }
 
-            // Collectible Blue Coin Intersections
-            coins.forEach(coin => {
+            for (let i = 0; i < coins.length; i++) {
+                let coin = coins[i];
                 if (!coin.collected) {
                     let dx = car.x - coin.x;
                     let dy = car.y - coin.y;
@@ -144,54 +136,48 @@
                         scoreDisplay.innerText = score;
                     }
                 }
-            });
+            }
         }
 
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 1. Draw Arena Boundary Edges
             ctx.strokeStyle = '#30363d'; ctx.lineWidth = 8;
             ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
 
-            // 2. Draw Stunt Obstacle Ramps
-            ramps.forEach(r => {
+            for (let i = 0; i < ramps.length; i++) {
+                let r = ramps[i];
                 ctx.fillStyle = '#7f8c8d';
                 ctx.fillRect(r.x, r.y, r.w, r.h);
                 ctx.strokeStyle = '#95a5a6'; ctx.lineWidth = 2;
                 ctx.strokeRect(r.x, r.y, r.w, r.h);
-            });
+            }
 
-            // 3. Draw Blue Target Rewards Coins
-            coins.forEach(coin => {
+            for (let i = 0; i < coins.length; i++) {
+                let coin = coins[i];
                 if (!coin.collected) {
                     ctx.fillStyle = '#58a6ff';
                     ctx.beginPath(); ctx.arc(coin.x, coin.y, 8, 0, Math.PI * 2); ctx.fill();
                     ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
                 }
-            });
+            }
 
-            // 4. Render Sports Car Chassis Model
             ctx.save();
             ctx.translate(car.x, car.y);
             ctx.rotate(car.angle);
 
-            // Base Body Shell
             ctx.fillStyle = '#ff2a2a';
             ctx.fillRect(-22, -12, 44, 24);
 
-            // Cockpit Windshield Frame
             ctx.fillStyle = '#111';
             ctx.fillRect(-6, -9, 16, 18);
-            ctx.fillStyle = '#a5d6a7'; // Windows glass highlight tint
+            ctx.fillStyle = '#a5d6a7'; 
             ctx.fillRect(-2, -7, 10, 14);
 
-            // Headlights Nodes
             ctx.fillStyle = '#f1c40f';
             ctx.fillRect(18, -10, 4, 4);
             ctx.fillRect(18, 6, 4, 4);
 
-            // Rear Nitro Exhaust Flame (Only active when boosting)
             if ((keys['ShiftLeft'] || keys['ShiftRight']) && Math.abs(car.speed) > 1) {
                 ctx.fillStyle = '#ff9800';
                 ctx.beginPath();
