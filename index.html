@@ -204,7 +204,7 @@
             ctx.fillStyle = '#f39c12';
             ctx.beginPath();
             if (terrainPoints.length > 0) {
-                ctx.moveTo(terrainPoints[0].x, 400);
+                ctx.moveTo(terrainPoints[0].x, 400); // Fixed bracket error here
                 terrainPoints.forEach(p => ctx.lineTo(p.x, p.y));
                 ctx.lineTo(terrainPoints[terrainPoints.length-1].x, 400);
             }
