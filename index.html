@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Classroom Physics Workspace</title>
+    <title>Classroom Workspace Module</title>
     <style>
         body { 
             background-color: #0b0f17; 
@@ -29,31 +29,24 @@
             margin: 12px 0;
             font-size: 16px;
             font-weight: bold;
-            display: flex;
-            gap: 20px;
         }
-        #hud-timer { color: #ff9800; }
-        #hud-stars { color: #f1c40f; }
-        #hud-level { color: #2ecc71; }
+        #hud-score { color: #f1c40f; }
         canvas {
-            background-color: #74b9ff;
+            background-color: #2c3e50;
             border: 2px solid #30363d;
             border-radius: 8px;
             box-shadow: 0 6px 20px rgba(0,0,0,0.6);
-            cursor: pointer;
         }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>Vector Bike Trials Simulation Matrix</h1>
+        <h1>3D Madalin Stunt Driving Matrix</h1>
     </header>
 
     <div class="ui-panel">
-        <span id="hud-level">LEVEL SELECTOR</span> 
-        <span id="hud-timer">Time: 0.0s</span> 
-        <span id="hud-stars">&#11088; Stars: 0</span>
+        Coins Collected: <span id="hud-score">0</span> / 5 | WASD / Arrows = Drive | SHIFT = Nitro | Space = Handbrake | R = Reset
     </div>
 
     <canvas id="gameCanvas" width="700" height="400"></canvas>
@@ -61,182 +54,161 @@
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        const timerDisplay = document.getElementById('hud-timer');
-        const starsDisplay = document.getElementById('hud-stars');
-        const levelDisplay = document.getElementById('hud-level');
+        const scoreDisplay = document.getElementById('hud-score');
 
-        const gravity = 0.16;
-        const groundY = 330;
-
-        let gameState = 'MENU'; 
-        let currentLevel = 1;
-        let totalStars = 0;
-        let activeBikeType = 'ORANGE'; 
-        
-        let timeElapsed = 0;
-        let terrainPoints = [];
-        let checkpointX = 80;
-        let checkpointY = 160;
-        let checkpointReached = false;
-
-        let levelsProgress = {};
-        for (let l = 1; l <= 22; l++) {
-            levelsProgress[l] = { unlocked: l === 1 ? true : false, cleared: false };
-        }
-
-        const bikesData = {
-            'ORANGE': { color: '#e67e22', speed: 0.20, weight: 1.0, cost: 0, unlocked: true, name: 'Default Orange' },
-            'RED_NINJA': { color: '#e74c3c', speed: 0.24, weight: 0.95, cost: 15, unlocked: false, name: 'Ninja Red' },
-            'FLAMING_GHOST': { color: '#7f8c8d', speed: 0.28, weight: 0.90, cost: 40, unlocked: false, name: 'Ghost Rider' }
+        // Car Physics Variables
+        let car = {
+            x: 120, y: 240,
+            vx: 0, vy: 0,
+            angle: 0,
+            speed: 0,
+            maxSpeed: 7,
+            accel: 0.12,
+            friction: 0.96,
+            turnSpeed: 0.045
         };
 
-        let bike = { x: 80, y: 200, vx: 0, vy: 0, angle: 0, rotVel: 0, radius: 14, onGround: false };
+        let coins = [
+            { x: 350, y: 120, collected: false },
+            { x: 550, y: 150, collected: false },
+            { x: 200, y: 320, collected: false },
+            { x: 500, y: 300, collected: false },
+            { x: 450, y: 220, collected: false }
+        ];
 
-        function initLevelTerrain(lvl) {
-            terrainPoints = [];
-            checkpointX = 80; checkpointY = 160; checkpointReached = false;
-            
-            let freq = 0.01 + (lvl * 0.0015);
-            let amp = 24 + (lvl * 1.5);
+        let ramps = [
+            { x: 300, y: 180, w: 80, h: 40, angle: -0.2 }
+        ];
 
-            for (let x = 0; x <= 1600; x += 25) {
-                let y = groundY + Math.sin(x * freq) * amp;
-                if (lvl % 2 === 0 && x > 400 && x < 550) y -= (x - 400) * 0.6; 
-                if (lvl % 3 === 0 && x > 650 && x < 750) y = 520; 
-                if (lvl > 5 && x > 850 && x < 1050) y += Math.cos(x * 0.04) * 22; 
-                terrainPoints.push({ x: x, y: y });
-            }
-        }
-
-        function getGroundHeight(xX) {
-            if (terrainPoints.length === 0) return groundY;
-            for (let i = 0; i < terrainPoints.length - 1; i++) {
-                if (xX >= terrainPoints[i].x && xX <= terrainPoints[i+1].x) {
-                    let r = (xX - terrainPoints[i].x) / (terrainPoints[i+1].x - terrainPoints[i].x);
-                    return terrainPoints[i].y + r * (terrainPoints[i+1].y - terrainPoints[i].y);
-                }
-            }
-            return groundY;
-        }
-
+        let score = 0;
         let keys = {};
+
         window.addEventListener('keydown', e => keys[e.code] = true);
         window.addEventListener('keyup', e => keys[e.code] = false);
 
-        canvas.addEventListener('mousedown', function(e) {
-            const rect = canvas.getBoundingClientRect();
-            const mX = e.clientX - rect.left;
-            const mY = e.clientY - rect.top;
-
-            if (gameState === 'MENU') {
-                if (mX > 540 && mX < 660 && mY > 15 && mY < 55) {
-                    gameState = 'SHOP';
-                    return;
-                }
-
-                let startX = 60, startY = 90, spacingX = 85, spacingY = 65, btnW = 65, btnH = 45;
-                let lvlIndex = 1;
-
-                for (let row = 0; row < 4; row++) {
-                    for (let col = 0; col < 6; col++) {
-                        if (lvlIndex > 22) break;
-                        let bX = startX + col * spacingX;
-                        let bY = startY + row * spacingY;
-                        if (mX > bX && mX < bX + btnW && mY > bY && mY < bY + btnH) {
-                            if (levelsProgress[lvlIndex].unlocked) {
-                                currentLevel = lvlIndex;
-                                gameState = 'PLAYING';
-                                timeElapsed = 0;
-                                resetBikePosition();
-                                initLevelTerrain(currentLevel);
-                            }
-                        }
-                        lvlIndex++;
-                    }
-                }
-            } 
-            else if (gameState === 'SHOP') {
-                if (mX > 20 && mX < 120 && mY > 20 && mY < 60) gameState = 'MENU';
-                if (mX > 80 && mX < 280 && mY > 280 && mY < 320) handleShopPurchase('RED_NINJA');
-                if (mX > 420 && mX < 620 && mY > 280 && mY < 320) handleShopPurchase('FLAMING_GHOST');
-            }
-        });
-
-        function handleShopPurchase(type) {
-            if (bikesData[type].unlocked) {
-                activeBikeType = type;
-            } else if (totalStars >= bikesData[type].cost) {
-                totalStars -= bikesData[type].cost;
-                bikesData[type].unlocked = true;
-                activeBikeType = type;
-                starsDisplay.innerText = '⭐ Stars: ' + totalStars;
-            }
-        }
-
-        function resetBikePosition() {
-            bike.x = checkpointX; bike.y = checkpointY; bike.vx = 0; bike.vy = 0; bike.angle = 0; bike.rotVel = 0;
-        }
-
         function update() {
-            if (gameState !== 'PLAYING') {
-                if ((gameState === 'CRASHED' || gameState === 'VICTORY') && keys['Space']) {
-                    if (gameState === 'VICTORY') {
-                        levelsProgress[currentLevel].cleared = true;
-                        if (currentLevel < 22) levelsProgress[currentLevel + 1].unlocked = true;
-                        gameState = 'MENU'; 
-                    } else {
-                        gameState = 'PLAYING';
-                        resetBikePosition();
+            // Nitro Boost
+            let currentAccel = car.accel;
+            let currentMaxSpeed = car.maxSpeed;
+            if (keys['ShiftLeft'] || keys['ShiftRight']) {
+                currentAccel = car.accel * 1.8;
+                currentMaxSpeed = car.maxSpeed * 1.5;
+            }
+
+            // Drive Controls
+            if (keys['KeyW'] || keys['ArrowUp']) {
+                if (car.speed < currentMaxSpeed) car.speed += currentAccel;
+            } else if (keys['KeyS'] || keys['ArrowDown']) {
+                if (car.speed > -currentMaxSpeed / 2) car.speed -= currentAccel;
+            } else {
+                car.speed *= car.friction;
+            }
+
+            // Handbrake Stop
+            if (keys['Space']) {
+                car.speed *= 0.85;
+            }
+
+            // Steering Logic
+            if (Math.abs(car.speed) > 0.2) {
+                let reverseTurn = car.speed < 0 ? -1 : 1;
+                if (keys['KeyA'] || keys['ArrowLeft']) car.angle -= car.turnSpeed * reverseTurn;
+                if (keys['KeyD'] || keys['ArrowRight']) car.angle += car.turnSpeed * reverseTurn;
+            }
+
+            // Map Vectors Movement
+            car.vx = Math.cos(car.angle) * car.speed;
+            car.vy = Math.sin(car.angle) * car.speed;
+            car.x += car.vx;
+            car.y += car.vy;
+
+            // Screen Border Hard Limits
+            if (car.x < 20) { car.x = 20; car.speed *= -0.4; }
+            if (car.x > 680) { car.x = 680; car.speed *= -0.4; }
+            if (car.y < 20) { car.y = 20; car.speed *= -0.4; }
+            if (car.y > 380) { car.y = 380; car.speed *= -0.4; }
+
+            // Manual Car Reset Trigger
+            if (keys['KeyR']) {
+                car.x = 120; car.y = 240; car.speed = 0; car.angle = 0;
+            }
+
+            // Collectible Blue Coin Intersections
+            coins.forEach(coin => {
+                if (!coin.collected) {
+                    let dx = car.x - coin.x;
+                    let dy = car.y - coin.y;
+                    if (Math.sqrt(dx*dx + dy*dy) < 22) {
+                        coin.collected = true;
+                        score++;
+                        scoreDisplay.innerText = score;
                     }
                 }
-                return;
-            }
-
-            timeElapsed += 1/60;
-            timerDisplay.innerText = 'Time: ' + timeElapsed.toFixed(1) + 's';
-            levelDisplay.innerText = 'STAGE: ' + currentLevel + ' / 22';
-
-            let stats = bikesData[activeBikeType];
-            if (keys['KeyW'] || keys['ArrowUp']) { bike.vx += Math.cos(bike.angle) * stats.speed; bike.vy += Math.sin(bike.angle) * stats.speed; }
-            if (keys['KeyS'] || keys['ArrowDown']) bike.vx *= 0.90;
-            if (keys['KeyA'] || keys['ArrowLeft']) bike.rotVel -= 0.006;
-            if (keys['KeyD'] || keys['ArrowRight']) bike.rotVel += 0.006;
-
-            bike.rotVel *= 0.93; bike.angle += bike.rotVel; bike.vy += gravity * stats.weight; bike.vx *= 0.985; bike.x += bike.vx; bike.y += bike.vy;
-
-            let currentFloorY = getGroundHeight(bike.x);
-            if (bike.y + bike.radius >= currentFloorY) {
-                bike.y = currentFloorY - bike.radius; bike.vy = 0; bike.onGround = true;
-                let groundSlopeAngle = Math.atan2(getGroundHeight(bike.x + 15) - currentFloorY, 15);
-                bike.angle = bike.angle * 0.72 + groundSlopeAngle * 0.28;
-            } else {
-                bike.onGround = false;
-            }
-
-            if (!checkpointReached && bike.x >= 600) { checkpointReached = true; checkpointX = 600; checkpointY = getGroundHeight(600) - 30; }
-
-            let normalizedAngle = Math.abs((bike.angle + Math.PI) % (Math.PI * 2) - Math.PI);
-            if ((bike.onGround && normalizedAngle > 1.38) || bike.y > 420) gameState = 'CRASHED';
-            if (bike.x >= 1350) gameState = 'VICTORY';
+            });
         }
 
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            if (gameState === 'MENU') {
-                ctx.fillStyle = '#161b22'; ctx.fillRect(0, 0, 700, 400);
-                ctx.fillStyle = '#fff'; ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'left'; ctx.fillText('SELECT CHALLENGE STAGE', 50, 45);
-                
-                ctx.fillStyle = '#ff9800'; ctx.fillRect(540, 15, 120, 40);
-                ctx.fillStyle = '#fff'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('GARAGE SHOP', 600, 40);
+            // 1. Draw Arena Boundary Edges
+            ctx.strokeStyle = '#30363d'; ctx.lineWidth = 8;
+            ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
 
-                let startX = 60, startY = 90, spacingX = 85, spacingY = 65, btnW = 65, btnH = 45;
-                let lvlIndex = 1;
+            // 2. Draw Stunt Obstacle Ramps
+            ramps.forEach(r => {
+                ctx.fillStyle = '#7f8c8d';
+                ctx.fillRect(r.x, r.y, r.w, r.h);
+                ctx.strokeStyle = '#95a5a6'; ctx.lineWidth = 2;
+                ctx.strokeRect(r.x, r.y, r.w, r.h);
+            });
 
-                for (let row = 0; row < 4; row++) {
-                    for (let col = 0; col < 6; col++) {
-                        if (lvlIndex > 22) break;
-                        let bX = startX + col * spacingX;
-                        let bY = startY + row * spacingY;
-                        let prog = levelsProgress[lvlIndex];
+            // 3. Draw Blue Target Rewards Coins
+            coins.forEach(coin => {
+                if (!coin.collected) {
+                    ctx.fillStyle = '#58a6ff';
+                    ctx.beginPath(); ctx.arc(coin.x, coin.y, 8, 0, Math.PI * 2); ctx.fill();
+                    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+                }
+            });
 
+            // 4. Render Sports Car Chassis Model
+            ctx.save();
+            ctx.translate(car.x, car.y);
+            ctx.rotate(car.angle);
+
+            // Base Body Shell
+            ctx.fillStyle = '#ff2a2a';
+            ctx.fillRect(-22, -12, 44, 24);
+
+            // Cockpit Windshield Frame
+            ctx.fillStyle = '#111';
+            ctx.fillRect(-6, -9, 16, 18);
+            ctx.fillStyle = '#a5d6a7'; // Windows glass highlight tint
+            ctx.fillRect(-2, -7, 10, 14);
+
+            // Headlights Nodes
+            ctx.fillStyle = '#f1c40f';
+            ctx.fillRect(18, -10, 4, 4);
+            ctx.fillRect(18, 6, 4, 4);
+
+            // Rear Nitro Exhaust Flame (Only active when boosting)
+            if ((keys['ShiftLeft'] || keys['ShiftRight']) && Math.abs(car.speed) > 1) {
+                ctx.fillStyle = '#ff9800';
+                ctx.beginPath();
+                ctx.moveTo(-22, -4); ctx.lineTo(-38, 0); ctx.lineTo(-22, 4);
+                ctx.fill();
+            }
+
+            ctx.restore();
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
