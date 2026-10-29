@@ -78,7 +78,6 @@
         let hasKey = false;
         let isLevelComplete = false;
 
-        // Custom Static Platform Collision Boundaries
         let platforms = [
             { x: 0, y: 350, w: 250, h: 50 },
             { x: 320, y: 290, w: 140, h: 20 },
@@ -94,8 +93,8 @@
         let goalPortal = { x: 660, y: 180, w: 20, h: 50 };
 
         let inputKeys = {};
-        window.addEventListener('keydown', e => inputKeys[e.code] = true);
-        window.addEventListener('keyup', e => inputKeys[e.code] = false);
+        window.addEventListener('keydown', function(e) { inputKeys[e.code] = true; });
+        window.addEventListener('keyup', function(e) { inputKeys[e.code] = false; });
 
         function checkCollision(obj1, obj2) {
             return obj1.x < obj2.x + obj2.w &&
@@ -107,11 +106,10 @@
         function update() {
             if (isLevelComplete) return;
 
-            // Slide Logic (S Key or Down Arrow)
             if ((inputKeys['KeyS'] || inputKeys['ArrowDown']) && player.grounded && !player.sliding) {
                 player.sliding = true;
                 player.slideTimer = 25;
-                player.height = 18; // Lower hitbox footprint
+                player.height = 18; 
                 player.y += 20;
             }
 
@@ -126,32 +124,28 @@
                     player.y -= 20;
                 }
             } else {
-                // Horizontal Movement Input Mapping
                 if (inputKeys['KeyA'] || inputKeys['ArrowLeft']) player.vx -= 0.5;
                 if (inputKeys['KeyD'] || inputKeys['ArrowRight']) player.vx += 0.5;
             }
 
-            // Jump Action
             if ((inputKeys['KeyW'] || inputKeys['ArrowUp']) && player.grounded && !player.sliding) {
                 player.vy = -player.jumpForce;
                 player.grounded = false;
             }
 
-            // Apply Basic Drag/Gravity Physics Vectors
             player.vx *= friction;
             player.vy += gravity;
 
             player.x += player.vx;
             
-            // X Axis Platform Collision Intersections
-            platforms.forEach(p => {
+            for (let i = 0; i < platforms.length; i++) {
+                let p = platforms[i];
                 if (checkCollision(player, p)) {
                     if (player.vx > 0) player.x = p.x - player.width;
                     if (player.vx < 0) player.x = p.x + p.w;
                 }
-            });
+            }
 
-            // Handle closed Gate boundaries
             if (!ancientGate.open && checkCollision(player, ancientGate)) {
                 if (player.vx > 0) player.x = ancientGate.x - player.width;
             }
@@ -159,8 +153,8 @@
             player.y += player.vy;
             player.grounded = false;
 
-            // Y Axis Platform Collision Intersections
-            platforms.forEach(p => {
+            for (let i = 0; i < platforms.length; i++) {
+                let p = platforms[i];
                 if (checkCollision(player, p)) {
                     if (player.vy > 0) {
                         player.y = p.y - player.height;
@@ -171,41 +165,37 @@
                         player.vy = 0;
                     }
                 }
-            });
+            }
 
-            // Spikes Trap Core Intersection Hits
-            spikes.forEach(s => {
+            for (let i = 0; i < spikes.length; i++) {
+                let s = spikes[i];
                 let hitBox = { x: player.x, y: player.y, width: player.width, height: player.height };
                 if (checkCollision(hitBox, s)) {
                     resetPlayer();
                 }
-            });
+            }
 
-            // Golden Key Pickup Vector Checking
             if (!goldenKey.collected) {
                 let coinBox = { x: player.x, y: player.y, width: player.width, height: player.height };
                 let targetKey = { x: goldenKey.x, y: goldenKey.y, width: goldenKey.w, height: goldenKey.h };
                 if (checkCollision(coinBox, targetKey)) {
                     goldenKey.collected = true;
                     hasKey = true;
-                    keysDisplay.innerText = "1";
-                    statusDisplay.innerText = "ANCIENT GATE UNLOCKED!";
+                    keysDisplay.innerText = '1';
+                    statusDisplay.innerText = 'ANCIENT GATE UNLOCKED!';
                 }
             }
 
-            // Unlocking Gate Event Checks
             if (hasKey && Math.abs(player.x - ancientGate.x) < 40) {
                 ancientGate.open = true;
             }
 
-            // Goal Completed Level Validation Check
             let finalGoal = { x: goalPortal.x, y: goalPortal.y, width: goalPortal.w, height: goalPortal.h };
             if (checkCollision(player, finalGoal)) {
                 isLevelComplete = true;
-                statusDisplay.innerText = "VICTORY! SQUIGGLE PORTAL REACHED!";
+                statusDisplay.innerText = 'VICTORY!';
             }
 
-            // Screen Border Bottom Fall Pit Fail
             if (player.y > canvas.height) {
                 resetPlayer();
             }
@@ -223,35 +213,29 @@
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 1. Draw Safe Environment Platforms
             ctx.fillStyle = '#2c3e50';
-            platforms.forEach(p => {
-                ctx.fillRect(p.x, p.y, p.w, p.h);
-            });
+            for (let i = 0; i < platforms.length; i++) {
+                ctx.fillRect(platforms[i].x, platforms[i].y, platforms[i].w, platforms[i].h);
+            }
 
-            // 2. Draw Danger Spike Obstacles
             ctx.fillStyle = '#e74c3c';
-            spikes.forEach(s => {
-                ctx.fillRect(s.x, s.y, s.w, s.h);
-            });
+            for (let i = 0; i < spikes.length; i++) {
+                ctx.fillRect(spikes[i].x, spikes[i].y, spikes[i].w, spikes[i].h);
+            }
 
-            // 3. Draw Golden Key Entity
             if (!goldenKey.collected) {
                 ctx.fillStyle = '#f1c40f';
                 ctx.fillRect(goldenKey.x, goldenKey.y, goldenKey.w, goldenKey.h);
             }
 
-            // 4. Draw Interactive Lock Gate Structure
             if (!ancientGate.open) {
                 ctx.fillStyle = '#7f8c8d';
                 ctx.fillRect(ancientGate.x, ancientGate.y, ancientGate.w, ancientGate.h);
             }
 
-            // 5. Draw Goal Finish Squiggle Region
             ctx.fillStyle = '#2ecc71';
             ctx.fillRect(goalPortal.x, goalPortal.y, goalPortal.w, goalPortal.h);
 
-            // 6. Paint Animated Vector Stickman Entity
             ctx.strokeStyle = '#ffffff';
             ctx.lineWidth = 3;
 
@@ -259,7 +243,6 @@
             let headY = player.y + 6;
 
             if (player.sliding) {
-                // Modified Sliding Geometry Profiles
                 ctx.beginPath();
                 ctx.arc(player.x + 12, player.y + 6, 5, 0, Math.PI * 2);
                 ctx.fillStyle = '#fff'; ctx.fill();
@@ -268,20 +251,42 @@
                 ctx.lineTo(player.x, player.y + 12);
                 ctx.stroke();
             } else {
-                // Standing/Jumping Classical Stick Skeleton Vector Layouts
                 ctx.fillStyle = '#ffffff';
                 ctx.beginPath();
                 ctx.arc(centerX, headY, 5, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Spine/Torso Line
                 ctx.beginPath();
                 ctx.moveTo(centerX, headY + 5);
                 ctx.lineTo(centerX, headY + 20);
 
-                // Arm Lines
                 ctx.moveTo(centerX, headY + 8);
                 ctx.lineTo(centerX - 10, headY + 14);
                 ctx.moveTo(centerX, headY + 8);
                 ctx.lineTo(centerX + 10, headY + 14);
 
+                ctx.moveTo(centerX, headY + 20);
+                ctx.lineTo(centerX - 8, headY + 34);
+                ctx.moveTo(centerX, headY + 20);
+                ctx.lineTo(centerX + 8, headY + 34);
+                ctx.stroke();
+            }
+
+            if (isLevelComplete) {
+                ctx.fillStyle = 'rgba(0,0,0,0.7)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#2ecc71'; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'center';
+                ctx.fillText('STAGE COMPLETED!', 350, 200);
+            }
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
