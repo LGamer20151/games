@@ -3,27 +3,269 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Classroom Math Simulator</title>
+    <title>Classroom Physics Workspace</title>
     <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: #000;
+        body { 
+            background-color: #0b0f17; 
+            color: #c9d1d9; 
+            font-family: sans-serif; 
+            margin: 0; 
+            padding: 0; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            min-height: 100vh;
+            user-select: none;
         }
-        embed {
+        header {
+            text-align: center;
+            padding: 12px;
+            border-bottom: 2px solid #24292f;
             width: 100%;
-            height: 100%;
-            border: none;
+            background: #161b22;
+        }
+        h1 { margin: 0; color: #58a6ff; font-size: 22px; }
+        .ui-panel {
+            margin: 12px 0;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        #hud { color: #ff9800; }
+        #checkpoint-msg { color: #2ecc71; margin-left: 15px; display: none; }
+        canvas {
+            background-color: #74b9ff; /* Beach sky backdrop */
+            border: 2px solid #30363d;
+            border-radius: 8px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.6);
         }
     </style>
 </head>
 <body>
 
-    <!-- Encrypted Proxy Game Portal Stream -->
-    <embed src="data:text/html;base64,PGh0bWw+PGhlYWQ+PHN0eWxlPmJvZHksaHRtbHt3aWR0aDoxMDAlO2hlaWdodDoxMDAlO21hcmdpbjowO3BhZGRpbmc6MDtvdmVyZmxvdzpoaWRkZW47YmFja2dyb3VuZDojMDAwO31pZnJhbWV7d2lkdGg6MTAwJTtoZWlnaHQ6MTAwJTtib3JkZXI6bm9uZTt9PC9zdHlsZT48L2hlYWQ+PGJvZHk+PGlmcmFtZSBzcmM9Imh0dHBzOi8vdW5ibG9ja2VkLWdhbWVzczMuYW1hem9uYXdzLmNvbS9tb3RvLXgzbS5odG1sIiBhbGxvd2Z1bGxzY3JlZW49InRydWUiIHNjcm9sbGluZz0ibm8iPjwvaWZyYW1lPjwvYm9keT48L2h0bWw+"></embed>
+    <header>
+        <h1>Vector Bike Trials Simulation Matrix</h1>
+    </header>
 
-</body>
-</html>
+    <div class="ui-panel">
+        Time: <span id="hud">0.0s</span> | W = Gas | S = Brake | A/D = Balance & Flips <span id="checkpoint-msg">CHECKPOINT!</span>
+    </div>
+
+    <canvas id="gameCanvas" width="700" height="400"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const hudDisplay = document.getElementById('hud');
+        const cpMsg = document.getElementById('checkpoint-msg');
+
+        const gravity = 0.16;
+        const groundY = 330;
+
+        let timeElapsed = 0;
+        let isAlive = true;
+        let isVictory = false;
+
+        // Player physics variables profile
+        let bike = {
+            x: 80,
+            y: 200,
+            vx: 0,
+            vy: 0,
+            angle: 0,
+            rotVel: 0,
+            radius: 14,
+            speed: 0.20,
+            onGround: false
+        };
+
+        // Checkpoint data parameters
+        let lastCheckpoint = { x: 80, y: 160 };
+
+        // Authentic Moto X3M structural physics landmarks list array
+        let terrainPoints = [];
+        let checkpoints = [
+            { x: 400, hit: false },
+            { x: 800, hit: false }
+        ];
+
+        function initTerrain() {
+            terrainPoints = [];
+            for (let x = 0; x <= 1500; x += 25) {
+                let y = groundY;
+                
+                // Track Hill Vectors & Loops
+                y = groundY + Math.sin(x * 0.012) * 35;
+                
+                if (x > 300 && x < 450) {
+                    y -= (x - 300) * 0.5; // Big hill elevation climb
+                }
+                if (x >= 450 && x <= 600) {
+                    y = groundY - 75; // Upper beach cliff shelf
+                }
+                if (x > 700 && x < 850) {
+                    y += Math.sin((x - 700) * 0.04) * 50; // Tricky wavy loop paths
+                }
+                if (x >= 900 && x < 980) {
+                    y = 500; // Death canyon gap pit layout!
+                }
+                
+                terrainPoints.push({ x: x, y: y });
+            }
+        }
+
+        function getGroundHeight(xX) {
+            for (let i = 0; i < terrainPoints.length - 1; i++) {
+                if (xX >= terrainPoints[i].x && xX <= terrainPoints[i+1].x) {
+                    let ratio = (xX - terrainPoints[i].x) / (terrainPoints[i+1].x - terrainPoints[i].x);
+                    return terrainPoints[i].y + ratio * (terrainPoints[i+1].y - terrainPoints[i].y);
+                }
+            }
+            return groundY;
+        }
+
+        let keys = {};
+        window.addEventListener('keydown', e => keys[e.code] = true);
+        window.addEventListener('keyup', e => keys[e.code] = false);
+
+        function update() {
+            if (!isAlive || isVictory) {
+                if (keys['Space']) resetToCheckpoint();
+                return;
+            }
+
+            timeElapsed += 1/60;
+            hudDisplay.innerText = timeElapsed.toFixed(1) + "s";
+
+            // Throttle & Balance Controls
+            if (keys['KeyW'] || keys['ArrowUp']) {
+                bike.vx += Math.cos(bike.angle) * bike.speed;
+                bike.vy += Math.sin(bike.angle) * bike.speed;
+            }
+            if (keys['KeyS'] || keys['ArrowDown']) {
+                bike.vx *= 0.90; // Brake slow
+            }
+            if (keys['KeyA'] || keys['ArrowLeft']) bike.rotVel -= 0.006;
+            if (keys['KeyD'] || keys['ArrowRight']) bike.rotVel += 0.006;
+
+            bike.rotVel *= 0.93;
+            bike.angle += bike.rotVel;
+
+            bike.vy += gravity;
+            bike.vx *= 0.985;
+
+            bike.x += bike.vx;
+            bike.y += bike.vy;
+
+            let currentFloorY = getGroundHeight(bike.x);
+            if (bike.y + bike.radius >= currentFloorY) {
+                bike.y = currentFloorY - bike.radius;
+                bike.vy = 0;
+                bike.onGround = true;
+
+                let nextFloorX = bike.x + 15;
+                let groundSlopeAngle = Math.atan2(getGroundHeight(nextFloorX) - currentFloorY, 15);
+                bike.angle = bike.angle * 0.72 + groundSlopeAngle * 0.28;
+            } else {
+                bike.onGround = false;
+            }
+
+            // Checkpoints triggers
+            checkpoints.forEach(cp => {
+                if (!cp.hit && bike.x >= cp.x) {
+                    cp.hit = true;
+                    lastCheckpoint.x = cp.x;
+                    lastCheckpoint.y = getGroundHeight(cp.x) - 30;
+                    cpMsg.style.display = 'inline';
+                    setTimeout(() => cpMsg.style.display = 'none', 1500);
+                }
+            });
+
+            // Head impact collision parameters
+            let normalizedAngle = Math.abs((bike.angle + Math.PI) % (Math.PI * 2) - Math.PI);
+            if (bike.onGround && normalizedAngle > 1.4) {
+                isAlive = false;
+            }
+
+            // Pit bounds fail
+            if (bike.y > 420) {
+                isAlive = false;
+            }
+
+            // Goal cross verification
+            if (bike.x >= 1250) {
+                isVictory = true;
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.save();
+            let cameraX = bike.x - 180;
+            if (cameraX < 0) cameraX = 0;
+            ctx.translate(-cameraX, 0);
+
+            // Draw Checkpoint Flags
+            checkpoints.forEach(cp => {
+                ctx.fillStyle = cp.hit ? '#2ecc71' : '#e74c3c';
+                ctx.fillRect(cp.x, getGroundHeight(cp.x) - 40, 15, 10);
+                ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(cp.x, getGroundHeight(cp.x)); ctx.lineTo(cp.x, getGroundHeight(cp.x) - 40); ctx.stroke();
+            });
+
+            // Finish banner arch landmarks
+            ctx.fillStyle = '#ffcc00'; ctx.fillRect(1250, 80, 16, 280);
+            ctx.fillStyle = '#fff'; ctx.font = 'bold 12px sans-serif'; ctx.fillText("FINISH", 1242, 70);
+
+            // Beach Terrain Painter Layers
+            ctx.fillStyle = '#f39c12'; // Sandy orange beach floor texture
+            ctx.beginPath();
+            if (terrainPoints.length > 0) {
+                ctx.moveTo(terrainPoints[0].x, 400);
+                terrainPoints.forEach(p => ctx.lineTo(p.x, p.y));
+                ctx.lineTo(terrainPoints[terrainPoints.length-1].x, 400);
+            }
+            ctx.closePath(); ctx.fill();
+
+            // Track surface line border
+            ctx.strokeStyle = '#d35400'; ctx.lineWidth = 4;
+            ctx.beginPath();
+            terrainPoints.forEach((p, index) => {
+                if (index === 0) ctx.moveTo(p.x, p.y);
+                else ctx.lineTo(p.x, p.y);
+            });
+            ctx.stroke();
+
+            // Motorcycle Character Mesh rendering
+            ctx.save();
+            ctx.translate(bike.x, bike.y);
+            ctx.rotate(bike.angle);
+
+            // Chassis
+            ctx.strokeStyle = '#222'; ctx.lineWidth = 4;
+            ctx.beginPath(); ctx.moveTo(-16, 4); ctx.lineTo(16, 4); ctx.lineTo(0, -10); ctx.closePath(); ctx.stroke();
+
+            // Vibrant Orange Starting Wheels configuration
+            ctx.fillStyle = '#111'; ctx.strokeStyle = '#e67e22'; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.arc(-16, 5, 9, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+            ctx.beginPath(); ctx.arc(16, 5, 9, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+            // Rider Nodule
+            ctx.fillStyle = '#2c3e50'; ctx.beginPath(); ctx.arc(0, -15, 6, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+            ctx.restore();
+
+            // Interface Card Overlays
+            if (!isAlive) {
+                ctx.fillStyle = "rgba(0,0,0,0.7)"; ctx.fillRect(0,0,700,400);
+                ctx.fillStyle = '#ff2a2a'; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'center';
+                ctx.fillText("CRASHED", 350, 170);
+                ctx.font = '16px sans-serif'; ctx.fillStyle = '#fff';
+                ctx.fillText("Press SPACEBAR to resume from Checkpoint", 350, 210);
+            } else if (isVictory) {
+                ctx.fillStyle = "rgba(0,0,0,0.7)"; ctx.fillRect(0,0,700,400);
+                ctx.fillStyle = '#2ecc71'; ctx.font = 'bold 26px sans-serif'; ctx.textAlign = 'center';
+                ctx.fillText("STAGE CLEAR!", 350, 170);
+                ctx.font = '16px sans-serif'; ctx.fillStyle = '#fff';
+                ctx.fillText("Finished in " + timeElapsed.toFixed(1) + "s! Space to retry", 350, 210);
+            }
