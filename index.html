@@ -6,7 +6,7 @@
     <title>Classroom Workspace Module</title>
     <style>
         body { 
-            background-color: #0d1117; 
+            background-color: #0b0f17; 
             color: #c9d1d9; 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; 
             margin: 0; 
@@ -20,116 +20,133 @@
         header {
             text-align: center;
             padding: 15px;
-            border-bottom: 1px solid #21262d;
+            border-bottom: 2px solid #24292f;
             width: 100%;
             background: #161b22;
             display: flex;
             justify-content: space-around;
             align-items: center;
+            box-sizing: border-box;
         }
-        header h1 { margin: 0; color: #58a6ff; font-size: 22px; cursor: pointer; }
+        header h1 { margin: 0; color: #58a6ff; font-size: 24px; cursor: pointer; text-shadow: 0 0 10px rgba(88,166,255,0.3); }
         .back-btn {
             background: #21262d;
             border: 1px solid #30363d;
             color: #c9d1d9;
-            padding: 6px 12px;
+            padding: 8px 16px;
             border-radius: 6px;
             cursor: pointer;
             font-weight: bold;
             display: none;
         }
-        .back-btn:hover { background: #30363d; }
+        .back-btn:hover { background: #30363d; border-color: #8b949e; }
         
-        /* Grid list array layout configuration menu deck */
         .portal-grid { 
             display: flex; 
             justify-content: center; 
             flex-wrap: wrap;
-            gap: 25px; 
-            margin: 50px 20px; 
-            max-width: 900px;
+            gap: 20px; 
+            margin: 40px 20px; 
+            max-width: 1000px;
         }
         .game-card { 
             border: 1px solid #30363d; 
-            padding: 20px; 
-            border-radius: 8px; 
+            padding: 15px; 
+            border-radius: 10px; 
             background: #161b22; 
-            width: 240px; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+            width: 210px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
             text-align: center;
             transition: transform 0.2s, border-color 0.2s;
         }
         .game-card:hover {
-            transform: translateY(-4px);
+            transform: translateY(-5px);
             border-color: #58a6ff;
         }
-        .game-card h3 { margin-top: 0; color: #ff7b72; font-size: 18px; }
-        .game-card p { color: #8b949e; font-size: 13px; line-height: 1.4; height: 40px; }
+        .game-card h3 { margin: 0 0 8px 0; color: #ff7b72; font-size: 17px; }
+        .game-card p { color: #8b949e; font-size: 12px; line-height: 1.4; height: 36px; margin: 0 0 12px 0; }
         
         .launch-btn { 
             display: inline-block; 
             background: #238636; 
             color: white; 
-            padding: 8px 16px; 
-            text-decoration: none; 
+            padding: 8px 14px; 
             font-weight: bold; 
             border-radius: 6px; 
-            margin-top: 15px; 
             cursor: pointer;
+            font-size: 13px;
         }
         .launch-btn:hover { background: #2ea043; }
 
-        /* Full sandbox display canvas viewport box styling */
         .game-container {
             display: none;
             flex-direction: column;
             align-items: center;
-            margin-top: 20px;
+            margin-top: 15px;
         }
         .hud-panel {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: bold;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
             color: #58a6ff;
+            background: #161b22;
+            padding: 6px 16px;
+            border-radius: 20px;
+            border: 1px solid #30363d;
         }
         canvas {
             background-color: #000;
             border: 2px solid #30363d;
-            border-radius: 6px;
-            box-shadow: 0 6px 15px rgba(0,0,0,0.6);
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.7);
         }
     </style>
 </head>
 <body>
 
     <header>
-        <h1 onclick="showMenu()">FreezeNova Simulation Core</h1>
-        <button class="back-btn" id="homeBtn" onclick="showMenu()">EXIT GAME</button>
+        <h1 onclick="showMenu()">FreezeNova Unblocked Platform</h1>
+        <button class="back-btn" id="homeBtn" onclick="showMenu()">BACK TO HUB</button>
     </header>
 
     <!-- Main Navigation Interface Dashboard Deck -->
     <div class="portal-grid" id="menuDeck">
         <div class="game-card">
+            <h3>Spacebar Clicker</h3>
+            <p>High-density incremental engine. Buy auto-clickers to maximize generation.</p>
+            <div class="launch-btn" onclick="bootGame('clicker')">LAUNCH GAME</div>
+        </div>
+        <div class="game-card">
+            <h3>Highway Traffic</h3>
+            <p>Speedy driving simulation. Dodge cross-lane traffic vectors at breakneck speeds.</p>
+            <div class="launch-btn" onclick="bootGame('traffic')">LAUNCH GAME</div>
+        </div>
+        <div class="game-card">
+            <h3>Tap Tap Shots</h3>
+            <p>Physics-driven basketball. Timing trajectories cleanly inside swapping baskets.</p>
+            <div class="launch-btn" onclick="bootGame('basketball')">LAUNCH GAME</div>
+        </div>
+        <div class="game-card">
+            <h3>Nova Craft Sandbox</h3>
+            <p>2D terrain engine. Mine and place blocks in a generated village world with mobs.</p>
+            <div class="launch-btn" onclick="bootGame('sandbox')">LAUNCH GAME</div>
+        </div>
+        <div class="game-card">
+            <h3>Urban Sniper Agent</h3>
+            <p>Slingshot physics combat engine. Eliminate bad guy targets with vector launches.</p>
+            <div class="launch-btn" onclick="bootGame('sniper')">LAUNCH GAME</div>
+        </div>
+        <div class="game-card">
             <h3>Matrix Plinko</h3>
-            <p>High-density peg scatter matrix featuring a center 3x money slot multiplier payload.</p>
-            <div class="launch-btn" onclick="bootGame('plinko')">PLAY NOW</div>
-        </div>
-        <div class="game-card">
-            <h3>Vector Jet Stream</h3>
-            <p>Endless side-scroller simulation mapping tilt angles velocity over vertical spike boundaries.</p>
-            <div class="launch-btn" onclick="bootGame('jet')">PLAY NOW</div>
-        </div>
-        <div class="game-card">
-            <h3>Adventure Sandbox</h3>
-            <p>Top-down environment engine featuring building placement blocks, tracking zombie mobs, and heart nodes.</p>
-            <div class="launch-btn" onclick="bootGame('sandbox')">PLAY NOW</div>
+            <p>Drop risk physics sandbox. Bounce balls down rows of pegs for high-tier payouts.</p>
+            <div class="launch-btn" onclick="bootGame('plinko')">LAUNCH GAME</div>
         </div>
     </div>
 
     <!-- Active Single Canvas Frame Applier Window -->
     <div class="game-container" id="playerWindow">
-        <div class="hud-panel" id="hudTracker">Balance: $100</div>
-        <canvas id="coreCanvas" width="640" height="400"></canvas>
+        <div class="hud-panel" id="hudTracker">Loading engine variables...</div>
+        <canvas id="coreCanvas" width="672" height="416"></canvas>
     </div>
 
     <script>
@@ -140,13 +157,10 @@
         const canvas = document.getElementById('coreCanvas');
         const ctx = canvas.getContext('2d');
 
-        canvas.addEventListener('contextmenu', e => e.preventDefault());
-
         let activeGame = null;
         let animationFrameId = null;
         let keys = {};
 
-        // Tracking global event hooks mappings variables hooks
         window.addEventListener('keydown', e => keys[e.code] = true);
         window.addEventListener('keyup', e => keys[e.code] = false);
 
@@ -154,6 +168,7 @@
             if(animationFrameId) cancelAnimationFrame(animationFrameId);
             activeGame = null;
             keys = {};
+            canvas.onmousedown = null;
             menuDeck.style.display = 'flex';
             playerWindow.style.display = 'none';
             homeBtn.style.display = 'none';
@@ -165,78 +180,65 @@
             homeBtn.style.display = 'block';
             activeGame = gameType;
             keys = {};
+            canvas.onmousedown = null;
             
             ctx.clearRect(0,0,canvas.width,canvas.height);
-            if(gameType === 'plinko') initPlinko();
-            else if(gameType === 'jet') initJet();
+            if(gameType === 'clicker') initClicker();
+            else if(gameType === 'traffic') initTraffic();
+            else if(gameType === 'basketball') initBasketball();
             else if(gameType === 'sandbox') initSandbox();
+            else if(gameType === 'sniper') initSniper();
+            else if(gameType === 'plinko') initPlinko();
             
             runEngineLoop();
         }
 
         // ==========================================
-        // GAME MODULE 1: CORE MATRIX PLINKO
+        // GAME 1: SPACEBAR CLICKER (Incremental Engine)
         // ==========================================
-        let pScore, pState, pBallX, pBallY, pBallVX, pBallVY, pPegs, pBuckets;
-        function initPlinko() {
-            pScore = 100; pState = 1; pBallX = 0; pBallY = 20; pBallVX = 0; pBallVY = 0; pPegs = [];
-            hudTracker.innerText = `Balance: $${pScore} | Press SPACEBAR to drop ball ($10 bet)`;
-            for (let r = 0; r < 10; r++) {
-                let y = 60 + r * 28;
-                let startX = 320 - (r * 36) / 2;
-                for (let i = 0; i <= r; i++) {
-                    let x = startX + i * 36;
-                    if(x > 20 && x < 620) pPegs.push({x:x, y:y});
-                }
-            }
-            pBuckets = [
-                {s:0, e:180, c:'#404040', l:'0.5x', m:0.5},
-                {s:180, e:280, c:'#FF8000', l:'1x', m:1},
-                {s:280, e:360, c:'#00FF00', l:'3x', m:3},
-                {s:360, e:460, c:'#FF8000', l:'1x', m:1},
-                {s:460, e:640, c:'#404040', l:'0.5x', m:0.5}
-            ];
+        let clicks, autoCost, autos;
+        function initClicker() {
+            clicks = 0; autoCost = 15; autos = 0;
+            hudTracker.innerText = `Total Clicks: 0 | Auto-Clickers: 0`;
+            canvas.onmousedown = function() {
+                clicks++;
+                updateClickerText();
+            };
         }
-        function updatePlinko() {
-            if (keys['Space'] && pState === 1 && pScore >= 10) {
-                pScore -= 10; pBallX = 320 + (Math.random()*20-10); pBallY = 20; pBallVX = 0; pBallVY = 0; pState = 0;
-                hudTracker.innerText = `Balance: $${pScore} | Analyzing vector pathing nodes...`;
-            }
-            if (pState === 0) {
-                pBallVY += 0.22; pBallVX *= 0.99; pBallX += pBallVX; pBallY += pBallVY;
-                pPegs.forEach(peg => {
-                    let dx = pBallX - peg.x, dy = pBallY - peg.y, d = Math.sqrt(dx*dx+dy*dy);
-                    if (d < 11) { pBallVY = -2.0; pBallVX = (Math.random()*2.4-1.2) + (dx*0.25); }
-                });
-                if(pBallX < 10) { pBallX = 10; pBallVX *= -0.5; }
-                if(pBallX > 630) { pBallX = 630; pBallVX *= -0.5; }
-                if (pBallY >= 350) {
-                    for (let i = 0; i < pBuckets.length; i++) {
-                        if (pBallX >= pBuckets[i].s && pBallX < pBuckets[i].e) {
-                            let win = 10 * pBuckets[i].m; pScore += win; pState = 1;
-                            hudTracker.innerText = `Balance: $${pScore} | Hit ${pBuckets[i].l} slot! (+$${win}). Press SPACE to drop.`;
-                            break;
-                        }
-                    }
-                }
-            }
-            ctx.fillStyle = '#000'; ctx.fillRect(0,0,640,400);
-            pBuckets.forEach(b => { ctx.fillStyle = b.c; ctx.fillRect(b.s,350,b.e-b.s,50); ctx.fillStyle="#fff"; ctx.font="13px sans-serif"; ctx.textAlign="center"; ctx.fillText(b.l, b.s+(b.e-b.s)/2, 380); });
-            ctx.fillStyle = '#fff'; pPegs.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI*2); ctx.fill(); });
-            if(pState === 0) { ctx.fillStyle = '#ff00ff'; ctx.beginPath(); ctx.arc(pBallX, pBallY, 7, 0, Math.PI*2); ctx.fill(); }
+        function updateClicker() {
+            if(keys['Space']) { clicks++; keys['Space'] = false; updateClickerText(); }
+            if(clicks >= autoCost && keys['KeyB']) { clicks -= autoCost; autos++; autoCost = Math.floor(autoCost * 1.5); keys['KeyB'] = false; updateClickerText(); }
+            clicks += (autos / 60); 
+            if(Math.floor(clicks * 10) % 10 === 0) updateClickerText();
+
+            ctx.fillStyle = '#161b22'; ctx.fillRect(0,0,672,416);
+            ctx.fillStyle = '#58a6ff'; ctx.beginPath(); ctx.arc(336, 208, 70, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#fff'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('CLICK REGION', 336, 212);
+            ctx.fillStyle = '#8b949e'; ctx.font = '13px sans-serif'; ctx.fillText(`Press 'B' to buy Auto-Clicker (Cost: ${autoCost} clicks)`, 336, 340);
+        }
+        function updateClickerText() {
+            hudTracker.innerText = `Total Clicks: ${Math.floor(clicks)} | Auto-Clickers: ${autos} | Press 'B' to Buy Auto`;
         }
 
         // ==========================================
-        // GAME MODULE 2: VECTOR JET STREAM RUNNER
+        // GAME 2: HIGHWAY TRAFFIC (Fast Racer Engine)
         // ==========================================
-        let jY, jV, jObsX, jObsH, jScore, jLive;
-        function initJet() {
-            jY = 200; jV = 0; jObsX = 640; jObsH = Math.random()*140 + 50; jScore = 0; jLive = true;
-            hudTracker.innerText = `Score: ${jScore} | HOLD SPACEBAR TO FLY UPWARD!`;
+        let carX, carY, enemies, tScore, tLive;
+        function initTraffic() {
+            carX = 336; carY = 340; enemies = []; tScore = 0; tLive = true;
+            hudTracker.innerText = `Distance: 0m | A/D or Arrows = Move Left/Right`;
         }
-        function updateJet() {
-            if(!jLive) { if(keys['Space']) initJet(); return; }
-            jV += keys['Space'] ? 0.35 : -0.28;
-            if(jV > 8) jV = 8; if(jV < -8) jV = -8;
-            jY -= jV; jObsX -= 5.5;
-            if(jObsX < -40) { jObsX = 640; jObsH = Math.random()*140 + 50; jScore++; hudTracker.innerText = `Score: ${jScore} | Flapped cleanly over obstacles!`; }
+        function updateTraffic() {
+            if(!tLive) { if(keys['Space'] || keys['KeyR']) initTraffic(); return; }
+            if(keys['KeyA'] || keys['ArrowLeft']) carX -= 4;
+            if(keys['KeyD'] || keys['ArrowRight']) carX += 4;
+            if(carX < 190) carX = 190; if(carX > 450) carX = 450;
+            
+            tScore++; hudTracker.innerText = `Distance: ${Math.floor(tScore/5)}m | Avoid oncoming vehicle matrices`;
+            if(Math.random() < 0.02) enemies.push({x: 190 + Math.random()*260, y: -40, s: 4 + Math.random()*3});
+            
+            ctx.fillStyle = '#21262d'; ctx.fillRect(0,0,672,416); // Highway road
+            ctx.fillStyle = '#161b22'; ctx.fillRect(0,0,180,416); ctx.fillRect(492,0,180,416); // Grass bounds
+            ctx.fillStyle = '#fff'; ctx.fillRect(333, 0, 6, 416); // Center lane split
+
+            enemies.forEach((e, idx) => {
