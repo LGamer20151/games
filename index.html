@@ -50,7 +50,7 @@
         <div id="status">Press SPACEBAR to Drop Ball ($10)</div>
     </div>
 
-    <!-- The Plinko Screen -->
+    <!-- Canvas drawing canvas viewport -->
     <canvas id="plinkoCanvas" width="480" height="400"></canvas>
 
     <script>
@@ -59,7 +59,7 @@
         const scoreDisplay = document.getElementById('score');
         const statusDisplay = document.getElementById('status');
 
-        // Game State Variables
+        // Game State Engine Variables
         let score = 100;
         let state = 1; // 1 = Waiting, 0 = Ball Falling
         let ballX = 0;
@@ -69,88 +69,85 @@
         const gravity = 0.2;
         const friction = 0.99;
 
-        // Peg Layout Coordinates (Same logic as Scratch version)
+        // Vector Matrix Peg Grid Coordinates
         const pegs = [
-            {x: 240, y: 120}, // Row 1
-            {x: 210, y: 170}, {x: 270, y: 170}, // Row 2
-            {x: 180, y: 220}, {x: 240, y: 220}, {x: 300, y: 220}, // Row 3
-            {x: 150, y: 270}, {x: 210, y: 270}, {x: 270, y: 270}, {x: 330, y: 270} // Row 4
+            {x: 240, y: 120}, 
+            {x: 210, y: 170}, {x: 270, y: 170}, 
+            {x: 180, y: 220}, {x: 240, y: 220}, {x: 300, y: 220}, 
+            {x: 150, y: 270}, {x: 210, y: 270}, {x: 270, y: 270}, {x: 330, y: 270} 
         ];
 
-        // Multiplier Bucket Zones
+        // Prize Slot Routing Configurations
         const buckets = [
-            { startX: 0, endX: 170, color: '#404040', label: '0.5x', mult: 0.5 },   // Left Edge
-            { startX: 170, endX: 210, color: '#FF8000', label: '1x', mult: 1 },    // Outer Left
-            { startX: 210, endX: 270, color: '#00FF00', label: '2x', mult: 2 },    // THE MONEY SPOT
-            { startX: 270, endX: 310, color: '#FF8000', label: '1x', mult: 1 },    // Outer Right
-            { startX: 310, endX: 480, color: '#404040', label: '0.5x', mult: 0.5 }   // Right Edge
+            { startX: 0, endX: 170, color: '#404040', label: '0.5x', mult: 0.5 },   
+            { startX: 170, endX: 210, color: '#FF8000', label: '1x', mult: 1 },    
+            { startX: 210, endX: 270, color: '#00FF00', label: '2x', mult: 2 },    // THE 2X MONEY SPOT
+            { startX: 270, endX: 310, color: '#FF8000', label: '1x', mult: 1 },    
+            { startX: 310, endX: 480, color: '#404040', label: '0.5x', mult: 0.5 }   
         ];
 
-        // Keyboard Controls
+        // Trigger Ball Drops
         window.addEventListener('keydown', function(e) {
             if (e.code === 'Space' && state === 1) {
                 if (score >= 10) {
                     score -= 10;
                     scoreDisplay.innerText = score;
-                    statusDisplay.innerText = "Simulating drop path...";
+                    statusDisplay.innerText = "Processing vector simulation paths...";
                     
-                    // Drop ball with slight random offset at the top
                     ballX = 240 + (Math.random() * 20 - 10);
                     ballY = 60;
                     ballVX = 0;
                     ballVY = 0;
-                    state = 0; // Lock inputs
+                    state = 0; 
                 } else {
-                    statusDisplay.innerText = "Out of funds! Refresh page to reset.";
+                    statusDisplay.innerText = "Insufficient funds. Refresh tab to restart.";
                 }
             }
         });
 
-        // Main Engine Loop (Equivalent to Scratch's Forever loop)
+        // Math Physics Processing Loop
         function gameLoop() {
-            // Physics Calculations
             if (state === 0) {
                 ballVY += gravity;
                 ballVX *= friction;
                 ballX += ballVX;
                 ballY += ballVY;
 
-                // Check collisions against each peg
+                // Geometric deflection calculations
                 pegs.forEach(peg => {
                     let dx = ballX - peg.x;
                     let dy = ballY - peg.y;
                     let distance = Math.sqrt(dx * dx + dy * dy);
 
-                    if (distance < 12) { // Hitbox detection
-                        ballVY = -2.5; // Bounce up
-                        ballVX = (Math.random() * 4 - 2) + (dx * 0.2); // Random scatter deflection
+                    if (distance < 12) { 
+                        ballVY = -2.5; 
+                        ballVX = (Math.random() * 4 - 2) + (dx * 0.2); 
                     }
                 });
 
-                // Wall bounds checks
+                // Screen border limits
                 if (ballX < 10) { ballX = 10; ballVX *= -0.5; }
                 if (ballX > 470) { ballX = 470; ballVX *= -0.5; }
 
-                // Check landing at the bottom row (Y value)
+                // Landing logic
                 if (ballY >= 350) {
-                    // Check which bucket zone the ball landed in
                     for (let i = 0; i < buckets.length; i++) {
                         if (ballX >= buckets[i].startX && ballX < buckets[i].endX) {
                             let winnings = 10 * buckets[i].mult;
                             score += winnings;
                             scoreDisplay.innerText = score;
-                            statusDisplay.innerText = `Landed in ${buckets[i].label} slot! (+ $${winnings}). Press SPACE to drop again.`;
+                            statusDisplay.innerText = `Landed in ${buckets[i].label} slot! (+$${winnings}). Press SPACEBAR to play again.`;
                             break;
                         }
                     }
-                    state = 1; // Unlock drop mechanics
+                    state = 1; 
                 }
             }
 
-            // Canvas Drawing Logic (Equivalent to Scratch's Render Game Custom Block)
+            // Graphic Painter Render Loops
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 1. Draw Prize Buckets
+            // Draw prize collection boxes
             buckets.forEach(b => {
                 ctx.fillStyle = b.color;
                 ctx.fillRect(b.startX, 350, b.endX - b.startX, 50);
@@ -161,7 +158,7 @@
                 ctx.fillText(b.label, b.startX + (b.endX - b.startX) / 2, 380);
             });
 
-            // 2. Draw Pegs
+            // Draw peg nodes
             ctx.fillStyle = "#ffffff";
             pegs.forEach(peg => {
                 ctx.beginPath();
@@ -169,7 +166,7 @@
                 ctx.fill();
             });
 
-            // 3. Draw Pink Plinko Ball
+            // Draw Plinko active matrix ball
             if (state === 0) {
                 ctx.fillStyle = "#ff00ff";
                 ctx.beginPath();
@@ -180,7 +177,6 @@
             requestAnimationFrame(gameLoop);
         }
 
-        // Start the engine
         gameLoop();
     </script>
 </body>
