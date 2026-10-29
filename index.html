@@ -29,14 +29,18 @@
             margin: 12px 0;
             font-size: 16px;
             font-weight: bold;
+            display: flex;
+            gap: 20px;
         }
-        #hud { color: #ff9800; }
-        #checkpoint-msg { color: #2ecc71; margin-left: 15px; display: none; }
+        #hud-timer { color: #ff9800; }
+        #hud-stars { color: #f1c40f; }
+        #hud-level { color: #2ecc71; }
         canvas {
             background-color: #74b9ff;
             border: 2px solid #30363d;
             border-radius: 8px;
             box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+            cursor: pointer;
         }
     </style>
 </head>
@@ -47,7 +51,9 @@
     </header>
 
     <div class="ui-panel">
-        Time: <span id="hud">0.0s</span> | W = Gas | S = Brake | A/D = Balance & Flips <span id="checkpoint-msg">CHECKPOINT!</span>
+        <span id="hud-level">MENU SCREEN</span> 
+        <span id="hud-timer">Time: 0.0s</span> 
+        <span id="hud-stars">⭐ Stars: 0</span>
     </div>
 
     <canvas id="gameCanvas" width="700" height="400"></canvas>
@@ -55,56 +61,66 @@
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        const hudDisplay = document.getElementById('hud');
-        const cpMsg = document.getElementById('checkpoint-msg');
+        const timerDisplay = document.getElementById('hud-timer');
+        const starsDisplay = document.getElementById('hud-stars');
+        const levelDisplay = document.getElementById('hud-level');
 
+        // Physics Baseline Constants
         const gravity = 0.16;
         const groundY = 330;
 
+        // Core Game Progression State (Saved across plays)
+        let gameState = "MENU"; // MENU, SHOP, PLAYING, CRASHED, VICTORY
+        let currentLevel = 1;
+        let totalStars = 0;
+        let activeBikeType = "ORANGE"; // ORANGE, RED_NINJA, FLAMING_GHOST
+        
         let timeElapsed = 0;
-        let isAlive = true;
-        let isVictory = false;
+        let terrainPoints = [];
+        let checkpointX = 80;
+        let checkpointY = 160;
+        let checkpointReached = false;
 
-        let bike = {
-            x: 80,
-            y: 200,
-            vx: 0,
-            vy: 0,
-            angle: 0,
-            rotVel: 0,
-            radius: 14,
-            speed: 0.20,
-            onGround: false
+        // Custom Motorbike Performance Stats Mapping
+        const bikesData = {
+            "ORANGE": { color: "#e67e22", speed: 0.20, weight: 1.0, cost: 0, unlocked: true, name: "Default Orange" },
+            "RED_NINJA": { color: "#e74c3c", speed: 0.24, weight: 0.95, cost: 15, unlocked: false, name: "Ninja Red (+Speed)" },
+            "FLAMING_GHOST": { color: "#7f8c8d", speed: 0.28, weight: 0.90, cost: 40, unlocked: false, name: "Ghost Rider (Max Speed)" }
         };
 
-        let lastCheckpoint = { x: 80, y: 160 };
-        let checkpoints = [
-            { x: 400, hit: false },
-            { x: 800, hit: false }
-        ];
+        let bike = { x: 80, y: 200, vx: 0, vy: 0, angle: 0, rotVel: 0, radius: 14, onGround: false };
 
-        let terrainPoints = [];
-        function initTerrain() {
+        // Generate 22 Completely Unique Procedural Levels
+        function initLevelTerrain(lvl) {
             terrainPoints = [];
-            for (let x = 0; x <= 1500; x += 25) {
-                let y = groundY + Math.sin(x * 0.012) * 35;
-                if (x > 300 && x < 450) {
-                    y -= (x - 300) * 0.5;
+            checkpointX = 80;
+            checkpointY = 160;
+            checkpointReached = false;
+            
+            // Adjust frequency parameters dynamically per level code index
+            let frequencyModifier = 0.01 + (lvl * 0.002);
+            let amplitudeModifier = 25 + (lvl * 2);
+
+            for (let x = 0; x <= 1600; x += 25) {
+                let y = groundY + Math.sin(x * frequencyModifier) * amplitudeModifier;
+                
+                // Add unique obstacle elements depending on the stage index row
+                if (lvl % 2 === 0 && x > 400 && x < 550) {
+                    y -= (x - 400) * 0.55; // Vertical jump ramps
                 }
-                if (x >= 450 && x <= 600) {
-                    y = groundY - 75;
+                if (lvl % 3 === 0 && x > 650 && x < 750) {
+                    y = 520; // Canyon gap layout pits
                 }
-                if (x > 700 && x < 850) {
-                    y += Math.sin((x - 700) * 0.04) * 50;
+                if (lvl > 10 && x > 800 && x < 1000) {
+                    y += Math.cos(x * 0.05) * 25; // High tier bumper waves
                 }
-                if (x >= 900 && x < 980) {
-                    y = 500;
-                }
+                
                 terrainPoints.push({ x: x, y: y });
             }
         }
 
         function getGroundHeight(xX) {
+            if (terrainPoints.length === 0) return groundY;
             for (let i = 0; i < terrainPoints.length - 1; i++) {
                 if (xX >= terrainPoints[i].x && xX <= terrainPoints[i+1].x) {
                     let ratio = (xX - terrainPoints[i].x) / (terrainPoints[i+1].x - terrainPoints[i].x);
@@ -118,29 +134,93 @@
         window.addEventListener('keydown', e => keys[e.code] = true);
         window.addEventListener('keyup', e => keys[e.code] = false);
 
+        // Handle Canvas Menu Interface Mouse Click Bounds Tracking
+        canvas.addEventListener('mousedown', function(e) {
+            const rect = canvas.getBoundingClientRect();
+            const mX = e.clientX - rect.left;
+            const mY = e.clientY - rect.top;
+
+            if (gameState === "MENU") {
+                if (mX > 250 && mX < 450 && mY > 160 && mY < 210) {
+                    // Start Level Action
+                    gameState = "PLAYING";
+                    timeElapsed = 0;
+                    resetBikePosition();
+                    initLevelTerrain(currentLevel);
+                }
+                if (mX > 250 && mX < 450 && mY > 240 && mY < 290) {
+                    gameState = "SHOP";
+                }
+            } 
+            else if (gameState === "SHOP") {
+                // Exit Button clicked
+                if (mX > 20 && mX < 120 && mY > 20 && mY < 60) {
+                    gameState = "MENU";
+                }
+                // Selection / Purchase Node 1: Ninja Red (15 Stars)
+                if (mX > 80 && mX < 280 && mY > 280 && mY < 320) {
+                    handleShopPurchase("RED_NINJA");
+                }
+                // Selection / Purchase Node 2: Ghost Rider (40 Stars)
+                if (mX > 420 && mX < 620 && mY > 280 && mY < 320) {
+                    handleShopPurchase("FLAMING_GHOST");
+                }
+            }
+        });
+
+        function handleShopPurchase(type) {
+            if (bikesData[type].unlocked) {
+                activeBikeType = type;
+            } else if (totalStars >= bikesData[type].cost) {
+                totalStars -= bikesData[type].cost;
+                bikesData[type].unlocked = true;
+                activeBikeType = type;
+                starsDisplay.innerText = `⭐ Stars: ${totalStars}`;
+            }
+        }
+
+        function resetBikePosition() {
+            bike.x = checkpointX;
+            bike.y = checkpointY;
+            bike.vx = 0; bike.vy = 0; bike.angle = 0; bike.rotVel = 0;
+        }
+
         function update() {
-            if (!isAlive || isVictory) {
-                if (keys['Space']) resetToCheckpoint();
+            if (gameState !== "PLAYING") {
+                if ((gameState === "CRASHED" || gameState === "VICTORY") && keys['Space']) {
+                    if (gameState === "VICTORY") {
+                        currentLevel = currentLevel >= 22 ? 1 : currentLevel + 1;
+                    }
+                    gameState = "PLAYING";
+                    timeElapsed = 0;
+                    checkpointX = 80; checkpointY = 160; checkpointReached = false;
+                    resetBikePosition();
+                    initLevelTerrain(currentLevel);
+                }
                 return;
             }
 
             timeElapsed += 1/60;
-            hudDisplay.innerText = timeElapsed.toFixed(1) + "s";
+            timerDisplay.innerText = `Time: ${timeElapsed.toFixed(1)}s`;
+            levelDisplay.innerText = `STAGE: ${currentLevel} / 22`;
 
+            let stats = bikesData[activeBikeType];
+
+            // Throttle & Balancing Calculations Profile
             if (keys['KeyW'] || keys['ArrowUp']) {
-                bike.vx += Math.cos(bike.angle) * bike.speed;
-                bike.vy += Math.sin(bike.angle) * bike.speed;
+                bike.vx += Math.cos(bike.angle) * stats.speed;
+                bike.vy += Math.sin(bike.angle) * stats.speed;
             }
             if (keys['KeyS'] || keys['ArrowDown']) {
-                bike.vx *= 0.90;
+                bike.vx *= 0.90; // Brake deceleration factor
             }
-            if (keys['KeyA'] || keys['ArrowLeft']) bike.rotVel -= 0.006;
-            if (keys['KeyD'] || keys['ArrowRight']) bike.rotVel += 0.006;
+            if (keys['KeyA'] || keys['ArrowLeft']) bike.rotVel -= 0.007;
+            if (keys['KeyD'] || keys['ArrowRight']) bike.rotVel += 0.007;
 
             bike.rotVel *= 0.93;
             bike.angle += bike.rotVel;
 
-            bike.vy += gravity;
+            bike.vy += gravity * stats.weight;
             bike.vx *= 0.985;
 
             bike.x += bike.vx;
@@ -154,120 +234,28 @@
 
                 let nextFloorX = bike.x + 15;
                 let groundSlopeAngle = Math.atan2(getGroundHeight(nextFloorX) - currentFloorY, 15);
-                bike.angle = bike.angle * 0.72 + groundSlopeAngle * 0.28;
+                bike.angle = bike.angle * 0.70 + groundSlopeAngle * 0.30;
             } else {
                 bike.onGround = false;
             }
 
-            checkpoints.forEach(cp => {
-                if (!cp.hit && bike.x >= cp.x) {
-                    cp.hit = true;
-                    lastCheckpoint.x = cp.x;
-                    lastCheckpoint.y = getGroundHeight(cp.x) - 30;
-                    cpMsg.style.display = 'inline';
-                    setTimeout(() => cpMsg.style.display = 'none', 1500);
-                }
-            });
+            // Central Green Checkpoint line cross verifications
+            if (!checkpointReached && bike.x >= 600) {
+                checkpointReached = true;
+                checkpointX = 600;
+                checkpointY = getGroundHeight(600) - 30;
+            }
 
+            // Head Impact Crash Constraints (Loose balance check)
             let normalizedAngle = Math.abs((bike.angle + Math.PI) % (Math.PI * 2) - Math.PI);
-            if (bike.onGround && normalizedAngle > 1.4) {
-                isAlive = false;
+            if (bike.onGround && normalizedAngle > 1.38) {
+                gameState = "CRASHED";
             }
-
             if (bike.y > 420) {
-                isAlive = false;
+                gameState = "CRASHED";
             }
 
-            if (bike.x >= 1250) {
-                isVictory = true;
-            }
-        }
-
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            ctx.save();
-            let cameraX = bike.x - 180;
-            if (cameraX < 0) cameraX = 0;
-            ctx.translate(-cameraX, 0);
-
-            checkpoints.forEach(cp => {
-                ctx.fillStyle = cp.hit ? '#2ecc71' : '#e74c3c';
-                ctx.fillRect(cp.x, getGroundHeight(cp.x) - 40, 15, 10);
-                ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
-                ctx.beginPath(); ctx.moveTo(cp.x, getGroundHeight(cp.x)); ctx.lineTo(cp.x, getGroundHeight(cp.x) - 40); ctx.stroke();
-            });
-
-            ctx.fillStyle = '#ffcc00'; ctx.fillRect(1250, 80, 16, 280);
-            ctx.fillStyle = '#fff'; ctx.font = 'bold 12px sans-serif'; ctx.fillText("FINISH", 1242, 70);
-
-            ctx.fillStyle = '#f39c12';
-            ctx.beginPath();
-            if (terrainPoints.length > 0) {
-                ctx.moveTo(terrainPoints[0].x, 400); // Fixed bracket error here
-                terrainPoints.forEach(p => ctx.lineTo(p.x, p.y));
-                ctx.lineTo(terrainPoints[terrainPoints.length-1].x, 400);
-            }
-            ctx.closePath(); ctx.fill();
-
-            ctx.strokeStyle = '#d35400'; ctx.lineWidth = 4;
-            ctx.beginPath();
-            terrainPoints.forEach((p, index) => {
-                if (index === 0) ctx.moveTo(p.x, p.y);
-                else ctx.lineTo(p.x, p.y);
-            });
-            ctx.stroke();
-
-            ctx.save();
-            ctx.translate(bike.x, bike.y);
-            ctx.rotate(bike.angle);
-
-            ctx.strokeStyle = '#222'; ctx.lineWidth = 4;
-            ctx.beginPath(); ctx.moveTo(-16, 4); ctx.lineTo(16, 4); ctx.lineTo(0, -10); ctx.closePath(); ctx.stroke();
-
-            ctx.fillStyle = '#111'; ctx.strokeStyle = '#e67e22'; ctx.lineWidth = 3;
-            ctx.beginPath(); ctx.arc(-16, 5, 9, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-            ctx.beginPath(); ctx.arc(16, 5, 9, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-
-            ctx.fillStyle = '#2c3e50'; ctx.beginPath(); ctx.arc(0, -15, 6, 0, Math.PI * 2); ctx.fill();
-            ctx.restore();
-            ctx.restore();
-
-            if (!isAlive) {
-                ctx.fillStyle = "rgba(0,0,0,0.7)"; ctx.fillRect(0,0,700,400);
-                ctx.fillStyle = '#ff2a2a'; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'center';
-                ctx.fillText("CRASHED", 350, 170);
-                ctx.font = '16px sans-serif'; ctx.fillStyle = '#fff';
-                ctx.fillText("Press SPACEBAR to reload checkpoint", 350, 210);
-            } else if (isVictory) {
-                ctx.fillStyle = "rgba(0,0,0,0.7)"; ctx.fillRect(0,0,700,400);
-                ctx.fillStyle = '#2ecc71'; ctx.font = 'bold 26px sans-serif'; ctx.textAlign = 'center';
-                ctx.fillText("STAGE CLEAR!", 350, 170);
-                ctx.font = '16px sans-serif'; ctx.fillStyle = '#fff';
-                ctx.fillText("Finished in " + timeElapsed.toFixed(1) + "s! Space to restart", 350, 210);
-            }
-        }
-
-        function resetToCheckpoint() {
-            bike.x = lastCheckpoint.x;
-            bike.y = lastCheckpoint.y;
-            bike.vx = 0; bike.vy = 0; bike.angle = 0; bike.rotVel = 0;
-            isAlive = true;
-            if(isVictory) {
-                timeElapsed = 0; isVictory = false;
-                checkpoints.forEach(cp => cp.hit = false);
-                lastCheckpoint = { x: 80, y: 160 };
-            }
-        }
-
-        function loop() {
-            update();
-            draw();
-            requestAnimationFrame(loop);
-        }
-
-        initTerrain();
-        loop();
-    </script>
-</body>
-</html>
+            // Level Completion Star Allocations Base Check
+            if (bike.x >= 1350) {
+                gameState = "VICTORY";
+                // Reward star counts depending on finishing speed efficiency
