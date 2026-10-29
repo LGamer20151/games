@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Matrix Terrain Editor</title>
+    <title>Terrain Simulation Matrix</title>
     <style>
         body { 
             background-color: #0d1117; 
@@ -30,208 +30,228 @@
             font-size: 15px;
             font-weight: bold;
             display: flex;
-            gap: 20px;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
         }
+        .stats-bar { display: flex; gap: 30px; font-size: 16px; }
+        #hearts { color: #ff2a2a; }
         #inventory { color: #ff9800; }
+        #status { color: #8b949e; font-size: 13px; }
         canvas {
-            background-color: #1a233a;
+            background-color: #27ae60; /* Grass green world background */
             border: 2px solid #30363d;
             border-radius: 6px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            cursor: pointer;
+            cursor: crosshair;
         }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>3D Isometric Sandbox Simulation Workspace</h1>
+        <h1>Top-Down Adventure Simulation Matrix</h1>
     </header>
 
     <div class="ui-panel">
-        <div>Placing Block: <span id="inventory">OAK PLANKS</span> (Press 'Q' to swap items)</div>
-        <div>W/A/S/D = Walk Selector | CLICK = Mine Block | SHIFT + CLICK = Stack Block</div>
+        <div class="stats-bar">
+            <div>Health: <span id="hearts">❤❤❤❤❤</span></div>
+            <div>Hotbar: <span id="inventory">OAK PLANKS</span> (Press 'Q' to cycle)</div>
+        </div>
+        <div id="status">W/A/S/D = Walk | LEFT CLICK = Mine | RIGHT CLICK = Place | Defend against the red Zombie Mobs!</div>
     </div>
 
-    <canvas id="gameCanvas" width="700" height="460"></canvas>
+    <canvas id="gameCanvas" width="768" height="480"></canvas>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const invDisplay = document.getElementById('inventory');
+        const heartsDisplay = document.getElementById('hearts');
 
-        // Grid measurements configurations
-        const sizeX = 8;
-        const sizeY = 8;
-        const sizeZ = 4;
-        const tileW = 46;
-        const tileH = 24;
+        // Block right-clicks from throwing standard popups
+        canvas.addEventListener('contextmenu', e => e.preventDefault());
 
-        // Base spatial anchoring coordinates
-        const originX = 350;
-        const originY = 140;
+        const tileSize = 32;
+        const cols = 24; // 768 / 32
+        const rows = 15; // 480 / 32
 
-        // Grid Matrix tracking arrays: 0=Air, 1=Grass, 2=Stone, 3=Wood Planks
-        let world = [];
-        const blockNames = { 1: "GRASS BLOCK", 2: "STONE BLOCK", 3: "OAK PLANKS" };
-        let activeSelectionSlot = 1;
+        // Player configuration profile
+        let player = {
+            x: 120, y: 120,
+            w: 22, h: 22,
+            speed: 3,
+            health: 5,
+            damageCooldown: 0
+        };
 
-        // Active highlighted coordinate locator box vectors
-        let cursorX = 3;
-        let cursorY = 3;
+        // Grid contents tracking matrix array
+        // 0=Grass, 1=Water, 2=Log, 3=Leaves, 4=Planks, 5=Stone, 6=Village Floor, 7=Village Wall
+        let grid = [];
+        const blockNames = { 4: "OAK PLANKS", 5: "STONE", 1: "WATER" };
+        let activeSelection = 4;
 
-        function init3DWorld() {
-            for (let x = 0; x < sizeX; x++) {
-                world[x] = [];
-                for (let y = 0; y < sizeY; y++) {
-                    world[x][y] = [];
-                    for (let z = 0; z < sizeZ; z++) {
-                        if (z === 0) {
-                            world[x][y][z] = 2; // Bedrock base layers stone
-                        } else if (z === 1) {
-                            world[x][y][z] = 1; // Surface layers grass
+        // Interactive entities array list (Wandering Zombies)
+        let mobs = [
+            { x: 500, y: 100, w: 22, h: 22, speed: 1.2, type: 'zombie' },
+            { x: 600, y: 350, w: 22, h: 22, speed: 0.9, type: 'zombie' }
+        ];
+
+        let keys = {};
+        window.addEventListener('keydown', function(e) {
+            keys[e.code] = true;
+            if (e.code === 'KeyQ') {
+                if (activeSelection === 4) activeSelection = 5;
+                else if (activeSelection === 5) activeSelection = 1;
+                else activeSelection = 4;
+                invDisplay.innerText = blockNames[activeSelection];
+            }
+        });
+        window.addEventListener('keyup', e => keys[e.code] = false);
+
+        // Map layout populator scripts
+        function initWorld() {
+            for (let r = 0; r < rows; r++) {
+                grid[r] = [];
+                for (let c = 0; c < cols; c++) {
+                    grid[r][c] = 0; // Natural grass cover baseline
+                    if (Math.random() < 0.03) grid[r][c] = 5; // Rock nodes
+                }
+            }
+
+            // Spawn standard tree configurations
+            spawnTree(2, 4);
+            spawnTree(10, 3);
+
+            // Procedurally assemble a small Villager House cluster structure (Village)
+            buildVillageHouse(4, 12);
+            buildVillageHouse(4, 18);
+        }
+
+        function spawnTree(rootR, rootC) {
+            if (rootR >= 2 && rootR < rows && rootC >= 1 && rootC < cols - 1) {
+                grid[rootR][rootC] = 2; // Trunk wood
+                grid[rootR-1][rootC] = 2;
+                grid[rootR-1][rootC-1] = 3; // Leaf canopy structures
+                grid[rootR-1][rootC+1] = 3;
+                grid[rootR-2][rootC] = 3;
+            }
+        }
+
+        function buildVillageHouse(startR, startC) {
+            // Generates floor tiles and surrounding wooden security boundaries (Villages)
+            for (let r = startR; r < startR + 4; r++) {
+                for (let c = startC; c < startC + 4; c++) {
+                    if (r >= 0 && r < rows && c >= 0 && c < cols) {
+                        if (r === startR || r === startR + 3 || c === startC || c === startC + 4 - 1) {
+                            // Leave a single gap tile open to act as a front doorway
+                            if (!(r === startR + 3 && c === startC + 1)) {
+                                grid[r][c] = 7; // Cobblestone/Wall block structure
+                            } else {
+                                grid[r][c] = 6; // Inside wood pathway plank floor
+                            }
                         } else {
-                            world[x][y][z] = 0; // Empty air layout block nodes
+                            grid[r][c] = 6; // Inside wood pathway floor
                         }
                     }
                 }
             }
-            // Generate some random structural hills blocks at start
-            world[2][2][2] = 1;
-            world[2][3][2] = 1;
-            world[5][4][2] = 3;
         }
 
-        // Keyboard selectors mapping
-        window.addEventListener('keydown', function(e) {
-            if (e.code === 'KeyW' && cursorY > 0) cursorY--;
-            if (e.code === 'KeyS' && cursorY < sizeY - 1) cursorY++;
-            if (e.code === 'KeyA' && cursorX > 0) cursorX--;
-            if (e.code === 'KeyD' && cursorX < sizeX - 1) cursorX++;
-            
-            if (e.code === 'KeyQ') {
-                activeSelectionSlot = activeSelectionSlot === 3 ? 1 : activeSelectionSlot + 1;
-                invDisplay.innerText = blockNames[activeSelectionSlot];
-            }
-        });
-
-        // Click mechanics event tracker
+        // Action block positioning tools click detectors
         canvas.addEventListener('mousedown', function(e) {
-            // Find highest active stack position at the active user map selection node
-            let z = sizeZ - 1;
-            while (z >= 0 && world[cursorX][cursorY][z] === 0) {
-                z--;
-            }
+            const rect = canvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
 
-            if (e.shiftKey) {
-                // Shift + Click: Place / Stack block upwards
-                if (z + 1 < sizeZ) {
-                    world[cursorX][cursorY][z + 1] = activeSelectionSlot;
-                }
-            } else {
-                // Single Click: Destroy / Mine block down
-                if (z >= 0) {
-                    world[cursorX][cursorY][z] = 0;
+            let c = Math.floor(clickX / tileSize);
+            let r = Math.floor(clickY / tileSize);
+
+            if (r >= 0 && r < rows && c >= 0 && c < cols) {
+                if (e.button === 0) {
+                    grid[r][c] = 0; // Mine block away back to standard grass
+                } else if (e.button === 2) {
+                    if (grid[r][c] === 0) {
+                        grid[r][c] = activeSelection; // Paste block
+                    }
                 }
             }
         });
 
-        // Drawing Isometric geometric matrices calculations block drawer
-        function drawCube(x, y, z, blockType, isCursor = false) {
-            // Map 3D coordinate spaces onto flat 2D layout spacing dimensions
-            let isoX = originX + (x - y) * tileW;
-            let isoY = originY + (x + y) * tileH - (z * 28);
+        // Bounding collision checks locator
+        function hitsSolidBlock(x, y, w, h) {
+            let left = Math.floor(x / tileSize);
+            let right = Math.floor((x + w) / tileSize);
+            let top = Math.floor(y / tileSize);
+            let bottom = Math.floor((y + h) / tileSize);
 
-            // Block face tint hex definitions
-            let topColor = "#2ecc71";
-            let leftColor = "#8b5a2b";
-            let rightColor = "#6e4720";
+            if (left < 0 || right >= cols || top < 0 || bottom >= rows) return true;
 
-            if (blockType === 2) { // Stone
-                topColor = "#bdc3c7"; leftColor = "#95a5a6"; rightColor = "#7f8c8d";
-            } else if (blockType === 3) { // Planks
-                topColor = "#f39c12"; leftColor = "#d35400"; rightColor = "#e67e22";
+            for (let r = top; r <= bottom; r++) {
+                for (let c = left; c <= right; c++) {
+                    // Block type 1 (water), 2 (log), 3 (leaves), 4 (planks), 5 (stone), and 7 (village walls) block movement pathing
+                    if (grid[r][c] === 1 || grid[r][c] === 2 || grid[r][c] === 3 || grid[r][c] === 4 || grid[r][c] === 5 || grid[r][c] === 7) {
+                        return true;
+                    }
+                }
             }
-
-            if (isCursor) {
-                topColor = "rgba(255, 235, 59, 0.4)";
-                leftColor = "rgba(255, 235, 59, 0.2)";
-                rightColor = "rgba(255, 235, 59, 0.2)";
-            }
-
-            // A. Draw TOP rhombus face profile
-            ctx.fillStyle = topColor;
-            ctx.beginPath();
-            ctx.moveTo(isoX, isoY);
-            ctx.lineTo(isoX + tileW, isoY + tileH);
-            ctx.lineTo(isoX, isoY + (tileH * 2));
-            ctx.lineTo(isoX - tileW, isoY + tileH);
-            ctx.closePath();
-            ctx.fill();
-            ctx.strokeStyle = "rgba(0,0,0,0.12)";
-            ctx.stroke();
-
-            if (!isCursor) {
-                // B. Draw LEFT structural projection panel side
-                ctx.fillStyle = leftColor;
-                ctx.beginPath();
-                ctx.moveTo(isoX - tileW, isoY + tileH);
-                ctx.lineTo(isoX, isoY + (tileH * 2));
-                ctx.lineTo(isoX, isoY + (tileH * 2) + 28);
-                ctx.lineTo(isoX - tileW, isoY + tileH + 28);
-                ctx.closePath();
-                ctx.fill();
-                ctx.stroke();
-
-                // C. Draw RIGHT structural projection panel side
-                ctx.fillStyle = rightColor;
-                ctx.beginPath();
-                ctx.moveTo(isoX, isoY + (tileH * 2));
-                ctx.lineTo(isoX + tileW, isoY + tileH);
-                ctx.lineTo(isoX + tileW, isoY + tileH + 28);
-                ctx.lineTo(isoX, isoY + (tileH * 2) + 28);
-                ctx.closePath();
-                ctx.fill();
-                ctx.stroke();
-            }
+            return false;
         }
 
-        // Painter loop sorting rendering order from back wall blocks to foreground elements
-        function drawWorld() {
+        // Processing calculations engine loop loops
+        function update() {
+            if (player.health <= 0) return;
+
+            let nextX = player.x;
+            let nextY = player.y;
+
+            if (keys['KeyW']) nextY -= player.speed;
+            if (keys['KeyS']) nextY += player.speed;
+            if (!hitsSolidBlock(player.x, nextY, player.w, player.h)) player.y = nextY;
+
+            if (keys['KeyA']) nextX -= player.speed;
+            if (keys['KeyD']) nextX += player.speed;
+            if (!hitsSolidBlock(nextX, player.y, player.w, player.h)) player.x = nextX;
+
+            if (player.damageCooldown > 0) player.damageCooldown--;
+
+            // Zombie Mob Tracking AI (Aggressively pursues player player coordinate spaces)
+            mobs.forEach(mob => {
+                let dx = player.x - mob.x;
+                let dy = player.y - mob.y;
+                let distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance > 0) {
+                    let moveX = (dx / distance) * mob.speed;
+                    let moveY = (dy / distance) * mob.speed;
+
+                    if (!hitsSolidBlock(mob.x + moveX, mob.y, mob.w, mob.h)) mob.x += moveX;
+                    if (!hitsSolidBlock(mob.x, mob.y + moveY, mob.w, mob.h)) mob.y += moveY;
+                }
+
+                // Check collision directly with player model to deduct health hearts
+                if (Math.abs(player.x - mob.x) < 20 && Math.abs(player.y - mob.y) < 20) {
+                    if (player.damageCooldown === 0) {
+                        player.health--;
+                        player.damageCooldown = 40; // Temporary hit invincibility ticks
+                        
+                        // Redraw hearts indicator text string
+                        let str = "";
+                        for(let h=0; h<player.health; h++) str += "❤";
+                        if(str === "") str = "GAME OVER";
+                        heartsDisplay.innerText = str;
+                    }
+                }
+            });
+        }
+
+        // Screen layout graphics drawer scripts
+        function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Layered depth order drawing calculation engine
-            for (let z = 0; z < sizeZ; z++) {
-                for (let x = 0; x < sizeX; x++) {
-                    for (let y = 0; y < sizeY; y++) {
-                        let blockType = world[x][y][z];
-                        
-                        if (blockType > 0) {
-                            drawCube(x, y, z, blockType);
-                        }
-
-                        // Project and float user crosshair tracker layout target box
-                        if (x === cursorX && y === cursorY) {
-                            let topZ = z;
-                            while(topZ + 1 < sizeZ && world[cursorX][cursorY][topZ + 1] > 0) {
-                                topZ++;
-                            }
-                            if(z === topZ) {
-                                drawCube(cursorX, cursorY, topZ, null, true);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        function gameLoop() {
-            drawWorld();
-            requestAnimationFrame(gameLoop);
-        }
-
-        init3DWorld();
-        gameLoop();
-    </script>
-</body>
-</html>
+            // 1. Draw Map Tiles from Grid Array configurations
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    let type = grid[r][c];
+                    
+                    if (type === 1) ctx.fillStyle = '#2980b9';      // Water
