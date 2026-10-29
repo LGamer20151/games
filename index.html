@@ -51,7 +51,7 @@
     </header>
 
     <div class="ui-panel">
-        <span id="hud-level">MENU SCREEN</span> 
+        <span id="hud-level">LEVEL SELECTOR</span> 
         <span id="hud-timer">Time: 0.0s</span> 
         <span id="hud-stars">⭐ Stars: 0</span>
     </div>
@@ -65,15 +65,14 @@
         const starsDisplay = document.getElementById('hud-stars');
         const levelDisplay = document.getElementById('hud-level');
 
-        // Physics Baseline Constants
         const gravity = 0.16;
         const groundY = 330;
 
-        // Core Game Progression State (Saved across plays)
+        // Core Game Navigation Engine States
         let gameState = "MENU"; // MENU, SHOP, PLAYING, CRASHED, VICTORY
         let currentLevel = 1;
         let totalStars = 0;
-        let activeBikeType = "ORANGE"; // ORANGE, RED_NINJA, FLAMING_GHOST
+        let activeBikeType = "ORANGE"; 
         
         let timeElapsed = 0;
         let terrainPoints = [];
@@ -81,7 +80,12 @@
         let checkpointY = 160;
         let checkpointReached = false;
 
-        // Custom Motorbike Performance Stats Mapping
+        // Track level unlocked states array grid
+        let levelsProgress = {};
+        for (let l = 1; l <= 22; l++) {
+            levelsProgress[l] = { unlocked: l === 1 ? true : false, cleared: false };
+        }
+
         const bikesData = {
             "ORANGE": { color: "#e67e22", speed: 0.20, weight: 1.0, cost: 0, unlocked: true, name: "Default Orange" },
             "RED_NINJA": { color: "#e74c3c", speed: 0.24, weight: 0.95, cost: 15, unlocked: false, name: "Ninja Red (+Speed)" },
@@ -90,30 +94,21 @@
 
         let bike = { x: 80, y: 200, vx: 0, vy: 0, angle: 0, rotVel: 0, radius: 14, onGround: false };
 
-        // Generate 22 Completely Unique Procedural Levels
+        // Generate 22 Completely Unique Procedural Challenge Grids
         function initLevelTerrain(lvl) {
             terrainPoints = [];
-            checkpointX = 80;
-            checkpointY = 160;
-            checkpointReached = false;
+            checkpointX = 80; checkpointY = 160; checkpointReached = false;
             
-            // Adjust frequency parameters dynamically per level code index
-            let frequencyModifier = 0.01 + (lvl * 0.002);
-            let amplitudeModifier = 25 + (lvl * 2);
+            let freq = 0.01 + (lvl * 0.0015);
+            let amp = 24 + (lvl * 1.5);
 
             for (let x = 0; x <= 1600; x += 25) {
-                let y = groundY + Math.sin(x * frequencyModifier) * amplitudeModifier;
+                let y = groundY + Math.sin(x * freq) * amp;
                 
                 // Add unique obstacle elements depending on the stage index row
-                if (lvl % 2 === 0 && x > 400 && x < 550) {
-                    y -= (x - 400) * 0.55; // Vertical jump ramps
-                }
-                if (lvl % 3 === 0 && x > 650 && x < 750) {
-                    y = 520; // Canyon gap layout pits
-                }
-                if (lvl > 10 && x > 800 && x < 1000) {
-                    y += Math.cos(x * 0.05) * 25; // High tier bumper waves
-                }
+                if (lvl % 2 === 0 && x > 400 && x < 550) y -= (x - 400) * 0.6; 
+                if (lvl % 3 === 0 && x > 650 && x < 750) y = 520; 
+                if (lvl > 5 && x > 850 && x < 1050) y += Math.cos(x * 0.04) * 22; 
                 
                 terrainPoints.push({ x: x, y: y });
             }
@@ -123,8 +118,8 @@
             if (terrainPoints.length === 0) return groundY;
             for (let i = 0; i < terrainPoints.length - 1; i++) {
                 if (xX >= terrainPoints[i].x && xX <= terrainPoints[i+1].x) {
-                    let ratio = (xX - terrainPoints[i].x) / (terrainPoints[i+1].x - terrainPoints[i].x);
-                    return terrainPoints[i].y + ratio * (terrainPoints[i+1].y - terrainPoints[i].y);
+                    let r = (xX - terrainPoints[i].x) / (terrainPoints[i+1].x - terrainPoints[i].x);
+                    return terrainPoints[i].y + r * (terrainPoints[i+1].y - terrainPoints[i].y);
                 }
             }
             return groundY;
@@ -134,37 +129,47 @@
         window.addEventListener('keydown', e => keys[e.code] = true);
         window.addEventListener('keyup', e => keys[e.code] = false);
 
-        // Handle Canvas Menu Interface Mouse Click Bounds Tracking
+        // Click detection handler coordinates maps for Level Grid Menu layout
         canvas.addEventListener('mousedown', function(e) {
             const rect = canvas.getBoundingClientRect();
             const mX = e.clientX - rect.left;
             const mY = e.clientY - rect.top;
 
             if (gameState === "MENU") {
-                if (mX > 250 && mX < 450 && mY > 160 && mY < 210) {
-                    // Start Level Action
-                    gameState = "PLAYING";
-                    timeElapsed = 0;
-                    resetBikePosition();
-                    initLevelTerrain(currentLevel);
-                }
-                if (mX > 250 && mX < 450 && mY > 240 && mY < 290) {
+                // Garage Shop button box click check
+                if (mX > 560 && mX < 680 && mY > 15 && mY < 55) {
                     gameState = "SHOP";
+                    return;
+                }
+
+                // Grid mapping level block button click listeners (22 levels layout)
+                let startX = 60, startY = 90, spacingX = 85, spacingY = 65, btnW = 65, btnH = 45;
+                let lvlIndex = 1;
+
+                for (let row = 0; row < 4; row++) {
+                    for (let col = 0; col < 6; col++) {
+                        if (lvlIndex > 22) break;
+
+                        let bX = startX + col * spacingX;
+                        let bY = startY + row * spacingY;
+
+                        if (mX > bX && mX < bX + btnW && mY > bY && mY < bY + btnH) {
+                            if (levelsProgress[lvlIndex].unlocked) {
+                                currentLevel = lvlIndex;
+                                gameState = "PLAYING";
+                                timeElapsed = 0;
+                                resetBikePosition();
+                                initLevelTerrain(currentLevel);
+                            }
+                        }
+                        lvlIndex++;
+                    }
                 }
             } 
             else if (gameState === "SHOP") {
-                // Exit Button clicked
-                if (mX > 20 && mX < 120 && mY > 20 && mY < 60) {
-                    gameState = "MENU";
-                }
-                // Selection / Purchase Node 1: Ninja Red (15 Stars)
-                if (mX > 80 && mX < 280 && mY > 280 && mY < 320) {
-                    handleShopPurchase("RED_NINJA");
-                }
-                // Selection / Purchase Node 2: Ghost Rider (40 Stars)
-                if (mX > 420 && mX < 620 && mY > 280 && mY < 320) {
-                    handleShopPurchase("FLAMING_GHOST");
-                }
+                if (mX > 20 && mX < 120 && mY > 20 && mY < 60) gameState = "MENU";
+                if (mX > 80 && mX < 280 && mY > 280 && mY < 320) handleShopPurchase("RED_NINJA");
+                if (mX > 420 && mX < 620 && mY > 280 && mY < 320) handleShopPurchase("FLAMING_GHOST");
             }
         });
 
@@ -180,22 +185,20 @@
         }
 
         function resetBikePosition() {
-            bike.x = checkpointX;
-            bike.y = checkpointY;
-            bike.vx = 0; bike.vy = 0; bike.angle = 0; bike.rotVel = 0;
+            bike.x = checkpointX; bike.y = checkpointY; bike.vx = 0; bike.vy = 0; bike.angle = 0; bike.rotVel = 0;
         }
 
         function update() {
             if (gameState !== "PLAYING") {
                 if ((gameState === "CRASHED" || gameState === "VICTORY") && keys['Space']) {
                     if (gameState === "VICTORY") {
-                        currentLevel = currentLevel >= 22 ? 1 : currentLevel + 1;
+                        levelsProgress[currentLevel].cleared = true;
+                        if (currentLevel < 22) levelsProgress[currentLevel + 1].unlocked = true;
+                        gameState = "MENU"; // Exit back to level selection grid map
+                    } else {
+                        gameState = "PLAYING";
+                        resetBikePosition();
                     }
-                    gameState = "PLAYING";
-                    timeElapsed = 0;
-                    checkpointX = 80; checkpointY = 160; checkpointReached = false;
-                    resetBikePosition();
-                    initLevelTerrain(currentLevel);
                 }
                 return;
             }
@@ -205,57 +208,35 @@
             levelDisplay.innerText = `STAGE: ${currentLevel} / 22`;
 
             let stats = bikesData[activeBikeType];
+            if (keys['KeyW'] || keys['ArrowUp']) { bike.vx += Math.cos(bike.angle) * stats.speed; bike.vy += Math.sin(bike.angle) * stats.speed; }
+            if (keys['KeyS'] || keys['ArrowDown']) bike.vx *= 0.90;
+            if (keys['KeyA'] || keys['ArrowLeft']) bike.rotVel -= 0.006;
+            if (keys['KeyD'] || keys['ArrowRight']) bike.rotVel += 0.006;
 
-            // Throttle & Balancing Calculations Profile
-            if (keys['KeyW'] || keys['ArrowUp']) {
-                bike.vx += Math.cos(bike.angle) * stats.speed;
-                bike.vy += Math.sin(bike.angle) * stats.speed;
-            }
-            if (keys['KeyS'] || keys['ArrowDown']) {
-                bike.vx *= 0.90; // Brake deceleration factor
-            }
-            if (keys['KeyA'] || keys['ArrowLeft']) bike.rotVel -= 0.007;
-            if (keys['KeyD'] || keys['ArrowRight']) bike.rotVel += 0.007;
-
-            bike.rotVel *= 0.93;
-            bike.angle += bike.rotVel;
-
-            bike.vy += gravity * stats.weight;
-            bike.vx *= 0.985;
-
-            bike.x += bike.vx;
-            bike.y += bike.vy;
+            bike.rotVel *= 0.93; bike.angle += bike.rotVel; bike.vy += gravity * stats.weight; bike.vx *= 0.985; bike.x += bike.vx; bike.y += bike.vy;
 
             let currentFloorY = getGroundHeight(bike.x);
             if (bike.y + bike.radius >= currentFloorY) {
-                bike.y = currentFloorY - bike.radius;
-                bike.vy = 0;
-                bike.onGround = true;
-
-                let nextFloorX = bike.x + 15;
-                let groundSlopeAngle = Math.atan2(getGroundHeight(nextFloorX) - currentFloorY, 15);
-                bike.angle = bike.angle * 0.70 + groundSlopeAngle * 0.30;
+                bike.y = currentFloorY - bike.radius; bike.vy = 0; bike.onGround = true;
+                let groundSlopeAngle = Math.atan2(getGroundHeight(bike.x + 15) - currentFloorY, 15);
+                bike.angle = bike.angle * 0.72 + groundSlopeAngle * 0.28;
             } else {
                 bike.onGround = false;
             }
 
-            // Central Green Checkpoint line cross verifications
-            if (!checkpointReached && bike.x >= 600) {
-                checkpointReached = true;
-                checkpointX = 600;
-                checkpointY = getGroundHeight(600) - 30;
-            }
+            if (!checkpointReached && bike.x >= 600) { checkpointReached = true; checkpointX = 600; checkpointY = getGroundHeight(600) - 30; }
 
-            // Head Impact Crash Constraints (Loose balance check)
             let normalizedAngle = Math.abs((bike.angle + Math.PI) % (Math.PI * 2) - Math.PI);
-            if (bike.onGround && normalizedAngle > 1.38) {
-                gameState = "CRASHED";
-            }
-            if (bike.y > 420) {
-                gameState = "CRASHED";
-            }
+            if ((bike.onGround && normalizedAngle > 1.38) || bike.y > 420) gameState = "CRASHED";
+            if (bike.x >= 1350) gameState = "VICTORY";
+        }
 
-            // Level Completion Star Allocations Base Check
-            if (bike.x >= 1350) {
-                gameState = "VICTORY";
-                // Reward star counts depending on finishing speed efficiency
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (gameState === "MENU") {
+                ctx.fillStyle = '#161b22'; ctx.fillRect(0,0,700,400);
+                ctx.fillStyle = '#fff'; ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'left'; ctx.fillText("SELECT CHALLENGE STAGE", 50, 45);
+                
+                // Garage Shop button box
+                ctx.fillStyle = '#ff9800'; ctx.fillRect(540, 15, 120, 40);
