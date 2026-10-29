@@ -50,7 +50,6 @@
         <div id="status">Press SPACEBAR to Drop Ball ($10)</div>
     </div>
 
-    <!-- Canvas drawing canvas viewport -->
     <canvas id="plinkoCanvas" width="480" height="400"></canvas>
 
     <script>
@@ -63,27 +62,36 @@
         let score = 100;
         let state = 1; // 1 = Waiting, 0 = Ball Falling
         let ballX = 0;
-        let ballY = 60;
+        let ballY = 40;
         let ballVX = 0;
         let ballVY = 0;
-        const gravity = 0.2;
+        const gravity = 0.25;
         const friction = 0.99;
 
-        // Vector Matrix Peg Grid Coordinates
-        const pegs = [
-            {x: 240, y: 120}, 
-            {x: 210, y: 170}, {x: 270, y: 170}, 
-            {x: 180, y: 220}, {x: 240, y: 220}, {x: 300, y: 220}, 
-            {x: 150, y: 270}, {x: 210, y: 270}, {x: 270, y: 270}, {x: 330, y: 270} 
-        ];
+        // AUTOMATIC PEG GENERATOR (Creates a 7-row triangle grid)
+        const pegs = [];
+        const startY = 90;     // Top row starting height
+        const rowSpacing = 35; // Vertical space between rows
+        const pegSpacing = 40; // Horizontal space between pegs
+
+        for (let row = 1; row <= 7; row++) {
+            let y = startY + (row - 1) * rowSpacing;
+            // Center the row horizontally
+            let startX = 240 - ((row - 1) * pegSpacing) / 2;
+            
+            for (let i = 0; i < row; i++) {
+                let x = startX + i * pegSpacing;
+                pegs.push({ x: x, y: y });
+            }
+        }
 
         // Prize Slot Routing Configurations
         const buckets = [
-            { startX: 0, endX: 170, color: '#404040', label: '0.5x', mult: 0.5 },   
-            { startX: 170, endX: 210, color: '#FF8000', label: '1x', mult: 1 },    
-            { startX: 210, endX: 270, color: '#00FF00', label: '2x', mult: 2 },    // THE 2X MONEY SPOT
-            { startX: 270, endX: 310, color: '#FF8000', label: '1x', mult: 1 },    
-            { startX: 310, endX: 480, color: '#404040', label: '0.5x', mult: 0.5 }   
+            { startX: 0, endX: 120, color: '#404040', label: '0.5x', mult: 0.5 },   
+            { startX: 120, endX: 200, color: '#FF8000', label: '1x', mult: 1 },    
+            { startX: 200, endX: 280, color: '#00FF00', label: '2x', mult: 2 },    // THE 2X MONEY SPOT
+            { startX: 280, endX: 360, color: '#FF8000', label: '1x', mult: 1 },    
+            { startX: 360, endX: 480, color: '#404040', label: '0.5x', mult: 0.5 }   
         ];
 
         // Trigger Ball Drops
@@ -94,8 +102,8 @@
                     scoreDisplay.innerText = score;
                     statusDisplay.innerText = "Processing vector simulation paths...";
                     
-                    ballX = 240 + (Math.random() * 20 - 10);
-                    ballY = 60;
+                    ballX = 240 + (Math.random() * 10 - 5); // Tight center drop
+                    ballY = 40;
                     ballVX = 0;
                     ballVY = 0;
                     state = 0; 
@@ -119,9 +127,9 @@
                     let dy = ballY - peg.y;
                     let distance = Math.sqrt(dx * dx + dy * dy);
 
-                    if (distance < 12) { 
-                        ballVY = -2.5; 
-                        ballVX = (Math.random() * 4 - 2) + (dx * 0.2); 
+                    if (distance < 11) { // Hitbox detection radius
+                        ballVY = -2.2; // Bounce velocity
+                        ballVX = (Math.random() * 3 - 1.5) + (dx * 0.25); // Scatter physics
                     }
                 });
 
