@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Vector Engine Workspace</title>
+    <title>Matrix Terrain Editor</title>
     <style>
         body { 
             background-color: #0d1117; 
@@ -29,200 +29,208 @@
             margin: 10px 0;
             font-size: 15px;
             font-weight: bold;
-            text-align: center;
+            display: flex;
+            gap: 20px;
         }
+        #inventory { color: #ff9800; }
         canvas {
-            background-color: #000;
+            background-color: #1a233a;
             border: 2px solid #30363d;
             border-radius: 6px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>Spatial Projection Simulation Matrix</h1>
+        <h1>3D Isometric Sandbox Simulation Workspace</h1>
     </header>
 
     <div class="ui-panel">
-        W/S = Move Forward/Back | A/D = Look Left/Right | Clear the wandering Mobs!
+        <div>Placing Block: <span id="inventory">OAK PLANKS</span> (Press 'Q' to swap items)</div>
+        <div>W/A/S/D = Walk Selector | CLICK = Mine Block | SHIFT + CLICK = Stack Block</div>
     </div>
 
-    <canvas id="gameCanvas" width="640" height="400"></canvas>
+    <canvas id="gameCanvas" width="700" height="460"></canvas>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
+        const invDisplay = document.getElementById('inventory');
 
-        // Map layout configuration (1 = Wall block, 0 = Open path)
-        const map = [
-            [1,1,1,1,1,1,1,1,1,1],
-            [1,0,0,0,1,0,0,0,0,1],
-            [1,0,1,0,1,0,1,1,0,1],
-            [1,0,1,0,0,0,0,1,0,1],
-            [1,0,1,1,1,1,0,1,0,1],
-            [1,0,0,0,0,1,0,0,0,1],
-            [1,1,1,0,0,1,1,1,0,1],
-            [1,0,0,0,0,0,0,1,0,1],
-            [1,0,1,1,1,1,0,0,0,1],
-            [1,1,1,1,1,1,1,1,1,1]
-        ];
-        const mapSize = 10;
-        const tileSize = 64;
+        // Grid measurements configurations
+        const sizeX = 8;
+        const sizeY = 8;
+        const sizeZ = 4;
+        const tileW = 46;
+        const tileH = 24;
 
-        // Player starting positioning vectors
-        let player = {
-            x: 96,
-            y: 96,
-            angle: 0, // In radians
-            fov: Math.PI / 3, // 60 degree field of view
-            speed: 2.5,
-            rotSpeed: 0.04
-        };
+        // Base spatial anchoring coordinates
+        const originX = 350;
+        const originY = 140;
 
-        // Wandering enemy mobs array list
-        let mobs = [
-            {x: 7 * 64 + 32, y: 3 * 64 + 32, radius: 12, vx: 1, vy: 0},
-            {x: 2 * 64 + 32, y: 7 * 64 + 32, radius: 12, vx: 0, vy: -1}
-        ];
+        // Grid Matrix tracking arrays: 0=Air, 1=Grass, 2=Stone, 3=Wood Planks
+        let world = [];
+        const blockNames = { 1: "GRASS BLOCK", 2: "STONE BLOCK", 3: "OAK PLANKS" };
+        let activeSelectionSlot = 1;
 
-        let keys = {};
-        window.addEventListener('keydown', e => keys[e.code] = true);
-        window.addEventListener('keyup', e => keys[e.code] = false);
+        // Active highlighted coordinate locator box vectors
+        let cursorX = 3;
+        let cursorY = 3;
 
-        // Core physics calculations loop updates
-        function update() {
-            let moveX = 0;
-            let moveY = 0;
-
-            // Directional control movement vectors
-            if (keys['KeyW']) {
-                moveX += Math.cos(player.angle) * player.speed;
-                moveY += Math.sin(player.angle) * player.speed;
-            }
-            if (keys['KeyS']) {
-                moveX -= Math.cos(player.angle) * player.speed;
-                moveY -= Math.sin(player.angle) * player.speed;
-            }
-            if (keys['KeyA']) player.angle -= player.rotSpeed;
-            if (keys['KeyD']) player.angle += player.rotSpeed;
-
-            // Wall slide checks box bounding hits
-            let newX = player.x + moveX;
-            let newY = player.y + moveY;
-
-            if (map[Math.floor(player.y / tileSize)][Math.floor(newX / tileSize)] === 0) player.x = newX;
-            if (map[Math.floor(newY / tileSize)][Math.floor(player.x / tileSize)] === 0) player.y = newY;
-
-            // AI enemy coordinates updates
-            mobs.forEach(mob => {
-                let nMobX = mob.x + mob.vx;
-                let nMobY = mob.y + mob.vy;
-
-                // Simple wall collision bounce logic for the mob
-                if (map[Math.floor(mob.y / tileSize)][Math.floor(nMobX / tileSize)] !== 0) {
-                    mob.vx *= -1;
-                } else {
-                    mob.x = nMobX;
-                }
-                
-                if (map[Math.floor(nMobY / tileSize)][Math.floor(mob.x / tileSize)] !== 0) {
-                    mob.vy *= -1;
-                } else {
-                    mob.y = nMobY;
-                }
-            });
-        }
-
-        // Pseudo-3D Engine Painter Viewport
-        function draw3D() {
-            // Draw Ceiling and Floor flat background bars
-            ctx.fillStyle = '#2c3e50'; // Ceiling dark blue
-            ctx.fillRect(0, 0, canvas.width, canvas.height / 2);
-            ctx.fillStyle = '#27ae60'; // Floor field grass green
-            ctx.fillRect(0, canvas.height / 2, canvas.width, canvas.height / 2);
-
-            // Raycasting wall tracer scan loop
-            const numRays = canvas.width;
-            const halfFov = player.fov / 2;
-            
-            for (let i = 0; i < numRays; i++) {
-                // Interpolate exact angle displacement across view column lines
-                let rayAngle = player.angle - halfFov + (i / numRays) * player.fov;
-                let distance = 0;
-                let hitWall = false;
-
-                let cos = Math.cos(rayAngle);
-                let sin = Math.sin(rayAngle);
-
-                // Increment outward until ray strikes a wall node grid array element
-                while (!hitWall && distance < 600) {
-                    distance += 1.5;
-                    let checkX = Math.floor((player.x + cos * distance) / tileSize);
-                    let checkY = Math.floor((player.y + sin * distance) / tileSize);
-
-                    if (checkX < 0 || checkX >= mapSize || checkY < 0 || checkY >= mapSize) {
-                        hitWall = true;
-                        distance = 600;
-                    } else if (map[checkY][checkX] > 0) {
-                        hitWall = true;
+        function init3DWorld() {
+            for (let x = 0; x < sizeX; x++) {
+                world[x] = [];
+                for (let y = 0; y < sizeY; y++) {
+                    world[x][y] = [];
+                    for (let z = 0; z < sizeZ; z++) {
+                        if (z === 0) {
+                            world[x][y][z] = 2; // Bedrock base layers stone
+                        } else if (z === 1) {
+                            world[x][y][z] = 1; // Surface layers grass
+                        } else {
+                            world[x][y][z] = 0; // Empty air layout block nodes
+                        }
                     }
                 }
+            }
+            // Generate some random structural hills blocks at start
+            world[2][2][2] = 1;
+            world[2][3][2] = 1;
+            world[5][4][2] = 3;
+        }
 
-                // Fish-eye lens camera focal distortion correction math
-                let correctedDist = distance * Math.cos(rayAngle - player.angle);
-                
-                // Height projection scaling math calculations
-                let wallHeight = Math.min(canvas.height, (tileSize * canvas.height) / correctedDist);
+        // Keyboard selectors mapping
+        window.addEventListener('keydown', function(e) {
+            if (e.code === 'KeyW' && cursorY > 0) cursorY--;
+            if (e.code === 'KeyS' && cursorY < sizeY - 1) cursorY++;
+            if (e.code === 'KeyA' && cursorX > 0) cursorX--;
+            if (e.code === 'KeyD' && cursorX < sizeX - 1) cursorX++;
+            
+            if (e.code === 'KeyQ') {
+                activeSelectionSlot = activeSelectionSlot === 3 ? 1 : activeSelectionSlot + 1;
+                invDisplay.innerText = blockNames[activeSelectionSlot];
+            }
+        });
 
-                // Alternate gradient lighting shades to make side walls pop out dynamically
-                let colorVal = Math.floor(Math.max(20, 200 - (correctedDist * 0.4)));
-                ctx.fillStyle = `rgb(${colorVal}, ${colorVal + 20}, ${colorVal + 40})`;
-                
-                ctx.fillRect(i, (canvas.height - wallHeight) / 2, 1, wallHeight);
+        // Click mechanics event tracker
+        canvas.addEventListener('mousedown', function(e) {
+            // Find highest active stack position at the active user map selection node
+            let z = sizeZ - 1;
+            while (z >= 0 && world[cursorX][cursorY][z] === 0) {
+                z--;
             }
 
-            // Draw Sprite Overlay Mobs (Calculates simple 3D positioning matrices)
-            mobs.forEach(mob => {
-                let dx = mob.x - player.x;
-                let dy = mob.y - player.y;
-
-                let spriteAngle = Math.atan2(dy, dx) - player.angle;
-
-                // Wrap angles boundary checks limits
-                while (spriteAngle < -Math.PI) spriteAngle += Math.PI * 2;
-                while (spriteAngle > Math.PI) spriteAngle -= Math.PI * 2;
-
-                // Check if target sprite actually sits inside screen viewport window bounds
-                if (Math.abs(spriteAngle) < player.fov) {
-                    let dist = Math.sqrt(dx * dx + dy * dy);
-                    let spriteSize = Math.min(canvas.height, (tileSize * canvas.height) / dist);
-
-                    // Map screening center alignment offset points
-                    let screenX = (canvas.width / 2) + (Math.tan(spriteAngle) * (canvas.width / 2)) - spriteSize / 2;
-                    let screenY = (canvas.height / 2) - spriteSize / 2;
-
-                    // Draw Mobs (Bright red floating 3D spheres)
-                    ctx.fillStyle = '#ff2a2a';
-                    ctx.beginPath();
-                    ctx.arc(screenX + spriteSize/2, screenY + spriteSize/2, spriteSize / 4, 0, Math.PI * 2);
-                    ctx.fill();
-
-                    // Angry eye dots on the mob sprite overlay layers
-                    ctx.fillStyle = '#000000';
-                    ctx.fillRect(screenX + spriteSize/2 - 5, screenY + spriteSize/2 - 4, 3, 3);
-                    ctx.fillRect(screenX + spriteSize/2 + 3, screenY + spriteSize/2 - 4, 3, 3);
+            if (e.shiftKey) {
+                // Shift + Click: Place / Stack block upwards
+                if (z + 1 < sizeZ) {
+                    world[cursorX][cursorY][z + 1] = activeSelectionSlot;
                 }
-            });
+            } else {
+                // Single Click: Destroy / Mine block down
+                if (z >= 0) {
+                    world[cursorX][cursorY][z] = 0;
+                }
+            }
+        });
+
+        // Drawing Isometric geometric matrices calculations block drawer
+        function drawCube(x, y, z, blockType, isCursor = false) {
+            // Map 3D coordinate spaces onto flat 2D layout spacing dimensions
+            let isoX = originX + (x - y) * tileW;
+            let isoY = originY + (x + y) * tileH - (z * 28);
+
+            // Block face tint hex definitions
+            let topColor = "#2ecc71";
+            let leftColor = "#8b5a2b";
+            let rightColor = "#6e4720";
+
+            if (blockType === 2) { // Stone
+                topColor = "#bdc3c7"; leftColor = "#95a5a6"; rightColor = "#7f8c8d";
+            } else if (blockType === 3) { // Planks
+                topColor = "#f39c12"; leftColor = "#d35400"; rightColor = "#e67e22";
+            }
+
+            if (isCursor) {
+                topColor = "rgba(255, 235, 59, 0.4)";
+                leftColor = "rgba(255, 235, 59, 0.2)";
+                rightColor = "rgba(255, 235, 59, 0.2)";
+            }
+
+            // A. Draw TOP rhombus face profile
+            ctx.fillStyle = topColor;
+            ctx.beginPath();
+            ctx.moveTo(isoX, isoY);
+            ctx.lineTo(isoX + tileW, isoY + tileH);
+            ctx.lineTo(isoX, isoY + (tileH * 2));
+            ctx.lineTo(isoX - tileW, isoY + tileH);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = "rgba(0,0,0,0.12)";
+            ctx.stroke();
+
+            if (!isCursor) {
+                // B. Draw LEFT structural projection panel side
+                ctx.fillStyle = leftColor;
+                ctx.beginPath();
+                ctx.moveTo(isoX - tileW, isoY + tileH);
+                ctx.lineTo(isoX, isoY + (tileH * 2));
+                ctx.lineTo(isoX, isoY + (tileH * 2) + 28);
+                ctx.lineTo(isoX - tileW, isoY + tileH + 28);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // C. Draw RIGHT structural projection panel side
+                ctx.fillStyle = rightColor;
+                ctx.beginPath();
+                ctx.moveTo(isoX, isoY + (tileH * 2));
+                ctx.lineTo(isoX + tileW, isoY + tileH);
+                ctx.lineTo(isoX + tileW, isoY + tileH + 28);
+                ctx.lineTo(isoX, isoY + (tileH * 2) + 28);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+            }
+        }
+
+        // Painter loop sorting rendering order from back wall blocks to foreground elements
+        function drawWorld() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Layered depth order drawing calculation engine
+            for (let z = 0; z < sizeZ; z++) {
+                for (let x = 0; x < sizeX; x++) {
+                    for (let y = 0; y < sizeY; y++) {
+                        let blockType = world[x][y][z];
+                        
+                        if (blockType > 0) {
+                            drawCube(x, y, z, blockType);
+                        }
+
+                        // Project and float user crosshair tracker layout target box
+                        if (x === cursorX && y === cursorY) {
+                            let topZ = z;
+                            while(topZ + 1 < sizeZ && world[cursorX][cursorY][topZ + 1] > 0) {
+                                topZ++;
+                            }
+                            if(z === topZ) {
+                                drawCube(cursorX, cursorY, topZ, null, true);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         function gameLoop() {
-            update();
-            draw3D();
+            drawWorld();
             requestAnimationFrame(gameLoop);
         }
 
+        init3DWorld();
         gameLoop();
     </script>
 </body>
