@@ -60,22 +60,17 @@
         const scoreDisplay = document.getElementById('score-val');
         const statusDisplay = document.getElementById('status');
 
-        // Physics Configurations
         const gravity = 0.25;
         const groundY = 360;
-
-        // Slingshot Baseline Position
         const slingX = 130;
         const slingY = 260;
         const maxPull = 80;
 
-        // Game State Variables
         let score = 0;
         let isDragging = false;
         let mouseX = 0;
         let mouseY = 0;
 
-        // Duck Object definitions
         let duck = {
             x: slingX,
             y: slingY,
@@ -86,7 +81,6 @@
             onGround: false
         };
 
-        // Targets/Structures list array
         let entities = [];
 
         function initGame() {
@@ -101,30 +95,22 @@
             duck.isLaunched = false;
             duck.onGround = false;
 
-            // Generate structural boxes and enemy targets
             entities = [
-                // Red structural wooden blocks (x, y, width, height, type, active)
                 { x: 480, y: groundY - 80, w: 20, h: 80, type: 'structure', hp: 2 },
                 { x: 560, y: groundY - 80, w: 20, h: 80, type: 'structure', hp: 2 },
                 { x: 470, y: groundY - 100, w: 120, h: 20, type: 'structure', hp: 2 },
                 { x: 510, y: groundY - 180, w: 20, h: 80, type: 'structure', hp: 2 },
-                
-                // Bad Guys (Green targets)
                 { x: 520, y: groundY - 30, r: 16, type: 'enemy', alive: true },
                 { x: 520, y: groundY - 130, r: 14, type: 'enemy', alive: true },
                 { x: 620, y: groundY - 25, r: 18, type: 'enemy', alive: true }
             ];
         }
 
-        // Mouse Action Mechanics
         canvas.addEventListener('mousedown', function(e) {
             if (duck.isLaunched) return;
-            
             const rect = canvas.getBoundingClientRect();
             const mX = e.clientX - rect.left;
             const mY = e.clientY - rect.top;
-
-            // Detect if user clicks near the duck on the slingshot base
             let dx = mX - duck.x;
             let dy = mY - duck.y;
             if (Math.sqrt(dx * dx + dy * dy) < 30) {
@@ -136,13 +122,10 @@
             const rect = canvas.getBoundingClientRect();
             mouseX = e.clientX - rect.left;
             mouseY = e.clientY - rect.top;
-
             if (isDragging) {
                 let dx = mouseX - slingX;
                 let dy = mouseY - slingY;
                 let distance = Math.sqrt(dx * dx + dy * dy);
-
-                // Limit how far back the slingshot band can extend
                 if (distance > maxPull) {
                     let angle = Math.atan2(dy, dx);
                     duck.x = slingX + Math.cos(angle) * maxPull;
@@ -158,51 +141,41 @@
             if (isDragging) {
                 isDragging = false;
                 duck.isLaunched = true;
-
-                // Fire velocity based heavily on the opposite vector displacement
                 duck.vx = (slingX - duck.x) * 0.16;
                 duck.vy = (slingY - duck.y) * 0.16;
                 statusDisplay.innerText = "Duck tracking outbound physics vector...";
             }
         });
 
-        // Listen for standard keyboard reset tap
         window.addEventListener('keydown', function(e) {
             if (e.key === 'r' || e.key === 'R') {
                 initGame();
             }
         });
 
-        // Circle-to-Box Collision System Function
         function checkBallBoxCollision(ball, box) {
             let closestX = Math.max(box.x, Math.min(ball.x, box.x + box.w));
             let closestY = Math.max(box.y, Math.min(ball.y, box.y + box.h));
-
             let dx = ball.x - closestX;
             let dy = ball.y - closestY;
             let distance = Math.sqrt(dx * dx + dy * dy);
-
             return distance < ball.radius;
         }
 
-        // Main Engine Calculations Loop
         function update() {
             if (duck.isLaunched && !duck.onGround) {
-                // Apply Gravity Acceleration
                 duck.vy += gravity;
                 duck.x += duck.vx;
                 duck.y += duck.vy;
 
-                // Stop if goes far off-screen sideways
                 if (duck.x > canvas.width + 100 || duck.x < -100) {
                     duck.onGround = true;
                     statusDisplay.innerText = "Duck went out of bounds! Press 'R' to load next shot.";
                 }
 
-                // Ground Crash Bounds Check
                 if (duck.y + duck.radius >= groundY) {
                     duck.y = groundY - duck.radius;
-                    duck.vx *= 0.5; // High friction slowdown
+                    duck.vx *= 0.5;
                     duck.vy = 0;
                     if (Math.abs(duck.vx) < 0.2) {
                         duck.onGround = true;
@@ -210,21 +183,19 @@
                     }
                 }
 
-                // Check collisions across all structures & targets
-                entities.forEach(ent => {
+                entities.forEach(function(ent) {
                     if (ent.type === 'structure' && ent.hp > 0) {
                         if (checkBallBoxCollision(duck, ent)) {
-                            ent.hp -= 1; // Damage obstacle structural health
-                            duck.vx *= -0.4; // Bounce duck backward slightly
+                            ent.hp -= 1;
+                            duck.vx *= -0.4;
                             duck.vy *= 0.5;
                         }
                     } else if (ent.type === 'enemy' && ent.alive) {
                         let dx = duck.x - ent.x;
                         let dy = duck.y - ent.y;
                         let dist = Math.sqrt(dx * dx + dy * dy);
-                        
                         if (dist < (duck.radius + ent.r)) {
-                            ent.alive = false; // Destroy bad guy target!
+                            ent.alive = false;
                             score++;
                             scoreDisplay.innerText = score;
                             if (score >= 3) {
@@ -236,17 +207,14 @@
             }
         }
 
-        // Graphics Drawing Engine Layout
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 1. Draw the Sky and Ground Backdrop
             ctx.fillStyle = '#4a3319';
             ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
             ctx.fillStyle = '#27ae60';
-            ctx.fillRect(0, groundY, canvas.width, 10); // Grass layer
+            ctx.fillRect(0, groundY, canvas.width, 10);
 
-            // 2. Draw the Slingshot Post Lines
             ctx.strokeStyle = '#6e4720';
             ctx.lineWidth = 6;
             ctx.beginPath();
@@ -254,7 +222,6 @@
             ctx.lineTo(slingX, groundY);
             ctx.stroke();
 
-            // Draw rubber bands if player is currently aiming
             if (isDragging) {
                 ctx.strokeStyle = '#e67e22';
                 ctx.lineWidth = 4;
@@ -266,8 +233,44 @@
                 ctx.stroke();
             }
 
-            // 3. Draw All Entities (Structures & Green Enemies)
-            entities.forEach(ent => {
+            entities.forEach(function(ent) {
                 if (ent.type === 'structure' && ent.hp > 0) {
-                    ctx.fillStyle = ent.hp === 2 ? '#c0392b' : '#e74c3c'; // Darker red means full health
+                    ctx.fillStyle = ent.hp === 2 ? '#c0392b' : '#e74c3c';
                     ctx.fillRect(ent.x, ent.y, ent.w, ent.h);
+                    ctx.strokeStyle = '#1a1a1a';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(ent.x, ent.y, ent.w, ent.h);
+                } else if (ent.type === 'enemy' && ent.alive) {
+                    ctx.fillStyle = '#2ecc71';
+                    ctx.beginPath();
+                    ctx.arc(ent.x, ent.y, ent.r, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(ent.x - 5, ent.y - 3, 4, 0, Math.PI * 2);
+                    ctx.arc(ent.x + 5, ent.y - 3, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = '#000000';
+                    ctx.beginPath();
+                    ctx.arc(ent.x - 5, ent.y - 3, 1.5, 0, Math.PI * 2);
+                    ctx.arc(ent.x + 5, ent.y - 3, 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+
+            ctx.fillStyle = '#f1c40f';
+            ctx.beginPath();
+            ctx.arc(duck.x, duck.y, duck.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#e67e22';
+            ctx.beginPath();
+            ctx.moveTo(duck.x + 10, duck.y - 4);
+            ctx.lineTo(duck.x + 22, duck.y);
+            ctx.lineTo(duck.x + 10, duck.y + 4);
+            ctx.fill();
+
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
