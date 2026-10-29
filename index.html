@@ -50,7 +50,7 @@
         <div id="status">Press SPACEBAR to Drop Ball ($10)</div>
     </div>
 
-    <canvas id="plinkoCanvas" width="480" height="400"></canvas>
+    <canvas id="plinkoCanvas" width="480" height="420"></canvas>
 
     <script>
         const canvas = document.getElementById('plinkoCanvas');
@@ -62,36 +62,44 @@
         let score = 100;
         let state = 1; // 1 = Waiting, 0 = Ball Falling
         let ballX = 0;
-        let ballY = 40;
+        let ballY = 20;
         let ballVX = 0;
         let ballVY = 0;
         const gravity = 0.25;
         const friction = 0.99;
 
-        // AUTOMATIC PEG GENERATOR (Creates a 7-row triangle grid)
+        // HIGH-DENSITY GRID GENERATOR (Fills the entire frame layout)
         const pegs = [];
-        const startY = 90;     // Top row starting height
-        const rowSpacing = 35; // Vertical space between rows
-        const pegSpacing = 40; // Horizontal space between pegs
+        const rows = 11;
+        const cols = 13;
+        const startY = 60;
+        const rowSpacing = 28;
+        const pegSpacing = 36;
 
-        for (let row = 1; row <= 7; row++) {
-            let y = startY + (row - 1) * rowSpacing;
-            // Center the row horizontally
-            let startX = 240 - ((row - 1) * pegSpacing) / 2;
-            
-            for (let i = 0; i < row; i++) {
-                let x = startX + i * pegSpacing;
-                pegs.push({ x: x, y: y });
+        for (let r = 0; r < rows; r++) {
+            let y = startY + r * rowSpacing;
+            // Shift every second row slightly sideways for a perfect zigzag mesh pattern
+            let offsetX = (r % 2 === 0) ? 0 : pegSpacing / 2;
+            let startX = 24 - offsetX;
+
+            for (let c = 0; c <= cols; c++) {
+                let x = startX + c * pegSpacing;
+                // Only add the dot if it fits nicely inside the screen boundaries
+                if (x > 15 && x < 465) {
+                    pegs.push({ x: x, y: y });
+                }
             }
         }
 
-        // Prize Slot Routing Configurations
+        // Expanded Prize Slots (Includes high risk/reward on outer edges)
         const buckets = [
-            { startX: 0, endX: 120, color: '#404040', label: '0.5x', mult: 0.5 },   
-            { startX: 120, endX: 200, color: '#FF8000', label: '1x', mult: 1 },    
-            { startX: 200, endX: 280, color: '#00FF00', label: '2x', mult: 2 },    // THE 2X MONEY SPOT
-            { startX: 280, endX: 360, color: '#FF8000', label: '1x', mult: 1 },    
-            { startX: 360, endX: 480, color: '#404040', label: '0.5x', mult: 0.5 }   
+            { startX: 0, endX: 80, color: '#ff2a2a', label: '0.1x', mult: 0.1 },    // Dangerous Edges
+            { startX: 80, endX: 160, color: '#404040', label: '0.5x', mult: 0.5 },   
+            { startX: 160, endX: 210, color: '#FF8000', label: '1x', mult: 1 },    
+            { startX: 210, endX: 270, color: '#00FF00', label: '3x', mult: 3 },    // BUFFED THE CENTER SLOT TO 3X!
+            { startX: 270, endX: 320, color: '#FF8000', label: '1x', mult: 1 },    
+            { startX: 320, endX: 400, color: '#404040', label: '0.5x', mult: 0.5 },   
+            { startX: 400, endX: 480, color: '#ff2a2a', label: '0.1x', mult: 0.1 }     
         ];
 
         // Trigger Ball Drops
@@ -100,15 +108,16 @@
                 if (score >= 10) {
                     score -= 10;
                     scoreDisplay.innerText = score;
-                    statusDisplay.innerText = "Processing vector simulation paths...";
+                    statusDisplay.innerText = "Analyzing dense node collisions...";
                     
-                    ballX = 240 + (Math.random() * 10 - 5); // Tight center drop
-                    ballY = 40;
+                    // Allows dropping across a wider top entry point
+                    ballX = 240 + (Math.random() * 60 - 30); 
+                    ballY = 20;
                     ballVX = 0;
                     ballVY = 0;
                     state = 0; 
                 } else {
-                    statusDisplay.innerText = "Insufficient funds. Refresh tab to restart.";
+                    statusDisplay.innerText = "Insufficient funds! Refresh tab to restart.";
                 }
             }
         });
@@ -121,15 +130,15 @@
                 ballX += ballVX;
                 ballY += ballVY;
 
-                // Geometric deflection calculations
+                // Collision math loop for the entire grid array
                 pegs.forEach(peg => {
                     let dx = ballX - peg.x;
                     let dy = ballY - peg.y;
                     let distance = Math.sqrt(dx * dx + dy * dy);
 
-                    if (distance < 11) { // Hitbox detection radius
-                        ballVY = -2.2; // Bounce velocity
-                        ballVX = (Math.random() * 3 - 1.5) + (dx * 0.25); // Scatter physics
+                    if (distance < 11) { 
+                        ballVY = -2.0; // Bounces up from hit pins
+                        ballVX = (Math.random() * 2.6 - 1.3) + (dx * 0.28); 
                     }
                 });
 
@@ -137,8 +146,8 @@
                 if (ballX < 10) { ballX = 10; ballVX *= -0.5; }
                 if (ballX > 470) { ballX = 470; ballVX *= -0.5; }
 
-                // Landing logic
-                if (ballY >= 350) {
+                // Landing logic at the bottom row (Y value)
+                if (ballY >= 370) {
                     for (let i = 0; i < buckets.length; i++) {
                         if (ballX >= buckets[i].startX && ballX < buckets[i].endX) {
                             let winnings = 10 * buckets[i].mult;
@@ -158,15 +167,15 @@
             // Draw prize collection boxes
             buckets.forEach(b => {
                 ctx.fillStyle = b.color;
-                ctx.fillRect(b.startX, 350, b.endX - b.startX, 50);
+                ctx.fillRect(b.startX, 370, b.endX - b.startX, 50);
                 
                 ctx.fillStyle = "#ffffff";
-                ctx.font = "bold 14px sans-serif";
+                ctx.font = "bold 13px sans-serif";
                 ctx.textAlign = "center";
-                ctx.fillText(b.label, b.startX + (b.endX - b.startX) / 2, 380);
+                ctx.fillText(b.label, b.startX + (b.endX - b.startX) / 2, 400);
             });
 
-            // Draw peg nodes
+            // Draw peg nodes array pattern
             ctx.fillStyle = "#ffffff";
             pegs.forEach(peg => {
                 ctx.beginPath();
