@@ -33,7 +33,7 @@
         #hud { color: #ff9800; }
         #checkpoint-msg { color: #2ecc71; margin-left: 15px; display: none; }
         canvas {
-            background-color: #74b9ff; /* Beach sky backdrop */
+            background-color: #74b9ff; /* Beach sky blue backdrop */
             border: 2px solid #30363d;
             border-radius: 8px;
             box-shadow: 0 6px 20px rgba(0,0,0,0.6);
@@ -50,6 +50,7 @@
         Time: <span id="hud">0.0s</span> | W = Gas | S = Brake | A/D = Balance & Flips <span id="checkpoint-msg">CHECKPOINT!</span>
     </div>
 
+    <!-- Interactive Game Canvas Window Viewport -->
     <canvas id="gameCanvas" width="700" height="400"></canvas>
 
     <script>
@@ -65,7 +66,7 @@
         let isAlive = true;
         let isVictory = false;
 
-        // Player physics variables profile
+        // Player physics coordinate variables
         let bike = {
             x: 80,
             y: 200,
@@ -78,35 +79,32 @@
             onGround: false
         };
 
-        // Checkpoint data parameters
+        // Checkpoint mechanics trackers
         let lastCheckpoint = { x: 80, y: 160 };
-
-        // Authentic Moto X3M structural physics landmarks list array
-        let terrainPoints = [];
         let checkpoints = [
             { x: 400, hit: false },
             { x: 800, hit: false }
         ];
 
+        // Level terrain track vectors
+        let terrainPoints = [];
         function initTerrain() {
             terrainPoints = [];
             for (let x = 0; x <= 1500; x += 25) {
                 let y = groundY;
-                
-                // Track Hill Vectors & Loops
-                y = groundY + Math.sin(x * 0.012) * 35;
+                y = groundY + Math.sin(x * 0.012) * 35; // Wavy beach dirt path
                 
                 if (x > 300 && x < 450) {
-                    y -= (x - 300) * 0.5; // Big hill elevation climb
+                    y -= (x - 300) * 0.5; // Incline ramp climb elevation
                 }
                 if (x >= 450 && x <= 600) {
-                    y = groundY - 75; // Upper beach cliff shelf
+                    y = groundY - 75; // Upper terrace ledge
                 }
                 if (x > 700 && x < 850) {
-                    y += Math.sin((x - 700) * 0.04) * 50; // Tricky wavy loop paths
+                    y += Math.sin((x - 700) * 0.04) * 50; // Tricky loop section
                 }
                 if (x >= 900 && x < 980) {
-                    y = 500; // Death canyon gap pit layout!
+                    y = 500; // Big canyon jump gap pit!
                 }
                 
                 terrainPoints.push({ x: x, y: y });
@@ -136,13 +134,13 @@
             timeElapsed += 1/60;
             hudDisplay.innerText = timeElapsed.toFixed(1) + "s";
 
-            // Throttle & Balance Controls
+            // Controls Engine
             if (keys['KeyW'] || keys['ArrowUp']) {
                 bike.vx += Math.cos(bike.angle) * bike.speed;
                 bike.vy += Math.sin(bike.angle) * bike.speed;
             }
             if (keys['KeyS'] || keys['ArrowDown']) {
-                bike.vx *= 0.90; // Brake slow
+                bike.vx *= 0.90; // Brake slow down
             }
             if (keys['KeyA'] || keys['ArrowLeft']) bike.rotVel -= 0.006;
             if (keys['KeyD'] || keys['ArrowRight']) bike.rotVel += 0.006;
@@ -169,7 +167,7 @@
                 bike.onGround = false;
             }
 
-            // Checkpoints triggers
+            // Check if player runs across checkpoint lines
             checkpoints.forEach(cp => {
                 if (!cp.hit && bike.x >= cp.x) {
                     cp.hit = true;
@@ -180,13 +178,13 @@
                 }
             });
 
-            // Head impact collision parameters
+            // Handle head crashes (Upside down orientation contact)
             let normalizedAngle = Math.abs((bike.angle + Math.PI) % (Math.PI * 2) - Math.PI);
             if (bike.onGround && normalizedAngle > 1.4) {
                 isAlive = false;
             }
 
-            // Pit bounds fail
+            // Canyon gap pit fall bounds
             if (bike.y > 420) {
                 isAlive = false;
             }
@@ -205,7 +203,7 @@
             if (cameraX < 0) cameraX = 0;
             ctx.translate(-cameraX, 0);
 
-            // Draw Checkpoint Flags
+            // Draw checkpoint poles
             checkpoints.forEach(cp => {
                 ctx.fillStyle = cp.hit ? '#2ecc71' : '#e74c3c';
                 ctx.fillRect(cp.x, getGroundHeight(cp.x) - 40, 15, 10);
@@ -213,21 +211,21 @@
                 ctx.beginPath(); ctx.moveTo(cp.x, getGroundHeight(cp.x)); ctx.lineTo(cp.x, getGroundHeight(cp.x) - 40); ctx.stroke();
             });
 
-            // Finish banner arch landmarks
+            // Finish gate arch landmark
             ctx.fillStyle = '#ffcc00'; ctx.fillRect(1250, 80, 16, 280);
             ctx.fillStyle = '#fff'; ctx.font = 'bold 12px sans-serif'; ctx.fillText("FINISH", 1242, 70);
 
-            // Beach Terrain Painter Layers
-            ctx.fillStyle = '#f39c12'; // Sandy orange beach floor texture
+            // Level Terrain Ground
+            ctx.fillStyle = '#f39c12'; // Sand orange beach ground
             ctx.beginPath();
             if (terrainPoints.length > 0) {
-                ctx.moveTo(terrainPoints[0].x, 400);
+                ctx.moveTo(terrainPoints.x, 400);
                 terrainPoints.forEach(p => ctx.lineTo(p.x, p.y));
                 ctx.lineTo(terrainPoints[terrainPoints.length-1].x, 400);
             }
             ctx.closePath(); ctx.fill();
 
-            // Track surface line border
+            // Ground surface trim line
             ctx.strokeStyle = '#d35400'; ctx.lineWidth = 4;
             ctx.beginPath();
             terrainPoints.forEach((p, index) => {
@@ -236,36 +234,39 @@
             });
             ctx.stroke();
 
-            // Motorcycle Character Mesh rendering
+            // Bike Character Assembly
             ctx.save();
             ctx.translate(bike.x, bike.y);
             ctx.rotate(bike.angle);
 
-            // Chassis
             ctx.strokeStyle = '#222'; ctx.lineWidth = 4;
             ctx.beginPath(); ctx.moveTo(-16, 4); ctx.lineTo(16, 4); ctx.lineTo(0, -10); ctx.closePath(); ctx.stroke();
 
-            // Vibrant Orange Starting Wheels configuration
+            // Starting Orange Wheels mesh circles
             ctx.fillStyle = '#111'; ctx.strokeStyle = '#e67e22'; ctx.lineWidth = 3;
             ctx.beginPath(); ctx.arc(-16, 5, 9, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
             ctx.beginPath(); ctx.arc(16, 5, 9, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
 
-            // Rider Nodule
             ctx.fillStyle = '#2c3e50'; ctx.beginPath(); ctx.arc(0, -15, 6, 0, Math.PI * 2); ctx.fill();
             ctx.restore();
             ctx.restore();
 
-            // Interface Card Overlays
+            // Game Cards Overlay screens
             if (!isAlive) {
                 ctx.fillStyle = "rgba(0,0,0,0.7)"; ctx.fillRect(0,0,700,400);
                 ctx.fillStyle = '#ff2a2a'; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'center';
                 ctx.fillText("CRASHED", 350, 170);
                 ctx.font = '16px sans-serif'; ctx.fillStyle = '#fff';
-                ctx.fillText("Press SPACEBAR to resume from Checkpoint", 350, 210);
+                ctx.fillText("Press SPACEBAR to reload checkpoint", 350, 210);
             } else if (isVictory) {
                 ctx.fillStyle = "rgba(0,0,0,0.7)"; ctx.fillRect(0,0,700,400);
                 ctx.fillStyle = '#2ecc71'; ctx.font = 'bold 26px sans-serif'; ctx.textAlign = 'center';
                 ctx.fillText("STAGE CLEAR!", 350, 170);
                 ctx.font = '16px sans-serif'; ctx.fillStyle = '#fff';
-                ctx.fillText("Finished in " + timeElapsed.toFixed(1) + "s! Space to retry", 350, 210);
+                ctx.fillText("Finished in " + timeElapsed.toFixed(1) + "s! Space to restart", 350, 210);
             }
+        }
+
+        function resetToCheckpoint() {
+            bike.x = lastCheckpoint.x;
+            bike.y = lastCheckpoint.y;
