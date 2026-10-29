@@ -31,6 +31,7 @@
             font-weight: bold;
         }
         #hud { color: #ff9800; }
+        #level-indicator { color: #2ecc71; margin-right: 15px; }
         canvas {
             background-color: #1a233a;
             border: 2px solid #30363d;
@@ -46,7 +47,7 @@
     </header>
 
     <div class="ui-panel">
-        Time: <span id="hud">0.0s</span> | W = Gas | S = Brake | A/D = Lean & Backflip / Frontflip
+        <span id="level-indicator">STAGE: 1</span>Time: <span id="hud">0.0s</span> | W = Gas | S = Brake | A/D = Lean & Flips
     </div>
 
     <canvas id="gameCanvas" width="700" height="400"></canvas>
@@ -55,6 +56,7 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const hudDisplay = document.getElementById('hud');
+        const lvlDisplay = document.getElementById('level-indicator');
 
         const gravity = 0.16;
         const groundY = 330;
@@ -62,6 +64,7 @@
         let timeElapsed = 0;
         let isAlive = true;
         let isVictory = false;
+        let currentLevel = 1;
 
         let bike = {
             x: 80,
@@ -77,16 +80,36 @@
         };
 
         let terrainPoints = [];
-        function initTerrain() {
+
+        // Dynamic Level Terrain Generation
+        function initTerrain(levelNum) {
             terrainPoints = [];
+            lvlDisplay.innerText = "STAGE: " + levelNum;
+
             for (let x = 0; x <= 1400; x += 25) {
-                let y = groundY + Math.sin(x * 0.015) * 45 + Math.cos(x * 0.04) * 12;
-                if (x > 500 && x < 620) {
-                    y -= (x - 500) * 0.65;
+                let y = groundY;
+
+                if (levelNum === 1) {
+                    // Level 1: Standard Bumpy Trail Route
+                    y = groundY + Math.sin(x * 0.015) * 45 + Math.cos(x * 0.04) * 12;
+                    if (x > 500 && x < 620) y -= (x - 500) * 0.65; // Ramp up at finish
+                } 
+                else if (levelNum === 2) {
+                    // Level 2: The Deep Death Valley Pit
+                    y = groundY + Math.sin(x * 0.01) * 20;
+                    if (x > 450 && x < 550) y -= (x - 450) * 0.7; // Fast jump ramp
+                    if (x >= 550 && x < 660) y = 550;             // Huge gap trap pit!
+                    if (x >= 660 && x < 750) y = groundY + 40;     // Lower landing zone
+                } 
+                else if (levelNum === 3) {
+                    // Level 3: Double Complex Launch Modifiers
+                    y = groundY;
+                    if (x > 300 && x < 400) y -= (x - 300) * 0.8; // Ramp 1
+                    if (x >= 400 && x < 480) y = 500;             // Gap 1
+                    if (x >= 480 && x < 650) y = groundY - 50;     // Elevated upper terrace
+                    if (x >= 650 && x < 750) y = 550;             // Gap 2
                 }
-                if (x >= 620 && x < 680) {
-                    y = 500;
-                }
+
                 terrainPoints.push({ x: x, y: y });
             }
         }
@@ -102,16 +125,18 @@
         }
 
         let keys = {};
-        window.addEventListener('keydown', function(e) {
-            keys[e.code] = true;
-        });
-        window.addEventListener('keyup', function(e) {
-            keys[e.code] = false;
-        });
+        window.addEventListener('keydown', function(e) { keys[e.code] = true; });
+        window.addEventListener('keyup', function(e) { keys[e.code] = false; });
 
         function update() {
             if (!isAlive || isVictory) {
-                if (keys['KeyR'] || keys['Space']) resetGame();
+                if (keys['Space']) {
+                    if (isVictory) {
+                        // Advance stages or restart loop on completion
+                        currentLevel = currentLevel >= 3 ? 1 : currentLevel + 1;
+                    }
+                    resetGame();
+                }
                 return;
             }
 
@@ -159,12 +184,12 @@
 
             if (bike.y > 420) {
                 isAlive = false;
-                hudDisplay.innerText = "WASTED! Fell into the pit. Press SPACE to Restart.";
+                hudDisplay.innerText = "WASTED! Fell into a pit. Press SPACE to Restart.";
             }
 
             if (bike.x >= 1100) {
                 isVictory = true;
-                hudDisplay.innerText = "VICTORY! Finished in: " + timeElapsed.toFixed(1) + "s. Press SPACE to play again!";
+                hudDisplay.innerText = "STAGE COMPLETED! Press SPACE for Next Level.";
             }
         }
 
@@ -176,24 +201,25 @@
             if (cameraX < 0) cameraX = 0;
             ctx.translate(-cameraX, 0);
 
+            // Draw Checkered Banner Finish Line
             ctx.fillStyle = '#ffcc00';
-            ctx.fillRect(1100, 100, 15, 250);
+            ctx.fillRect(1100, 50, 15, 300);
             ctx.fillStyle = '#fff';
             ctx.font = 'bold 12px sans-serif';
-            ctx.fillText("FINISH ARCH", 1070, 90);
+            ctx.fillText("GOAL FINISH", 1070, 40);
 
+            // Background Terrain Dirt
             ctx.fillStyle = '#e67e22';
             ctx.beginPath();
             if (terrainPoints.length > 0) {
                 ctx.moveTo(terrainPoints[0].x, 400);
-                terrainPoints.forEach(function(p) {
-                    ctx.lineTo(p.x, p.y);
-                });
+                terrainPoints.forEach(function(p) { ctx.lineTo(p.x, p.y); });
                 ctx.lineTo(terrainPoints[terrainPoints.length-1].x, 400);
             }
             ctx.closePath();
             ctx.fill();
 
+            // Track Driving Lane Surface Edge Accent (Green neon)
             ctx.strokeStyle = '#2ecc71';
             ctx.lineWidth = 4;
             ctx.beginPath();
@@ -203,6 +229,7 @@
             });
             ctx.stroke();
 
+            // Bike Character Assembly
             ctx.save();
             ctx.translate(bike.x, bike.y);
             ctx.rotate(bike.angle);
@@ -228,34 +255,22 @@
             ctx.restore();
             ctx.restore();
 
+            // HUD Screens Display Overlay Text boxes
             if (!isAlive) {
                 ctx.fillStyle = "rgba(0,0,0,0.65)"; ctx.fillRect(0,0,700,400);
                 ctx.fillStyle = '#ff2a2a'; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'center';
                 ctx.fillText("DRIVER CRASHED", 350, 180);
                 ctx.font = '16px sans-serif'; ctx.fillStyle = '#fff';
-                ctx.fillText("Press SPACEBAR to Respawn", 350, 220);
+                ctx.fillText("Press SPACEBAR to Try Stage Again", 350, 220);
             } else if (isVictory) {
                 ctx.fillStyle = "rgba(0,0,0,0.65)"; ctx.fillRect(0,0,700,400);
                 ctx.fillStyle = '#2ecc71'; ctx.font = 'bold 26px sans-serif'; ctx.textAlign = 'center';
-                ctx.fillText("STAGE COMPLETED!", 350, 180);
+                ctx.fillText(currentLevel === 3 ? "ALL STAGES COMPLETED!" : "STAGE PASSED!", 350, 180);
                 ctx.font = '16px sans-serif'; ctx.fillStyle = '#fff';
-                ctx.fillText("Press SPACEBAR to play again", 350, 220);
+                ctx.fillText("Press SPACEBAR to Load Next Track", 350, 220);
             }
         }
 
         function resetGame() {
             bike.x = 80; bike.y = 160; bike.vx = 0; bike.vy = 0; bike.angle = 0; bike.rotVel = 0;
             timeElapsed = 0; isAlive = true; isVictory = false;
-        }
-
-        function loop() {
-            update();
-            draw();
-            requestAnimationFrame(loop);
-        }
-
-        initTerrain();
-        loop();
-    </script>
-</body>
-</html>
