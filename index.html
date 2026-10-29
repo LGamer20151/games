@@ -68,8 +68,7 @@
         const gravity = 0.16;
         const groundY = 330;
 
-        // Core Game Navigation Engine States
-        let gameState = "MENU"; // MENU, SHOP, PLAYING, CRASHED, VICTORY
+        let gameState = "MENU"; 
         let currentLevel = 1;
         let totalStars = 0;
         let activeBikeType = "ORANGE"; 
@@ -80,7 +79,6 @@
         let checkpointY = 160;
         let checkpointReached = false;
 
-        // Track level unlocked states array grid
         let levelsProgress = {};
         for (let l = 1; l <= 22; l++) {
             levelsProgress[l] = { unlocked: l === 1 ? true : false, cleared: false };
@@ -88,13 +86,12 @@
 
         const bikesData = {
             "ORANGE": { color: "#e67e22", speed: 0.20, weight: 1.0, cost: 0, unlocked: true, name: "Default Orange" },
-            "RED_NINJA": { color: "#e74c3c", speed: 0.24, weight: 0.95, cost: 15, unlocked: false, name: "Ninja Red (+Speed)" },
-            "FLAMING_GHOST": { color: "#7f8c8d", speed: 0.28, weight: 0.90, cost: 40, unlocked: false, name: "Ghost Rider (Max Speed)" }
+            "RED_NINJA": { color: "#e74c3c", speed: 0.24, weight: 0.95, cost: 15, unlocked: false, name: "Ninja Red" },
+            "FLAMING_GHOST": { color: "#7f8c8d", speed: 0.28, weight: 0.90, cost: 40, unlocked: false, name: "Ghost Rider" }
         };
 
         let bike = { x: 80, y: 200, vx: 0, vy: 0, angle: 0, rotVel: 0, radius: 14, onGround: false };
 
-        // Generate 22 Completely Unique Procedural Challenge Grids
         function initLevelTerrain(lvl) {
             terrainPoints = [];
             checkpointX = 80; checkpointY = 160; checkpointReached = false;
@@ -104,12 +101,9 @@
 
             for (let x = 0; x <= 1600; x += 25) {
                 let y = groundY + Math.sin(x * freq) * amp;
-                
-                // Add unique obstacle elements depending on the stage index row
                 if (lvl % 2 === 0 && x > 400 && x < 550) y -= (x - 400) * 0.6; 
                 if (lvl % 3 === 0 && x > 650 && x < 750) y = 520; 
                 if (lvl > 5 && x > 850 && x < 1050) y += Math.cos(x * 0.04) * 22; 
-                
                 terrainPoints.push({ x: x, y: y });
             }
         }
@@ -129,30 +123,25 @@
         window.addEventListener('keydown', e => keys[e.code] = true);
         window.addEventListener('keyup', e => keys[e.code] = false);
 
-        // Click detection handler coordinates maps for Level Grid Menu layout
         canvas.addEventListener('mousedown', function(e) {
             const rect = canvas.getBoundingClientRect();
             const mX = e.clientX - rect.left;
             const mY = e.clientY - rect.top;
 
             if (gameState === "MENU") {
-                // Garage Shop button box click check
-                if (mX > 560 && mX < 680 && mY > 15 && mY < 55) {
+                if (mX > 540 && mX < 660 && mY > 15 && mY < 55) {
                     gameState = "SHOP";
                     return;
                 }
 
-                // Grid mapping level block button click listeners (22 levels layout)
                 let startX = 60, startY = 90, spacingX = 85, spacingY = 65, btnW = 65, btnH = 45;
                 let lvlIndex = 1;
 
                 for (let row = 0; row < 4; row++) {
                     for (let col = 0; col < 6; col++) {
                         if (lvlIndex > 22) break;
-
                         let bX = startX + col * spacingX;
                         let bY = startY + row * spacingY;
-
                         if (mX > bX && mX < bX + btnW && mY > bY && mY < bY + btnH) {
                             if (levelsProgress[lvlIndex].unlocked) {
                                 currentLevel = lvlIndex;
@@ -180,7 +169,7 @@
                 totalStars -= bikesData[type].cost;
                 bikesData[type].unlocked = true;
                 activeBikeType = type;
-                starsDisplay.innerText = `⭐ Stars: ${totalStars}`;
+                starsDisplay.innerText = '⭐ Stars: ' + totalStars;
             }
         }
 
@@ -194,7 +183,7 @@
                     if (gameState === "VICTORY") {
                         levelsProgress[currentLevel].cleared = true;
                         if (currentLevel < 22) levelsProgress[currentLevel + 1].unlocked = true;
-                        gameState = "MENU"; // Exit back to level selection grid map
+                        gameState = "MENU"; 
                     } else {
                         gameState = "PLAYING";
                         resetBikePosition();
@@ -204,8 +193,8 @@
             }
 
             timeElapsed += 1/60;
-            timerDisplay.innerText = `Time: ${timeElapsed.toFixed(1)}s`;
-            levelDisplay.innerText = `STAGE: ${currentLevel} / 22`;
+            timerDisplay.innerText = 'Time: ' + timeElapsed.toFixed(1) + 's';
+            levelDisplay.innerText = 'STAGE: ' + currentLevel + ' / 22';
 
             let stats = bikesData[activeBikeType];
             if (keys['KeyW'] || keys['ArrowUp']) { bike.vx += Math.cos(bike.angle) * stats.speed; bike.vy += Math.sin(bike.angle) * stats.speed; }
@@ -235,8 +224,19 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             if (gameState === "MENU") {
-                ctx.fillStyle = '#161b22'; ctx.fillRect(0,0,700,400);
-                ctx.fillStyle = '#fff'; ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'left'; ctx.fillText("SELECT CHALLENGE STAGE", 50, 45);
+                ctx.fillStyle = '#161b22'; ctx.fillRect(0, 0, 700, 400);
+                ctx.fillStyle = '#fff'; ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'left'; ctx.fillText('SELECT CHALLENGE STAGE', 50, 45);
                 
-                // Garage Shop button box
                 ctx.fillStyle = '#ff9800'; ctx.fillRect(540, 15, 120, 40);
+                ctx.fillStyle = '#fff'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('GARAGE SHOP', 600, 40);
+
+                let startX = 60, startY = 90, spacingX = 85, spacingY = 65, btnW = 65, btnH = 45;
+                let lvlIndex = 1;
+
+                for (let row = 0; row < 4; row++) {
+                    for (let col = 0; col < 6; col++) {
+                        if (lvlIndex > 22) break;
+                        let bX = startX + col * spacingX;
+                        let bY = startY + row * spacingY;
+                        let prog = levelsProgress[lvlIndex];
+
