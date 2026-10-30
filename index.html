@@ -3,27 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Stunt Car Playground</title>
+    <title>3D Arcade Driving Game</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #050505; font-family: sans-serif; }
-        #ui { position: absolute; top: 20px; left: 20px; color: white; text-shadow: 1px 1px 3px black; pointer-events: none; }
-        #speedometer { font-size: 32px; font-weight: bold; font-family: monospace; }
-        #controls { margin-top: 10px; font-size: 14px; opacity: 0.8; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        #ui { position: absolute; top: 20px; left: 20px; color: white; user-select: none; pointer-events: none; }
+        .stat-box { margin-bottom: 12px; padding: 6px 12px; background: rgba(0, 0, 0, 0.6); border-left: 4px solid #00f3ff; border-radius: 0 4px 4px 0; }
+        .label { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: #8af8ff; margin-bottom: 2px; }
+        .value { font-size: 24px; font-weight: bold; font-family: monospace; }
+        #nitro-bar { width: 120px; height: 10px; background: #333; margin-top: 4px; border-radius: 5px; overflow: hidden; }
+        #nitro-fill { width: 100%; height: 100%; background: #ff0055; transition: width 0.1s linear; }
     </style>
-    <!-- Include Three.js and OrbitControls -->
     <script src="https://cloudflare.com"></script>
 </head>
 <body>
     <div id="ui">
-        <div id="speedometer">000 KM/H</div>
-        <div id="controls">WASD / Arrows to Drive | Space to Brake | R to Reset</div>
+        <div class="stat-box"><div class="label">Score</div><div class="value" id="score">0</div></div>
+        <div class="stat-box"><div class="label">Time</div><div class="value" id="time">0.00s</div></div>
+        <div class="stat-box"><div class="label">Speed</div><div class="value" id="speed">0 km/h</div></div>
+        <div class="stat-box">
+            <div class="label">Nitro (SHIFT)</div>
+            <div id="nitro-bar"><div id="nitro-fill"></div></div>
+        </div>
     </div>
 
     <script>
-        // --- Setup Scene, Camera, & Renderer ---
+        // --- Core Engine Initialize Setup ---
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xa0b0d0);
-        scene.fog = new THREE.FogExp2(0xa0b0d0, 0.005);
+        scene.background = new THREE.Color(0x0a0e14);
+        scene.fog = new THREE.FogExp2(0x0a0e14, 0.007);
 
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -31,214 +38,184 @@
         renderer.shadowMap.enabled = true;
         document.body.appendChild(renderer.domElement);
 
-        // --- Lighting ---
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        // --- Lights Setup ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
         scene.add(ambientLight);
 
         const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        dirLight.position.set(100, 200, 50);
+        dirLight.position.set(40, 100, 20);
         dirLight.castShadow = true;
         dirLight.shadow.mapSize.width = 2048;
         dirLight.shadow.mapSize.height = 2048;
-        dirLight.shadow.camera.near = 0.5;
-        dirLight.shadow.camera.far = 500;
-        const d = 100;
-        dirLight.shadow.camera.left = -d;
-        dirLight.shadow.camera.right = d;
-        dirLight.shadow.camera.top = d;
-        dirLight.shadow.camera.bottom = -d;
         scene.add(dirLight);
 
-        // --- Physics & Track World Boundaries ---
-        const gravity = -18.0;
-        const obstacles = [];
-
-        // Grid Ground
+        // --- Environment Track Layout ---
+        const trackGroup = [];
+        
+        // Ground Grid Floor Plane
         const groundGeo = new THREE.PlaneGeometry(1000, 1000);
-        const groundMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 });
+        const groundMat = new THREE.MeshStandardMaterial({ color: 0x11141a, roughness: 0.8 });
         const ground = new THREE.Mesh(groundGeo, groundMat);
         ground.rotation.x = -Math.PI / 2;
         ground.receiveShadow = true;
         scene.add(ground);
-        
-        const grid = new THREE.GridHelper(1000, 100, 0x444444, 0x333333);
+
+        const grid = new THREE.GridHelper(1000, 100, 0x00f3ff, 0x172230);
         grid.position.y = 0.01;
         scene.add(grid);
 
-        // Helper function to build custom stunt ramps
-        function createRamp(w, h, d, x, y, z, rotX, color = 0xdd3333) {
+        // Ramp Geometry Builder
+        function createObstacleRamp(w, h, d, x, y, z, rotX, color) {
             const geo = new THREE.BoxGeometry(w, h, d);
-            const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.5 });
+            const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.4 });
             const mesh = new THREE.Mesh(geo, mat);
             mesh.position.set(x, y, z);
             mesh.rotation.x = rotX;
             mesh.castShadow = true;
             mesh.receiveShadow = true;
             scene.add(mesh);
-
-            // Save collision bounding box bounding configuration
-            mesh.geometry.computeBoundingBox();
-            obstacles.push(mesh);
-            return mesh;
+            trackGroup.push(mesh);
         }
 
-        // Build Stunt Environment Layout
-        createRamp(20, 2, 40, 0, 0.5, -60, 0.15); // Big Take-off Ramp
-        createRamp(25, 2, 30, 40, -1, -40, 0.3, 0xffaa00); // Steep Nitro Ramp
-        createRamp(30, 2, 80, -50, 5, -80, -0.05, 0x3388ff); // Massive Elevated Platform
+        // Stunt Prototyping World Elements
+        createObstacleRamp(20, 2, 40, 0, 0.2, -60, 0.15, 0xff0055);
+        createObstacleRamp(30, 2, 60, -40, 3, -120, -0.05, 0x00f3ff);
 
-        // --- Build Car Entity (Compound Mesh Hierarchy) ---
+        // --- Car Construction Rig ---
         const car = new THREE.Group();
-        car.position.set(0, 1, 0);
+        car.position.set(0, 0.5, 0);
         scene.add(car);
 
-        // Main Chassis Body
-        const bodyMat = new THREE.MeshStandardMaterial({ color: 0xff0055, roughness: 0.2, metalness: 0.8 });
+        const bodyMat = new THREE.MeshStandardMaterial({ color: 0x00f3ff, roughness: 0.2, metalness: 0.5 });
         const chassis = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.6, 4), bodyMat);
         chassis.position.y = 0.4;
         chassis.castShadow = true;
         car.add(chassis);
 
-        // Cabin Roof
-        const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.5, 2), new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1 }));
+        const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.5, 2), new THREE.MeshStandardMaterial({ color: 0x1a233a }));
         cabin.position.set(0, 0.85, -0.2);
-        cabin.castShadow = true;
         car.add(cabin);
 
-        // Front Spoiler / Wing
-        const wing = new THREE.Mesh(new THREE.BoxGeometry(2, 0.1, 0.5), bodyMat);
-        wing.position.set(0, 0.2, 2.1);
-        car.add(wing);
-
-        // Wheel Generation Layout
-        const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9 });
-        const wheelGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.4, 24);
-        wheelGeo.rotateZ(Math.PI / 2);
-
+        // Wheels Setup Layout
+        const wheelGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.4, 24).rotateZ(Math.PI / 2);
+        const wheelMat = new THREE.MeshStandardMaterial({ color: 0x222, roughness: 0.9 });
         const wheels = [];
-        const wheelPositions = [
-            { x: -1, y: 0.3, z: 1.2 },  // Front Left
-            { x: 1, y: 0.3, z: 1.2 },   // Front Right
-            { x: -1, y: 0.3, z: -1.2 }, // Rear Left
-            { x: 1, y: 0.3, z: -1.2 }   // Rear Right
-        ];
+        const offsets = [{x:-1, z:1.2}, {x:1, z:1.2}, {x:-1, z:-1.2}, {x:1, z:-1.2}];
 
-        wheelPositions.forEach(pos => {
-            const wheelMesh = new THREE.Mesh(wheelGeo, wheelMat);
-            wheelMesh.position.set(pos.x, pos.y, pos.z);
-            wheelMesh.castShadow = true;
-            car.add(wheelMesh);
-            wheels.push(wheelMesh);
+        offsets.forEach(offset => {
+            const wMesh = new THREE.Mesh(wheelGeo, wheelMat);
+            wMesh.position.set(offset.x, 0.4, offset.z);
+            wMesh.castShadow = true;
+            car.add(wMesh);
+            wheels.push(wMesh);
         });
 
-        // --- Input Keyboard Listeners ---
-        const keys = { Forward: false, Backward: false, Left: false, Right: false, Brake: false };
-        
-        const parseKeys = (e, status) => {
-            switch (e.code) {
-                case 'KeyW': case 'ArrowUp': keys.Forward = status; break;
-                case 'KeyS': case 'ArrowDown': keys.Backward = status; break;
-                case 'KeyA': case 'ArrowLeft': keys.Left = status; break;
-                case 'KeyD': case 'ArrowRight': keys.Right = status; break;
-                case 'Space': keys.Brake = status; break;
-                case 'KeyR': if(status) resetCar(); break;
-            }
-        };
+        // --- Controls Matrix Logic ---
+        const keys = { w: false, s: false, a: false, d: false, shift: false };
+        window.addEventListener('keydown', (e) => handleKey(e, true));
+        window.addEventListener('keyup', (e) => handleKey(e, false));
 
-        window.addEventListener('keydown', (e) => parseKeys(e, true));
-        window.addEventListener('keyup', (e) => parseKeys(e, false));
-
-        function resetCar() {
-            car.position.set(0, 2, 0);
-            car.rotation.set(0, 0, 0);
-            speed = 0;
-            velocity.set(0,0,0);
+        function handleKey(e, isDown) {
+            if (e.key === 'ArrowUp' || e.key.toLowerCase() === 'w') keys.w = isDown;
+            if (e.key === 'ArrowDown' || e.key.toLowerCase() === 's') keys.s = isDown;
+            if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') keys.a = isDown;
+            if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') keys.d = isDown;
+            if (e.key === 'Shift') keys.shift = isDown;
         }
 
-        // --- Physics Runtime Vectors ---
-        let speed = 0;
-        const maxSpeed = 65;
-        const acceleration = 35;
-        const friction = 0.98;
-        const brakeDecel = 0.85;
-        let steeringAngle = 0;
-        const maxSteer = 0.5;
-        
+        // --- Physics Vector Mechanics ---
+        let currentSpeed = 0;
+        let nitroReserve = 100;
+        let gameScore = 0;
         const velocity = new THREE.Vector3();
         const clock = new THREE.Clock();
-        const speedometerEl = document.getElementById('speedometer');
 
-        // --- Main Game Loop Animation Routine ---
-        function animate() {
-            requestAnimationFrame(animate);
+        const uiScore = document.getElementById('score');
+        const uiTime = document.getElementById('time');
+        const uiSpeed = document.getElementById('speed');
+        const uiNitro = document.getElementById('nitro-fill');
 
-            const dt = Math.min(clock.getDelta(), 0.1); // Cap delta to safe limits
+        function gameLoop() {
+            requestAnimationFrame(gameLoop);
 
-            // Handle Acceleration Engine Mechanics
-            if (keys.Forward) {
-                speed += acceleration * dt;
-                if (speed > maxSpeed) speed = maxSpeed;
-            } else if (keys.Backward) {
-                speed -= acceleration * dt;
-                if (speed < -maxSpeed / 2) speed = -maxSpeed / 2;
+            const dt = Math.min(clock.getDelta(), 0.1);
+            let targetMaxSpeed = 50;
+
+            // Handle Nitro Booster Boost
+            if (keys.shift && nitroReserve > 0 && keys.w) {
+                targetMaxSpeed = 90;
+                nitroReserve -= dt * 35;
+                bodyMat.color.setHex(0xff0055); // Change accent styling on boost
             } else {
-                speed *= friction;
+                nitroReserve = Math.min(100, nitroReserve + dt * 10);
+                bodyMat.color.setHex(0x00f3ff);
             }
 
-            // Apply Direct Braking
-            if (keys.Brake) speed *= brakeDecel;
+            // Engine Handling Dynamics
+            if (keys.w) currentSpeed = THREE.MathUtils.lerp(currentSpeed, targetMaxSpeed, dt * 2.5);
+            else if (keys.s) currentSpeed = THREE.MathUtils.lerp(currentSpeed, -20, dt * 4);
+            else currentSpeed = THREE.MathUtils.lerp(currentSpeed, 0, dt * 1.5);
 
-            // Handle Handling Steering Matrix
-            if (keys.Left) {
-                steeringAngle = THREE.MathUtils.lerp(steeringAngle, maxSteer, dt * 10);
-            } else if (keys.Right) {
-                steeringAngle = THREE.MathUtils.lerp(steeringAngle, -maxSteer, dt * 10);
+            // Steer Turning Matrices
+            if (keys.a) car.rotation.y += (currentSpeed / targetMaxSpeed) * 2.2 * dt;
+            if (keys.d) car.rotation.y -= (currentSpeed / targetMaxSpeed) * 2.2 * dt;
+
+            // Animate local space vectors
+            const heading = new THREE.Vector3(0, 0, 1).applyQuaternion(car.quaternion);
+            velocity.x = heading.x * currentSpeed;
+            velocity.z = heading.z * currentSpeed;
+
+            // Dynamic Surface Checking 
+            let surfaceY = 0;
+            const originVec = new THREE.Vector3(car.position.x, car.position.y + 3, car.position.z);
+            const downRay = new THREE.Raycaster(originVec, new THREE.Vector3(0, -1, 0));
+            const hitDetect = downRay.intersectObjects(trackGroup);
+
+            if (hitDetect.length > 0 && hitDetect[0].distance <= 3.1) {
+                surfaceY = (car.position.y + 3) - hitDetect[0].distance;
+                car.rotation.x = THREE.MathUtils.lerp(car.rotation.x, hitDetect[0].object.rotation.x, dt * 8);
             } else {
-                steeringAngle = THREE.MathUtils.lerp(steeringAngle, 0, dt * 10);
-            }
-
-            // Visual Wheel Rotation Animation Updates
-            wheels[0].rotation.y = steeringAngle;
-            wheels[1].rotation.y = steeringAngle;
-            wheels.forEach(w => w.rotation.x += (speed * dt) / 0.4);
-
-            // Calculate Object Space Heading Vector Direction
-            if (car.position.y <= 0.1 || car.isOnRamp) {
-                car.rotation.y += steeringAngle * (speed / maxSpeed) * dt * 2.5;
-            }
-
-            const forwardDir = new THREE.Vector3(0, 0, 1).applyQuaternion(car.quaternion);
-            
-            // Apply Horizontal Engine Velocity Forces
-            velocity.x = forwardDir.x * speed;
-            velocity.z = forwardDir.z * speed;
-
-            // Simple Raycasting Floor Elevation Tracker & Physics Resolving Engine
-            let groundHeight = 0;
-            car.isOnRamp = false;
-            
-            const carRay = new THREE.Raycaster(
-                new THREE.Vector3(car.position.x, car.position.y + 2, car.position.z),
-                new THREE.Vector3(0, -1, 0)
-            );
-            
-            const intersections = carRay.intersectObjects(obstacles);
-
-            if (intersections.length > 0 && intersections[0].distance <= 2.1) {
-                groundHeight = (car.position.y + 2) - intersections[0].distance;
-                car.isOnRamp = true;
-                
-                // Align vehicle pitch dynamically to match local ramp gradients
-                if(intersections[0].object.rotation.x !== 0) {
-                    car.rotation.x = THREE.MathUtils.lerp(car.rotation.x, intersections[0].object.rotation.x, dt * 5);
-                }
-            } else {
-                // Return pitch alignment naturally over time when airborne
                 car.rotation.x = THREE.MathUtils.lerp(car.rotation.x, 0, dt * 2);
             }
 
-            // Standard Gravity Constraints
-            if (car.position.y > groundHeight) {
-                velocity.y += gravity * dt;
+            // Apply Translation
+            if (car.position.y > surfaceY) {
+                velocity.y -= 25 * dt; // Gravity Drop
             } else {
                 velocity.y = 0;
+                car.position.y = surfaceY;
+            }
+
+            car.position.addScaledVector(velocity, dt);
+
+            // Visual Wheel Spin updates
+            wheels.forEach(w => w.rotation.x += (currentSpeed * dt) / 0.4);
+
+            // Update UI Engine Readouts
+            uiTime.textContent = `${clock.getElapsedTime().toFixed(2)}s`;
+            uiSpeed.textContent = `${Math.abs(Math.round(currentSpeed * 3))} km/h`;
+            uiNitro.style.width = `${nitroReserve}%`;
+            
+            if (Math.abs(currentSpeed) > 5) {
+                gameScore += Math.floor(Math.abs(currentSpeed) * dt * 0.2);
+                uiScore.textContent = gameScore;
+            }
+
+            // Elastic Dynamic Chase Camera Follow System Rig
+            const relativeCam = new THREE.Vector3(0, 2.5, -6.5).applyQuaternion(car.quaternion);
+            camera.position.lerp(car.position.clone().add(relativeCam), dt * 7);
+            camera.lookAt(car.position.clone().add(new THREE.Vector3(0, 0.6, 0)));
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        gameLoop();
+    </script>
+</body>
+</html>
