@@ -1,1 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Whack-a-Mole</title>
+  <style>
+    body { background:#0d0e12; color:#fff; font-family:Arial, sans-serif; text-align:center; margin:0; padding:20px; }
+    a { color:#89b4fa; }
+    #info { font-size:20px; margin:14px 0; }
+    #board { display:grid; grid-template-columns:repeat(3, 110px); gap:14px; justify-content:center; }
+    .hole { width:110px; height:110px; border-radius:50%; background:#1c1d24; border:none; font-size:50px; cursor:pointer; }
+    .hole.up { background:#f9e2af; }
+    #start { margin-top:20px; padding:12px 26px; font-size:18px; border:none; border-radius:8px; background:#89b4fa; color:#0d0e12; font-weight:bold; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <a href="index.html">&larr; Back to menu</a>
+  <h1>Whack-a-Mole</h1>
+  <div id="info">Score: 0 &nbsp;|&nbsp; Time: 30</div>
+  <div id="board"></div>
+  <button id="start">Start</button>
+<script>
+const board = document.getElementById('board');
+const info = document.getElementById('info');
+const startBtn = document.getElementById('start');
+let holes = [], score = 0, timeLeft = 30, moleTimer = null, clock = null, active = false, upIndex = -1;
 
+for (let i = 0; i < 9; i++) {
+  const b = document.createElement('button');
+  b.className = 'hole';
+  b.addEventListener('click', () => whack(i));
+  board.appendChild(b);
+  holes.push(b);
+}
+
+function render() {
+  info.textContent = 'Score: ' + score + '   |   Time: ' + timeLeft;
+}
+
+function showMole() {
+  if (upIndex !== -1) holes[upIndex].classList.remove('up');
+  upIndex = Math.floor(Math.random() * 9);
+  holes[upIndex].classList.add('up');
+  holes[upIndex].textContent = '';
+  holes[upIndex].textContent = '\u{1F439}';
+}
+
+function hideMole() {
+  if (upIndex !== -1) {
+    holes[upIndex].classList.remove('up');
+    holes[upIndex].textContent = '';
+    upIndex = -1;
+  }
+}
+
+function whack(i) {
+  if (!active) return;
+  if (i === upIndex) {
+    score++;
+    hideMole();
+    render();
+  }
+}
+
+function endGame() {
+  active = false;
+  clearInterval(clock);
+  clearInterval(moleTimer);
+  hideMole();
+  startBtn.disabled = false;
+  startBtn.textContent = 'Play Again';
+  info.textContent = 'Game over! Final score: ' + score;
+}
+
+startBtn.addEventListener('click', () => {
+  score = 0;
+  timeLeft = 30;
+  active = true;
+  startBtn.disabled = true;
+  render();
+  showMole();
+  moleTimer = setInterval(() => { hideMole(); showMole(); }, 700);
+  clock = setInterval(() => {
+    timeLeft--;
+    render();
+    if (timeLeft <= 0) endGame();
+  }, 1000);
+});
+</script>
+</body>
+</html>
