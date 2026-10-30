@@ -35,7 +35,7 @@
         const dotProduct = (vecA, vecB) => vecA.reduce((sum, val, i) => sum + val * vecB[i], 0);
         const randomWeight = () => Math.random() * 2 - 1;
 
-        // 2. Training Data (XOR Problem)
+        // 2. Correctly formatted Training Data arrays
         const trainingData = [
             { input:, output: [0] },
             { input:, output: [1] },
@@ -47,7 +47,7 @@
         const hiddenNodes = 3;
         const outputNodes = 1;
         const learningRate = 0.5;
-        const totalEpochs = 20000; // Lowered slightly for lightning-fast browser performance
+        const totalEpochs = 20000;
 
         let weightsInputHidden = Array.from({ length: hiddenNodes }, () => Array.from({ length: inputNodes }, randomWeight));
         let weightsHiddenOutput = Array.from({ length: outputNodes }, () => Array.from({ length: hiddenNodes }, randomWeight));
@@ -55,11 +55,12 @@
         let biasHidden = Array.from({ length: hiddenNodes }, randomWeight);
         let biasOutput = Array.from({ length: outputNodes }, randomWeight);
 
-        // Chunking the training process to keep the browser responsive
         async function trainNetwork() {
+            // Short delay to ensure browser finishes rendering text changes
+            await new Promise(resolve => setTimeout(resolve, 200));
+
             for (let epoch = 0; epoch <= totalEpochs; epoch++) {
                 
-                // Every 500 iterations, pause briefly to let the browser update the text counter
                 if (epoch % 500 === 0) {
                     statusDiv.textContent = `⚡ Training network... Progress: ${epoch} / ${totalEpochs} epochs`;
                     await new Promise(resolve => setTimeout(resolve, 1)); 
@@ -114,8 +115,7 @@
                 }
             }
 
-            // Finish up and output calculations
-            statusDiv.textContent = "✅ Training Complete! Total time: ~3 seconds.";
+            statusDiv.textContent = "✅ Training Complete!";
             statusDiv.style.color = "#7ee787";
             
             log("--- AI Evaluation Results ---");
@@ -126,7 +126,6 @@
             });
         }
 
-        // Kick off the updated loop
         trainNetwork();
     </script>
 </body>
