@@ -1,32 +1,151 @@
-import express from 'express';
-import cors from 'cors';
-import { GoogleGenAI } from '@google/genai';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My ChatGPT Clone</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #212121;
+            color: #eceecf;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .chat-container {
+            width: 100%;
+            max-width: 700px;
+            height: 80vh;
+            display: flex;
+            flex-direction: column;
+            background-color: #2f2f2f;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        .messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 15px;
+            line-height: 1.5;
+        }
+        .user {
+            background-color: #3e3e3e;
+            align-self: flex-end;
+            color: #fff;
+        }
+        .ai {
+            background-color: transparent;
+            align-self: flex-start;
+            color: #eceecf;
+        }
+        .input-area {
+            padding: 20px;
+            background-color: #2f2f2f;
+            display: flex;
+            gap: 10px;
+        }
+        input {
+            flex: 1;
+            padding: 14px;
+            border-radius: 8px;
+            border: 1px solid #4f4f4f;
+            background-color: #3e3e3e;
+            color: #fff;
+            font-size: 16px;
+            outline: none;
+        }
+        button {
+            padding: 0 20px;
+            background-color: #673ab7;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #512da8;
+        }
+    </style>
+</head>
+<body>
 
-const app = express();
-app.use(cors());
-app.use(express.json());
+<div class="chat-container">
+    <div class="messages" id="chat-messages">
+        <div class="message ai">Hello! I am your AI assistant. How can I help you today?</div>
+    </div>
+    <div class="input-area">
+        <input type="text" id="user-input" placeholder="Message AI..." onkeypress="handleKeyPress(event)">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+</div>
 
-// Initialize the Gemini AI with your secret key
-// Replace 'YOUR_GEMINI_API_KEY' with your actual key from Google AI Studio
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || 'YOUR_GEMINI_API_KEY' });
-
-app.post('/api/chat', async (req, res) => {
-  try {
-    const { message } = req.body;
-
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
-      contents: message,
-    });
-
-    res.json({ reply: response.text });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Something went wrong with the AI.' });
+<!-- Load the Google Gen AI SDK directly from the web -->
+<script type="importmap">
+  {
+    "imports": {
+      "@google/genai": "https://esm.run"
+    }
   }
-});
+</script>
 
-const PORT = 3000;
-app.listen(PORT, () => {
-  console.log(`AI Server running on http://localhost:${PORT}`);
-});
+<script type="module">
+    import { GoogleGenAI } from '@google/genai';
+
+    // 1. PUT YOUR ACTUAL GEMINI API KEY HERE BETWEEN THE QUOTES
+    const API_KEY = "YOUR_GEMINI_API_KEY"; 
+    const ai = new GoogleGenAI({ apiKey: API_KEY });
+
+    window.sendMessage = async function() {
+        const inputElement = document.getElementById('user-input');
+        const messageText = inputElement.value.trim();
+        if (!messageText) return;
+
+        inputElement.value = '';
+        appendMessage(messageText, 'user');
+
+        try {
+            // 2. Call the AI model directly from the browser window
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.0-flash',
+                contents: messageText,
+            });
+            
+            appendMessage(response.text, 'ai');
+        } catch (error) {
+            console.error(error);
+            appendMessage('Error: Could not get a response from the AI. Check your API key.', 'ai');
+        }
+    }
+
+    function appendMessage(text, sender) {
+        const messagesContainer = document.getElementById('chat-messages');
+        const messageElement = document.createElement('div');
+        messageElement.classList.add('message', sender);
+        messageElement.innerText = text;
+        messagesContainer.appendChild(messageElement);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    window.handleKeyPress = function(event) {
+        if (event.key === 'Enter') {
+            sendMessage();
+        }
+    }
+</script>
+
+</body>
+</html>
