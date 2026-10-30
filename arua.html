@@ -15,7 +15,7 @@
   <h1>Arua</h1>
   <canvas id="game" width="600" height="500"></canvas>
   <div id="score">Arua: 0</div>
-  <p>Bounce the ball off the spinning balls to collect Arua. Space or click restarts after a game over.</p>
+  <p>Bounce the ball off the two big balls to collect Arua. Space or click restarts after a game over.</p>
 
 <script>
 const canvas = document.getElementById('game');
@@ -23,39 +23,28 @@ const ctx = canvas.getContext('2d');
 const scoreEl = document.getElementById('score');
 
 const W = canvas.width, H = canvas.height;
-const CX = W / 2, CY = 230;
-const ORBIT = 110;      // distance from the center to each spinning ball
-const BIG_R = 40;       // radius of each spinning ball
+const BIG_R = 45;       // radius of each big ball
 const BALL_R = 10;
 const GRAVITY = 0.25;
-const SPIN_SPEED = 0.03;
 
-let ball, spinners, arua, gameOver, angle, contact;
+// The two big balls stay still at the bottom left and bottom right
+const spinners = [
+  { x: 130, y: H - 110, r: BIG_R, color: '#f38ba8' },
+  { x: W - 130, y: H - 110, r: BIG_R, color: '#89b4fa' }
+];
+
+let ball, arua, gameOver, contact;
 
 function reset() {
   ball = { x: W / 2, y: 60, vx: (Math.random() - 0.5) * 2, vy: 0, r: BALL_R };
   arua = 0;
   gameOver = false;
-  angle = 0;
   contact = [false, false];
   scoreEl.textContent = 'Arua: 0';
 }
 
-function spinnerPos(i) {
-  const a = angle + i * Math.PI;
-  return {
-    x: CX + Math.cos(a) * ORBIT,
-    y: CY + Math.sin(a) * ORBIT,
-    vx: -Math.sin(a) * ORBIT * SPIN_SPEED,
-    vy: Math.cos(a) * ORBIT * SPIN_SPEED,
-    a
-  };
-}
-
 function update() {
   if (gameOver) return;
-
-  angle += SPIN_SPEED;
 
   ball.vy += GRAVITY;
   ball.x += ball.vx;
@@ -66,12 +55,12 @@ function update() {
   if (ball.x > W - BALL_R) { ball.x = W - BALL_R; ball.vx = -Math.abs(ball.vx); }
   if (ball.y < BALL_R) { ball.y = BALL_R; ball.vy = Math.abs(ball.vy); }
 
-  // Bounce off each spinning ball
-  for (let i = 0; i < 2; i++) {
-    const s = spinnerPos(i);
+  // Bounce off each big ball
+  for (let i = 0; i < spinners.length; i++) {
+    const s = spinners[i];
     const dx = ball.x - s.x, dy = ball.y - s.y;
     const d = Math.hypot(dx, dy);
-    const minDist = BIG_R + ball.r;
+    const minDist = s.r + ball.r;
 
     if (d < minDist) {
       if (!contact[i]) {
@@ -81,18 +70,15 @@ function update() {
       }
 
       const nx = dx / d, ny = dy / d;
-      // Push the ball out of the spinning ball
+      // Push the ball out of the big ball
       ball.x = s.x + nx * minDist;
       ball.y = s.y + ny * minDist;
 
-      // Reflect the ball's velocity relative to the moving spinner
-      const rvx = ball.vx - s.vx, rvy = ball.vy - s.vy;
-      const dot = rvx * nx + rvy * ny;
+      // Reflect the velocity off the surface
+      const dot = ball.vx * nx + ball.vy * ny;
       if (dot < 0) {
         ball.vx -= 1.8 * dot * nx;
         ball.vy -= 1.8 * dot * ny;
-        // Small random nudge so the ball does not repeat the same path
-        ball.vx += (Math.random() - 0.5) * 0.4;
       }
     } else {
       contact[i] = false;
@@ -108,21 +94,12 @@ function update() {
 function draw() {
   ctx.clearRect(0, 0, W, H);
 
-  // Spinning balls with a stripe that shows the spin
-  for (let i = 0; i < 2; i++) {
-    const s = spinnerPos(i);
-    ctx.fillStyle = i === 0 ? '#f38ba8' : '#89b4fa';
+  // Still big balls
+  for (const s of spinners) {
+    ctx.fillStyle = s.color;
     ctx.beginPath();
-    ctx.arc(s.x, s.y, BIG_R, 0, Math.PI * 2);
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
     ctx.fill();
-
-    const sa = s.a * 2;
-    ctx.strokeStyle = '#11111b';
-    ctx.lineWidth = 6;
-    ctx.beginPath();
-    ctx.moveTo(s.x + Math.cos(sa) * BIG_R, s.y + Math.sin(sa) * BIG_R);
-    ctx.lineTo(s.x - Math.cos(sa) * BIG_R, s.y - Math.sin(sa) * BIG_R);
-    ctx.stroke();
   }
 
   // Main ball
