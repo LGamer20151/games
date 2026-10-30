@@ -1,262 +1,64 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arcade Plinko // Vector Core</title>
-    <style>
-        body {
-            background: #0f172a;
-            color: #f8fafc;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            user-select: none;
-        }
-        h1 {
-            margin-bottom: 5px;
-            color: #38bdf8;
-            text-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
-        }
-        #score-board {
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 15px;
-            color: #f59e0b;
-        }
-        canvas {
-            background: #1e293b;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            border: 2px solid #334155;
-            cursor: pointer;
-        }
-        .instructions {
-            margin-top: 15px;
-            color: #94a3b8;
-            font-size: 14px;
-            text-align: center;
-            max-width: 500px;
-        }
-    </style>
-</head>
-<body>
+import numpy as np
 
-    <h1>ARCADE PLINKO</h1>
-    <div id="score-board">SCORE: <span id="score-val">0</span></div>
+# 1. Activation function & its derivative
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
+
+def sigmoid_derivative(x):
+    return x * (1 - x)
+
+# 2. Training Data (XOR Gate Problem)
+# Inputs: 4 samples with 2 features each
+X = np.array([[0, 0],
+              [0, 1],
+              [1, 0],
+              [1, 1]])
+
+# Target outputs: XOR logic (0 if same, 1 if different)
+y = np.array([[0], [1], [1], [0]])
+
+# 3. Initialize Network Architecture & Weights
+np.random.seed(42) # For reproducible results
+input_neurons = 2
+hidden_neurons = 3
+output_neurons = 1
+
+# Weights and Biases
+weights_hidden = np.random.uniform(size=(input_neurons, hidden_neurons))
+bias_hidden = np.random.uniform(size=(1, hidden_neurons))
+
+weights_output = np.random.uniform(size=(hidden_neurons, output_neurons))
+bias_output = np.random.uniform(size=(1, output_neurons))
+
+learning_rate = 0.5
+epochs = 10000
+
+# 4. Training Loop
+for epoch in range(epochs):
+    # --- Forward Propagation ---
+    hidden_layer_input = np.dot(X, weights_hidden) + bias_hidden
+    hidden_layer_activation = sigmoid(hidden_layer_input)
     
-    <canvas id="plinkoCanvas" width="600" height="700"></canvas>
+    output_layer_input = np.dot(hidden_layer_activation, weights_output) + bias_output
+    predicted_output = sigmoid(output_layer_input)
     
-    <div class="instructions">
-        💡 <strong>How to Play:</strong> Move your mouse over the top board area and <strong>click anywhere</strong> to drop a ball! Watch it bounce through the pegs into a scoring slot.
-    </div>
+    # --- Backpropagation ---
+    # Error at output
+    error = y - predicted_output
+    d_predicted_output = error * sigmoid_derivative(predicted_output)
+    
+    # Error at hidden layer
+    error_hidden_layer = d_predicted_output.dot(weights_output.T)
+    d_hidden_layer = error_hidden_layer * sigmoid_derivative(hidden_layer_activation)
+    
+    # --- Updating Weights and Biases ---
+    weights_output += hidden_layer_activation.T.dot(d_predicted_output) * learning_rate
+    bias_output += np.sum(d_predicted_output, axis=0, keepdims=True) * learning_rate
+    
+    weights_hidden += X.T.dot(d_hidden_layer) * learning_rate
+    bias_hidden += np.sum(d_hidden_layer, axis=0, keepdims=True) * learning_rate
 
-    <script>
-        const canvas = document.getElementById('plinkoCanvas');
-        const ctx = canvas.getContext('2d');
-        const scoreDisplay = document.getElementById('score-val');
-
-        let score = 0;
-        const gravity = 0.25;
-        const bounce = 0.55; 
-
-        const balls = [];
-        const pegs = [];
-        const buckets = [];
-        const effects = [];
-
-        const bucketCounts = 9;
-        const bucketWidth = canvas.width / bucketCounts;
-        
-        // Alternative setup to prevent text cutoffs
-        const bucketScores =;
-        const bucketColors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#22c55e', '#eab308', '#f97316', '#ef4444'];
-
-        for (let i = 0; i < bucketCounts; i++) {
-            buckets.push({
-                x: i * bucketWidth,
-                y: canvas.height - 50,
-                w: bucketWidth,
-                h: 50,
-                score: bucketScores[i],
-                color: bucketColors[i],
-                flash: 0
-            });
-        }
-
-        const rows = 10;
-        const startY = 120;
-        const rowSpacing = 45;
-        const pegSpacing = 45;
-
-        for (let r = 0; r < rows; r++) {
-            const pegsInRow = r + 3; 
-            const rowWidth = (pegsInRow - 1) * pegSpacing;
-            const startX = (canvas.width - rowWidth) / 2;
-
-            for (let p = 0; p < pegsInRow; p++) {
-                pegs.push({
-                    x: startX + (p * pegSpacing),
-                    y: startY + (r * rowSpacing),
-                    radius: 5,
-                    pulse: 0
-                });
-            }
-        }
-
-        let mouseX = canvas.width / 2;
-        canvas.addEventListener('mousemove', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            mouseX = e.clientX - rect.left;
-        });
-
-        canvas.addEventListener('click', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const clickX = e.clientX - rect.left;
-            const clickY = e.clientY - rect.top;
-
-            if (clickY < 80) {
-                balls.push({
-                    x: clickX,
-                    y: clickY,
-                    vx: (Math.random() - 0.5) * 2, 
-                    vy: 2,
-                    radius: 9,
-                    color: '#38bdf8'
-                });
-            }
-        });
-
-        function spawnEffect(x, y, text, color) {
-            effects.push({ x, y, text, color, alpha: 1, vy: -1 });
-        }
-
-        function update() {
-            for (let i = balls.length - 1; i >= 0; i--) {
-                let b = balls[i];
-                b.vy += gravity;
-                b.x += b.vx;
-                b.y += b.vy;
-
-                if (b.x - b.radius < 0) {
-                    b.x = b.radius;
-                    b.vx *= -bounce;
-                } else if (b.x + b.radius > canvas.width) {
-                    b.x = canvas.width - b.radius;
-                    b.vx *= -bounce;
-                }
-
-                pegs.forEach(peg => {
-                    let dx = b.x - peg.x;
-                    let dy = b.y - peg.y;
-                    let dist = Math.sqrt(dx * dx + dy * dy);
-                    let minDist = b.radius + peg.radius;
-
-                    if (dist < minDist) {
-                        let overlap = minDist - dist;
-                        let nx = dx / dist;
-                        let ny = dy / dist;
-
-                        b.x += nx * overlap;
-                        b.y += ny * overlap;
-
-                        let dotProduct = b.vx * nx + b.vy * ny;
-                        b.vx = (b.vx - 2 * dotProduct * nx) * bounce;
-                        b.vy = (b.vy - 2 * dotProduct * ny) * bounce;
-                        b.vx += (Math.random() - 0.5) * 0.5;
-
-                        peg.pulse = 8; 
-                    }
-                });
-
-                if (b.y + b.radius >= canvas.height - 45) {
-                    for (let j = 0; j < buckets.length; j++) {
-                        let bucket = buckets[j];
-                        if (b.x >= bucket.x && b.x <= bucket.x + bucket.w) {
-                            score += bucket.score;
-                            scoreDisplay.textContent = score;
-                            bucket.flash = 15; 
-                            spawnEffect(bucket.x + bucket.w/2, bucket.y - 10, `+${bucket.score}`, bucket.color);
-                            break;
-                        }
-                    }
-                    balls.splice(i, 1); 
-                }
-            }
-
-            pegs.forEach(p => { if (p.pulse > 0) p.pulse--; });
-            buckets.forEach(b => { if (b.flash > 0) b.flash--; });
-            for (let i = effects.length - 1; i >= 0; i--) {
-                effects[i].y += effects[i].vy;
-                effects[i].alpha -= 0.02;
-                if (effects[i].alpha <= 0) effects.splice(i, 1);
-            }
-        }
-
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            ctx.strokeStyle = 'rgba(56, 189, 248, 0.2)';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(mouseX, 0);
-            ctx.lineTo(mouseX, 80);
-            ctx.stroke();
-
-            ctx.strokeStyle = '#334155';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(0, 80);
-            ctx.lineTo(canvas.width, 80);
-            ctx.stroke();
-
-            pegs.forEach(peg => {
-                ctx.beginPath();
-                ctx.arc(peg.x, peg.y, peg.radius + (peg.pulse * 0.4), 0, Math.PI * 2);
-                ctx.fillStyle = peg.pulse > 0 ? '#f43f5e' : '#94a3b8';
-                ctx.fill();
-            });
-
-            buckets.forEach(bucket => {
-                ctx.fillStyle = bucket.flash > 0 ? '#ffffff' : bucket.color;
-                ctx.fillRect(bucket.x + 2, bucket.y, bucket.w - 4, bucket.h);
-
-                ctx.fillStyle = '#475569';
-                ctx.fillRect(bucket.x, bucket.y - 15, 4, bucket.h + 15);
-
-                ctx.fillStyle = bucket.flash > 0 ? '#000000' : '#0f172a';
-                ctx.font = 'bold 14px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText(bucket.score, bucket.x + bucket.w / 2, bucket.y + 32);
-            });
-
-            balls.forEach(b => {
-                ctx.beginPath();
-                ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
-                ctx.fillStyle = b.color;
-                ctx.fill();
-            });
-
-            effects.forEach(eff => {
-                ctx.fillStyle = eff.color;
-                ctx.globalAlpha = eff.alpha;
-                ctx.font = 'bold 20px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText(eff.text, eff.x, eff.y);
-                ctx.globalAlpha = 1.0;
-            });
-        }
-
-        function loop() {
-            update();
-            draw();
-            requestAnimationFrame(loop);
-        }
-
-        loop();
-    </script>
-</body>
-</html>
+# 5. Test the trained AI
+print("Trained AI Predictions for XOR:")
+for i in range(len(X)):
+    print(f"Input: {X[i]} -> Target: {y[i][0]} -> AI Prediction: {predicted_output[i][0]:.4f}")
