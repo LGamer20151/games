@@ -1,235 +1,68 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Voxel Craft</title>
-<style>
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #87ceeb; font-family: sans-serif; }
-  #info { position: absolute; top: 12px; left: 12px; color: #fff; font-weight: bold;
-          text-shadow: 2px 2px 4px #000; pointer-events: none; line-height: 1.5; }
-  #crosshair { position: absolute; top: 50%; left: 50%; width: 4px; height: 4px; margin: -2px 0 0 -2px;
-               background: #fff; border-radius: 50%; box-shadow: 0 0 2px #000; pointer-events: none; }
-  #hotbar { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; }
-  .slot { width: 56px; height: 56px; border: 3px solid #333; background: rgba(0,0,0,0.5);
-          color: #fff; display: flex; align-items: center; justify-content: center; font-weight: bold; }
-  .slot.active { border-color: #fff; }
-  #start { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-           background: rgba(0,0,0,0.55); color: #fff; font-size: 28px; font-weight: bold; cursor: pointer; }
-</style>
-</head>
-<body>
-<div id="info">Voxel Craft<br>WASD: Move | Space: Jump | Mouse: Look<br>Left click: Break | Right click: Place | 1-4: Block | Esc: Pause</div>
-<div id="crosshair"></div>
-<div id="hotbar"></div>
-<div id="start">Click to Play</div>
-<script type="importmap">
-{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
-</script>
-<script type="module">
-import * as THREE from 'three';
+import java.util.*;
 
-const WORLD = 40, HEIGHT = 16;
-const BLOCKS = [
-  { name: 'Grass', color: 0x5fae3c, top: 0x6fc24a },
-  { name: 'Dirt',  color: 0x8b5a2b, top: 0x8b5a2b },
-  { name: 'Stone', color: 0x7d7d7d, top: 0x7d7d7d },
-  { name: 'Wood',  color: 0x8a6436, top: 0xb08850 }
-];
-let selected = 0;
-
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87ceeb);
-scene.fog = new THREE.Fog(0x87ceeb, 30, 70);
-const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.1, 200);
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(innerWidth, innerHeight);
-document.body.appendChild(renderer.domElement);
-scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-const sun = new THREE.DirectionalLight(0xffffff, 0.8);
-sun.position.set(20, 40, 10);
-scene.add(sun);
-
-const world = new Map();
-const key = (x, y, z) => `${x},${y},${z}`;
-const geo = new THREE.BoxGeometry(1, 1, 1);
-const matCache = {};
-function mat(i, face) {
-  const k = i + ':' + face;
-  if (!matCache[k]) {
-    const col = face === 'top' ? BLOCKS[i].top : BLOCKS[i].color;
-    matCache[k] = new THREE.MeshLambertMaterial({ color: col });
-  }
-  return matCache[k];
-}
-const meshes = [];
-
-function makeMesh(x, y, z, type) {
-  const mats = [mat(type, 'side'), mat(type, 'side'), mat(type, 'top'), mat(type, 'bottom'), mat(type, 'side'), mat(type, 'side')];
-  const m = new THREE.Mesh(geo, mats);
-  m.position.set(x + 0.5, y + 0.5, z + 0.5);
-  scene.add(m);
-  meshes.push(m);
-  return m;
-}
-
-function setBlock(x, y, z, type) {
-  const k = key(x, y, z);
-  if (world.has(k)) {
-    const old = world.get(k);
-    scene.remove(old.mesh);
-    world.delete(k);
-  }
-  if (type !== null) world.set(k, { type, mesh: makeMesh(x, y, z, type) });
-}
-
-function hasBlock(x, y, z) { return world.has(key(x, y, z)); }
-
-function generate() {
-  const half = WORLD / 2;
-  for (let x = -half; x < half; x++) {
-    for (let z = -half; z < half; z++) {
-      const h = Math.floor(3 + Math.sin(x * 0.15) * 2 + Math.cos(z * 0.2) * 2 + Math.sin((x + z) * 0.1) * 1.5);
-      for (let y = 0; y <= h; y++) {
-        let type = y === h ? 0 : (y > h - 3 ? 1 : 2);
-        setBlock(x, y, z, type);
-      }
-      if (Math.random() < 0.02 && Math.abs(x) > 3 && Math.abs(z) > 3) {
-        for (let t = 1; t <= 4; t++) setBlock(x, h + t, z, 3);
-        for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++)
-          for (let dy = 3; dy <= 5; dy++) if (!hasBlock(x + dx, h + dy, z + dz) && Math.abs(dx) + Math.abs(dz) < 4)
-            setBlock(x + dx, h + dy, z + dz, 0);
-      }
+public class ChatBot {
+    // Simple pair of pattern and response templates
+    private static class Rule {
+        final String pattern;
+        final String[] responses;
+        Rule(String pattern, String... responses) {
+            this.pattern = pattern.toLowerCase();
+            this.responses = responses;
+        }
     }
-  }
+
+    private final List<Rule> rules = new ArrayList<>();
+    private final Random random = new Random();
+
+    public ChatBot() {
+        // Greeting
+        addRule("hi|hello|hey", "Hello! How can I help you today?", "Hi there! What would you like to talk about?");
+        // Ask about needs
+        addRule("how are you|how's it going", "I'm just a bunch of code, but I'm here to help you. What would you like to do?", "I'm running smoothly. How can I assist you?");
+        // About Java
+        addRule("java.*(version|versions)?", "I can help you with Java basics, or compare versions. What would you like to know?", 
+                                   "Java is a versatile language running on the JVM. Need a quick guide?");
+        // Coding help
+        addRule("how to|give me a code|code for|write (a|an) (program|function)", 
+                "Sure, tell me the goal and the language. If you want, I can provide a starter example.",
+                "Give me a task description and I will draft a sample implementation.");
+        // Welcome to AI demo
+        addRule("ai|artificial intelligence|machine learning", "AI can mean many things. Do you want a simple chatbot, a game AI, or a data model example?", 
+                                                  "Are you looking for a basic AI for a game or a web service?");
+        // Default fallback
+        addRule(".*", "Tell me more about what you want to build with Java. I can provide code samples for a chatbot, a game AI, or a REST service.");
+    }
+
+    private void addRule(String pattern, String... responses) {
+        rules.add(new Rule(pattern, responses));
+    }
+
+    private String respond(String input) {
+        String in = input.trim().toLowerCase();
+        for (Rule r : rules) {
+            if (in.matches(".*" + r.pattern + ".*")) {
+                return r.responses[random.nextInt(r.responses.length)];
+            }
+        }
+        // Fallback
+        return "I'm not sure I understood that. Could you rephrase or share more details?";
+    }
+
+    public static void main(String[] args) {
+        ChatBot bot = new ChatBot();
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("ChatBot: Hi! I can help with Java code examples. Type 'exit' to quit.");
+        while (true) {
+            System.out.print("You: ");
+            String userInput = scanner.nextLine();
+            if (userInput == null) continue;
+            if (userInput.equalsIgnoreCase("exit") || userInput.equalsIgnoreCase("quit")) {
+                System.out.println("ChatBot: Goodbye!");
+                break;
+            }
+            String reply = bot.respond(userInput);
+            System.out.println("ChatBot: " + reply);
+        }
+        scanner.close();
+    }
 }
-generate();
-
-function groundAt(x, z) {
-  for (let y = HEIGHT; y >= 0; y--) if (hasBlock(Math.floor(x), y, Math.floor(z))) return y + 1;
-  return 0;
-}
-
-const player = { pos: new THREE.Vector3(0, 0, 0), vel: new THREE.Vector3(), onGround: false };
-player.pos.y = groundAt(0, 0) + 2;
-camera.position.copy(player.pos);
-camera.position.y += 1.6;
-
-let yaw = 0, pitch = 0;
-const keys = {};
-addEventListener('keydown', e => {
-  keys[e.code] = true;
-  if (e.code === 'Space' && player.onGround) { player.vel.y = 8; player.onGround = false; }
-  if (e.code.startsWith('Digit')) {
-    const n = parseInt(e.code.slice(5));
-    if (n >= 1 && n <= BLOCKS.length) { selected = n - 1; buildHotbar(); }
-  }
-});
-addEventListener('keyup', e => keys[e.code] = false);
-
-const start = document.getElementById('start');
-document.addEventListener('click', () => {
-  if (document.pointerLockElement !== renderer.domElement) renderer.domElement.requestPointerLock();
-});
-document.addEventListener('pointerlockchange', () => {
-  start.style.display = document.pointerLockElement === renderer.domElement ? 'none' : 'flex';
-});
-document.addEventListener('mousemove', e => {
-  if (document.pointerLockElement !== renderer.domElement) return;
-  yaw -= e.movementX * 0.002;
-  pitch -= e.movementY * 0.002;
-  pitch = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, pitch));
-});
-
-const raycaster = new THREE.Raycaster();
-const center = new THREE.Vector2(0, 0);
-function targetBlock() {
-  raycaster.setFromCamera(center, camera);
-  const hits = raycaster.intersectObjects(meshes, false);
-  if (!hits.length) return null;
-  const h = hits[0];
-  const p = h.point.clone().add(h.face.normal.clone().multiplyScalar(-0.01));
-  const hit = { x: Math.floor(p.x), y: Math.floor(p.y), z: Math.floor(p.z) };
-  const pn = h.point.clone().add(h.face.normal.clone().multiplyScalar(0.01));
-  const place = { x: Math.floor(pn.x), y: Math.floor(pn.y), z: Math.floor(pn.z) };
-  return { hit, place };
-}
-
-renderer.domElement.addEventListener('mousedown', e => {
-  if (document.pointerLockElement !== renderer.domElement) return;
-  const t = targetBlock();
-  if (!t) return;
-  if (e.button === 0) setBlock(t.hit.x, t.hit.y, t.hit.z, null);
-  if (e.button === 2) {
-    const pp = player.pos;
-    const overlaps = (t.place.x === Math.floor(pp.x) && t.place.z === Math.floor(pp.z) &&
-                      (t.place.y === Math.floor(pp.y) || t.place.y === Math.floor(pp.y + 1)));
-    if (!overlaps) setBlock(t.place.x, t.place.y, t.place.z, selected);
-  }
-});
-renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
-
-const hotbar = document.getElementById('hotbar');
-function buildHotbar() {
-  hotbar.innerHTML = '';
-  BLOCKS.forEach((b, i) => {
-    const d = document.createElement('div');
-    d.className = 'slot' + (i === selected ? ' active' : '');
-    d.style.background = '#' + b.color.toString(16).padStart(6, '0');
-    d.textContent = i + 1;
-    hotbar.appendChild(d);
-  });
-}
-buildHotbar();
-
-function collides(px, py, pz) {
-  const r = 0.3;
-  for (const ox of [-r, r]) for (const oz of [-r, r]) for (const oy of [0, 1.7]) {
-    if (hasBlock(Math.floor(px + ox), Math.floor(py + oy), Math.floor(pz + oz))) return true;
-  }
-  return false;
-}
-
-const clock = new THREE.Clock();
-function animate() {
-  requestAnimationFrame(animate);
-  const dt = Math.min(clock.getDelta(), 0.05);
-
-  const forward = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
-  const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
-  const move = new THREE.Vector3();
-  if (keys['KeyW']) move.add(forward);
-  if (keys['KeyS']) move.sub(forward);
-  if (keys['KeyD']) move.add(right);
-  if (keys['KeyA']) move.sub(right);
-  if (move.lengthSq() > 0) move.normalize().multiplyScalar(5 * dt);
-
-  player.vel.y -= 25 * dt;
-  let nx = player.pos.x + move.x;
-  if (!collides(nx, player.pos.y, player.pos.z)) player.pos.x = nx;
-  let nz = player.pos.z + move.z;
-  if (!collides(player.pos.x, player.pos.y, nz)) player.pos.z = nz;
-  let ny = player.pos.y + player.vel.y * dt;
-  if (!collides(player.pos.x, ny, player.pos.z)) {
-    player.pos.y = ny;
-    player.onGround = false;
-  } else {
-    if (player.vel.y < 0) player.onGround = true;
-    player.vel.y = 0;
-  }
-  if (player.pos.y < -20) player.pos.set(0, groundAt(0, 0) + 2, 0);
-
-  camera.position.set(player.pos.x, player.pos.y + 1.6, player.pos.z);
-  camera.rotation.set(pitch, yaw, 0, 'YXZ');
-  renderer.render(scene, camera);
-}
-animate();
-
-addEventListener('resize', () => {
-  camera.aspect = innerWidth / innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
-});
-</script>
-</body>
-</html>
