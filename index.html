@@ -3,258 +3,281 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Stunt Car Playground</title>
+    <title>2D Stickman Parkour</title>
     <style>
-        /* Force the document to take up the full screen size */
-        html, body { 
-            margin: 0; 
-            padding: 0; 
-            width: 100%; 
-            height: 100%; 
-            overflow: hidden; 
-            background-color: #050505; 
-            font-family: sans-serif; 
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #11141a;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        /* Lock the canvas to full screen windows */
-        #gameCanvas { 
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100vw; 
-            height: 100vh; 
+        #gameCanvas {
             display: block;
-            z-index: 1;
+            background: linear-gradient(to bottom, #1a1c23, #0f1015);
+            width: 100vw;
+            height: 100vh;
         }
-        /* Push the UI over the top of the canvas layout */
-        #ui { 
-            position: absolute; 
-            top: 20px; 
-            left: 20px; 
-            color: white; 
-            text-shadow: 1px 1px 3px black; 
-            pointer-events: none; 
-            z-index: 10; 
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #ffffff;
+            pointer-events: none;
+            z-index: 10;
         }
-        #speedometer { font-size: 32px; font-weight: bold; font-family: monospace; }
-        #controls { margin-top: 10px; font-size: 14px; opacity: 0.8; }
+        .hud-item {
+            font-size: 18px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+        #victoryScreen {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #00ffcc;
+            font-size: 48px;
+            font-weight: bold;
+            text-align: center;
+            text-shadow: 0 0 15px #00ffcc;
+            z-index: 20;
+            background: rgba(0,0,0,0.85);
+            padding: 30px 60px;
+            border: 2px solid #00ffcc;
+            border-radius: 10px;
+        }
     </style>
-    <script src="https://cloudflare.com"></script>
 </head>
 <body>
     <div id="ui">
-        <div id="speedometer">000 KM/H</div>
-        <div id="controls">WASD / Arrows to Drive | Space to Brake | R to Reset</div>
+        <div class="hud-item" id="levelDisplay">LEVEL: 1 (The Arena)</div>
+        <div class="hud-item">CONTROLS: A/D or Left/Right to Move | W or Space to Jump | R to Reset</div>
     </div>
+    <div id="victoryScreen">STAGE CLEARED!<br><span style="font-size: 20px; color: white;">Press 'R' to Play Again</span></div>
 
-    <!-- Explicitly declaring the canvas template element here -->
     <canvas id="gameCanvas"></canvas>
 
     <script>
-        // --- Core WebGL Engine Setup ---
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xa0b0d0);
-        scene.fog = new THREE.FogExp2(0xa0b0d0, 0.005);
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const victoryScreen = document.getElementById('victoryScreen');
 
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        
-        // Link directly to our hardcoded canvas element
-        const canvasContainer = document.getElementById('gameCanvas');
-        const renderer = new THREE.WebGLRenderer({ canvas: canvasContainer, antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.shadowMap.enabled = true;
-
-        // --- Environmental Lights ---
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-        scene.add(ambientLight);
-
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        dirLight.position.set(100, 200, 50);
-        dirLight.castShadow = true;
-        dirLight.shadow.mapSize.width = 1024;
-        dirLight.shadow.mapSize.height = 1024;
-        scene.add(dirLight);
-
-        // --- Physics Track Environment Boundary Surfaces ---
-        const gravity = -18.0;
-        const obstacles = [];
-
-        const groundGeo = new THREE.PlaneGeometry(1000, 1000);
-        const groundMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 });
-        const ground = new THREE.Mesh(groundGeo, groundMat);
-        ground.rotation.x = -Math.PI / 2;
-        ground.receiveShadow = true;
-        scene.add(ground);
-        
-        const grid = new THREE.GridHelper(1000, 100, 0x444444, 0x333333);
-        grid.position.y = 0.01;
-        scene.add(grid);
-
-        function createRamp(w, h, d, x, y, z, rotX, color = 0xdd3333) {
-            const geo = new THREE.BoxGeometry(w, h, d);
-            const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.5 });
-            const mesh = new THREE.Mesh(geo, mat);
-            mesh.position.set(x, y, z);
-            mesh.rotation.x = rotX;
-            mesh.castShadow = true;
-            mesh.receiveShadow = true;
-            scene.add(mesh);
-            obstacles.push(mesh);
-            return mesh;
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
         }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
 
-        // Stunt Arena Obstacles
-        createRamp(20, 2, 40, 0, 0.5, -60, 0.15); 
-        createRamp(25, 2, 30, 40, -1, -40, 0.3, 0xffaa00); 
-        createRamp(30, 2, 80, -50, 5, -80, -0.05, 0x3388ff); 
+        // --- Game Constants & Physics Values ---
+        const GRAVITY = 0.5;
+        const FRICTION = 0.85;
+        const RUN_SPEED = 0.7;
+        const MAX_SPEED = 6;
+        const JUMP_FORCE = -11;
 
-        // --- Compound Vehicle Structural Rig ---
-        const car = new THREE.Group();
-        car.position.set(0, 1, 0);
-        scene.add(car);
-
-        const bodyMat = new THREE.MeshStandardMaterial({ color: 0xff0055, roughness: 0.2, metalness: 0.8 });
-        const chassis = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.6, 4), bodyMat);
-        chassis.position.y = 0.4;
-        chassis.castShadow = true;
-        car.add(chassis);
-
-        const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.5, 2), new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1 }));
-        cabin.position.set(0, 0.85, -0.2);
-        cabin.castShadow = true;
-        car.add(cabin);
-
-        const wing = new THREE.Mesh(new THREE.BoxGeometry(2, 0.1, 0.5), bodyMat);
-        wing.position.set(0, 0.2, 2.1);
-        car.add(wing);
-
-        // Wheels System Grid Layout
-        const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9 });
-        const wheelGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.4, 24).rotateZ(Math.PI / 2);
-
-        const wheels = [];
-        const wheelPositions = [
-            { x: -1, y: 0.3, z: 1.2, isFront: true },   
-            { x: 1, y: 0.3, z: 1.2, isFront: true },    
-            { x: -1, y: 0.3, z: -1.2, isFront: false }, 
-            { x: 1, y: 0.3, z: -1.2, isFront: false }   
-        ];
-
-        wheelPositions.forEach(pos => {
-            const pivot = new THREE.Group();
-            pivot.position.set(pos.x, pos.y, pos.z);
-            
-            const wheelMesh = new THREE.Mesh(wheelGeo, wheelMat);
-            wheelMesh.castShadow = true;
-            pivot.add(wheelMesh);
-            
-            car.add(pivot);
-            wheels.push({ pivot: pivot, mesh: wheelMesh, isFront: pos.isFront });
-        });
-
-        // --- Keyboard Input Handling Matrix ---
-        const keys = { Forward: false, Backward: false, Left: false, Right: false, Brake: false };
-        
-        const parseKeys = (e, status) => {
-            switch (e.code) {
-                case 'KeyW': case 'ArrowUp': keys.Forward = status; break;
-                case 'KeyS': case 'ArrowDown': keys.Backward = status; break;
-                case 'KeyA': case 'ArrowLeft': keys.Left = status; break;
-                case 'KeyD': case 'ArrowRight': keys.Right = status; break;
-                case 'Space': keys.Brake = status; break;
-                case 'KeyR': if(status) resetCar(); break;
-            }
+        // --- Player Character Object Matrix ---
+        const player = {
+            x: 100,
+            y: 100,
+            vx: 0,
+            vy: 0,
+            width: 20,
+            height: 48,
+            grounded: false,
+            doubleJumpAvailable: true,
+            facing: 'right',
+            animFrame: 0
         };
 
-        window.addEventListener('keydown', (e) => parseKeys(e, true));
-        window.addEventListener('keyup', (e) => parseKeys(e, false));
+        // --- Map Level Elements Layout ---
+        const platforms = [
+            // Safe Ground floor blocks
+            { x: 0, y: window.innerHeight - 80, width: 400, height: 80, color: '#2d313f' },
+            
+            // Parkour platform configurations
+            { x: 480, y: window.innerHeight - 160, width: 120, height: 20, color: '#00f3ff' },
+            { x: 680, y: window.innerHeight - 260, width: 100, height: 20, color: '#00f3ff' },
+            { x: 860, y: window.innerHeight - 200, width: 140, height: 20, color: '#ff0055' }, // Moving/Danger platform reference
+            { x: 1080, y: window.innerHeight - 320, width: 120, height: 20, color: '#00f3ff' },
+            { x: 1280, y: window.innerHeight - 420, width: 250, height: 420, color: '#2d313f' }
+        ];
 
-        function resetCar() {
-            car.position.set(0, 2, 0);
-            car.rotation.set(0, 0, 0);
-            speed = 0;
-            velocity.set(0,0,0);
+        // Goal Flag Node
+        const goal = {
+            x: 1400,
+            y: window.innerHeight - 520,
+            width: 30,
+            height: 100,
+            reached: false
+        };
+
+        // Update platform positions dynamically to accommodate sizing recalculations
+        function updatePlatformsRelative() {
+            const h = window.innerHeight;
+            platforms[0].y = h - 80;
+            platforms[1].y = h - 160;
+            platforms[2].y = h - 260;
+            platforms[3].y = h - 210;
+            platforms[4].y = h - 320;
+            platforms[5].y = h - 420;
+            goal.y = h - 520;
+        }
+        window.addEventListener('resize', updatePlatformsRelative);
+        updatePlatformsRelative();
+
+        // --- Input Management ---
+        const keys = {};
+        window.addEventListener('keydown', e => {
+            keys[e.key.toLowerCase()] = true;
+            if (e.key === ' ' || e.key === 'ArrowUp' || e.key.toLowerCase() === 'w') {
+                handleJump();
+            }
+            if (e.key.toLowerCase() === 'r') {
+                resetGame();
+            }
+        });
+        window.addEventListener('keyup', e => {
+            keys[e.key.toLowerCase()] = false;
+        });
+
+        function handleJump() {
+            if (goal.reached) return;
+            if (player.grounded) {
+                player.vy = JUMP_FORCE;
+                player.grounded = false;
+            } else if (player.doubleJumpAvailable) {
+                player.vy = JUMP_FORCE * 0.85; // Slightly weaker second jump
+                player.doubleJumpAvailable = false;
+            }
         }
 
-        // --- Physics Quantities & Vector States ---
-        let speed = 0;
-        const maxSpeed = 65;
-        const acceleration = 35;
-        const friction = 0.98;
-        const brakeDecel = 0.85;
-        let steeringAngle = 0;
-        const maxSteer = 0.5;
-        
-        const velocity = new THREE.Vector3();
-        const clock = new THREE.Clock();
-        const speedometerEl = document.getElementById('speedometer');
+        function resetGame() {
+            player.x = 100;
+            player.y = platforms[0].y - player.height - 20;
+            player.vx = 0;
+            player.vy = 0;
+            player.grounded = false;
+            player.doubleJumpAvailable = true;
+            goal.reached = false;
+            victoryScreen.style.display = 'none';
+        }
 
-        // --- Main Simulation Loop Execution Block ---
-        function animate() {
-            requestAnimationFrame(animate);
+        // Initialize position safely
+        resetGame();
 
-            const dt = Math.min(clock.getDelta(), 0.1);
+        // --- Physics Engine & Collision Detection Loop ---
+        function update() {
+            if (goal.reached) return;
 
-            // Handle Input Vector Translations
-            if (keys.Forward) {
-                speed += acceleration * dt;
-                if (speed > maxSpeed) speed = maxSpeed;
-            } else if (keys.Backward) {
-                speed -= acceleration * dt;
-                if (speed < -maxSpeed / 2) speed = -maxSpeed / 2;
+            // Horizontal Input Application Force
+            if (keys['a'] || keys['arrowleft']) {
+                player.vx -= RUN_SPEED;
+                player.facing = 'left';
+            } else if (keys['d'] || keys['arrowright']) {
+                player.vx += RUN_SPEED;
+                player.facing = 'right';
             } else {
-                speed *= friction;
+                player.vx *= FRICTION;
             }
 
-            if (keys.Brake) speed *= brakeDecel;
+            // Cap Speed constraints
+            if (player.vx > MAX_SPEED) player.vx = MAX_SPEED;
+            if (player.vx < -MAX_SPEED) player.vx = -MAX_SPEED;
 
-            if (keys.Left) {
-                steeringAngle = THREE.MathUtils.lerp(steeringAngle, maxSteer, dt * 10);
-            } else if (keys.Right) {
-                steeringAngle = THREE.MathUtils.lerp(steeringAngle, -maxSteer, dt * 10);
+            // Vertical Acceleration Forces (Gravity)
+            player.vy += GRAVITY;
+
+            // Apply calculated updates
+            player.x += player.vx;
+            player.y += player.vy;
+
+            // Track animation frames when walking
+            if (Math.abs(player.vx) > 0.2 && player.grounded) {
+                player.animFrame += 0.15;
             } else {
-                steeringAngle = THREE.MathUtils.lerp(steeringAngle, 0, dt * 10);
+                player.animFrame = 0;
             }
 
-            // Safe Wheel Transformation Loops
-            wheels.forEach(w => {
-                if (w.isFront) {
-                    w.pivot.rotation.y = steeringAngle;
+            player.grounded = false;
+
+            // Collision Resolution against Platforms
+            platforms.forEach(plat => {
+                // Core AABB Intersection Formula
+                if (player.x < plat.x + plat.width &&
+                    player.x + player.width > plat.x &&
+                    player.y < plat.y + plat.height &&
+                    player.y + player.height > plat.y) {
+                    
+                    // Calculate penetration depths to resolve intersection properly
+                    let overlapX = Math.min(player.x + player.width - plat.x, plat.x + plat.width - player.x);
+                    let overlapY = Math.min(player.y + player.height - plat.y, plat.y + plat.height - player.y);
+
+                    if (overlapX > overlapY) {
+                        // Colliding Vertically
+                        if (player.vy > 0) {
+                            // Falling Downwards onto top of platform
+                            player.y -= overlapY;
+                            player.vy = 0;
+                            player.grounded = true;
+                            player.doubleJumpAvailable = true;
+                        } else if (player.vy < 0) {
+                            // Head hitting underneath platform
+                            player.y += overlapY;
+                            player.vy = 0;
+                        }
+                    } else {
+                        // Colliding Horizontally (Walls)
+                        if (player.vx > 0) player.x -= overlapX;
+                        else if (player.vx < 0) player.x += overlapX;
+                        player.vx = 0;
+                    }
                 }
-                w.mesh.rotation.x += (speed * dt) / 0.4;
             });
 
-            if (car.position.y <= 0.1 || car.isOnRamp) {
-                car.rotation.y += steeringAngle * (speed / maxSpeed) * dt * 2.5;
+            // Check Goal Intersection Node
+            if (player.x < goal.x + goal.width &&
+                player.x + player.width > goal.x &&
+                player.y < goal.y + goal.height &&
+                player.y + player.height > goal.y) {
+                goal.reached = true;
+                victoryScreen.style.display = 'block';
             }
 
-            const forwardDir = new THREE.Vector3(0, 0, 1).applyQuaternion(car.quaternion);
-            velocity.x = forwardDir.x * speed;
-            velocity.z = forwardDir.z * speed;
+            // Screen boundaries death resets
+            if (player.y > canvas.height) {
+                resetGame();
+            }
+            if (player.x < 0) player.x = 0;
+        }
 
-            // Surface Checking Mechanics
-            let groundHeight = 0;
-            car.isOnRamp = false;
-            
-            const carRay = new THREE.Raycaster(
-                new THREE.Vector3(car.position.x, car.position.y + 2, car.position.z),
-                new THREE.Vector3(0, -1, 0)
-            );
-            
-            const intersections = carRay.intersectObjects(obstacles);
+        // --- Render Vector Graphics Drawing Matrix ---
+        function drawStickman(ctx, x, y, frame, facing) {
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
 
-            if (intersections.length > 0 && intersections.distance <= 2.1) {
-                groundHeight = (car.position.y + 2) - intersections.distance;
-                car.isOnRamp = true;
-                if(intersections.object.rotation.x !== 0) {
-                    car.rotation.x = THREE.MathUtils.lerp(car.rotation.x, intersections.object.rotation.x, dt * 5);
-                }
-            } else {
-                car.rotation.x = THREE.MathUtils.lerp(car.rotation.x, 0, dt * 2);
+            // Base joint centers offset coordinate generation
+            let headX = x + 10;
+            let headY = y + 8;
+            let neckY = y + 14;
+            let pelvisY = y + 32;
+
+            // Procedural running bone calculations
+            let leftLegOffset = Math.sin(frame) * 12;
+            let rightLegOffset = -Math.sin(frame) * 12;
+
+            if (!player.grounded) {
+                // Set fixed dramatic airborne stance values
+                leftLegOffset = 10;
+                rightLegOffset = -6;
             }
 
-            if (car.position.y > groundHeight) {
-                velocity.y += gravity * dt;
-            } else {
-                velocity.y = 0;
-                car.position.y = groundHeight;
+            // Draw Head Structure
+            ctx.beginPath();
