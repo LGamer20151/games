@@ -11,10 +11,10 @@
   </style>
 </head>
 <body>
+  <a href="index.html">&larr; Back to menu</a>
   <h1>Snake</h1>
   <canvas id="board" width="400" height="400"></canvas>
   <div id="score">Score: 0</div>
-  <a href="index.html">Back to menu</a>
 
 <script>
 const canvas = document.getElementById('board');
@@ -76,6 +76,25 @@ function draw() {
     ctx.fillRect(s.x * SIZE + 1, s.y * SIZE + 1, SIZE - 2, SIZE - 2);
   }
 
+  // Face on the head
+  const head = snake[0];
+  const cx = head.x * SIZE + SIZE / 2;
+  const cy = head.y * SIZE + SIZE / 2;
+  const ex = dir.x * 4, ey = dir.y * 4;
+  const px = -dir.y * 4, py = dir.x * 4;
+
+  ctx.fillStyle = '#11111b';
+  ctx.beginPath();
+  ctx.arc(cx + ex + px, cy + ey + py, 2, 0, Math.PI * 2);
+  ctx.arc(cx + ex - px, cy + ey - py, 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = '#11111b';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(cx + ex * 0.8, cy + ey * 0.8, 3, 0, Math.PI);
+  ctx.stroke();
+
   if (gameOver) {
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 28px Arial';
@@ -88,10 +107,10 @@ function draw() {
 
 document.addEventListener('keydown', e => {
   const keys = {
-    ArrowUp: { x: 0, y: -1 },
-    ArrowDown: { x: 0, y: 1 },
-    ArrowLeft: { x: -1, y: 0 },
-    ArrowRight: { x: 1, y: 0 }
+    ArrowUp: { x: 0, y: -1 }, w: { x: 0, y: -1 }, W: { x: 0, y: -1 },
+    ArrowDown: { x: 0, y: 1 }, s: { x: 0, y: 1 }, S: { x: 0, y: 1 },
+    ArrowLeft: { x: -1, y: 0 }, a: { x: -1, y: 0 }, A: { x: -1, y: 0 },
+    ArrowRight: { x: 1, y: 0 }, d: { x: 1, y: 0 }, D: { x: 1, y: 0 }
   };
   if (keys[e.key]) {
     const d = keys[e.key];
