@@ -37,7 +37,8 @@ const kiwis = [
 let brain, arua, gameOver, contact;
 
 function reset() {
-  brain = { x: W / 2, y: 60, vx: (Math.random() - 0.5) * 2, vy: 0, r: BRAIN_R };
+  // Brain starts on the left side of the screen
+  brain = { x: BRAIN_R + 20, y: 60, vx: 1, vy: 0, r: BRAIN_R };
   arua = 0;
   gameOver = false;
   contact = [false, false];
