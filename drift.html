@@ -11,11 +11,11 @@
   </style>
 </head>
 <body>
+  <a href="index.html">&larr; Back to menu</a>
   <h1>Drift Boss</h1>
   <canvas id="track" width="600" height="400"></canvas>
   <div id="info">Score: 0 | Drift: 0</div>
-  <p>Arrow keys: steer and accelerate. Space: handbrake.</p>
-  <a href="index.html">Back to menu</a>
+  <p>Arrow keys or WASD: steer and accelerate. Space: handbrake.</p>
 
 <script>
 const canvas = document.getElementById('track');
@@ -36,9 +36,10 @@ function onTrack(x, y) {
 const car = { x: cx, y: cy - 130, angle: 0, speed: 0, vx: 0, vy: 0 };
 
 function update() {
-  const accel = keys['ArrowUp'] ? 0.25 : 0;
-  const brake = keys['ArrowDown'] ? -0.2 : 0;
-  const turn = (keys['ArrowLeft'] ? -1 : 0) + (keys['ArrowRight'] ? 1 : 0);
+  const accel = (keys['ArrowUp'] || keys['w'] || keys['W']) ? 0.25 : 0;
+  const brake = (keys['ArrowDown'] || keys['s'] || keys['S']) ? -0.2 : 0;
+  const turn = ((keys['ArrowLeft'] || keys['a'] || keys['A']) ? -1 : 0)
+             + ((keys['ArrowRight'] || keys['d'] || keys['D']) ? 1 : 0);
   const handbrake = keys[' '];
 
   car.speed += accel + brake;
@@ -94,7 +95,8 @@ function draw() {
 }
 
 window.addEventListener('keydown', e => {
-  if (e.key.startsWith('Arrow') || e.key === ' ') {
+  const controls = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd', 'W', 'A', 'S', 'D', ' '];
+  if (controls.includes(e.key)) {
     keys[e.key] = true;
     e.preventDefault();
   }
