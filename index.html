@@ -3,55 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JavaScript AI Neural Network</title>
+    <title>JS Neural Network</title>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: monospace;
             background-color: #0d1117;
-            color: #c9d1d9;
-            padding: 40px;
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        h1 {
-            color: #58a6ff;
-            border-bottom: 1px solid #21262d;
-            padding-bottom: 10px;
-        }
-        #console {
-            background-color: #161b22;
-            border: 1px solid #30363d;
-            border-radius: 6px;
-            padding: 20px;
-            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-            font-size: 14px;
-            line-height: 1.6;
-            white-space: pre-wrap;
-            overflow-x: auto;
             color: #7ee787;
+            padding: 30px;
         }
-        .status {
-            color: #e3b341;
-            font-style: italic;
-            margin-bottom: 15px;
-        }
+        h1 { color: #58a6ff; font-family: sans-serif; }
+        #output { white-space: pre-wrap; line-height: 1.5; font-size: 14px; }
     </style>
 </head>
 <body>
 
-    <h1>🧠 Browser-Based AI Neural Network</h1>
-    <p>This network trains entirely in your browser using vanilla JavaScript to solve the XOR logic gate problem.</p>
-    
-    <div id="status" class="status">Initializing network and weights...</div>
-    <pre id="console"></pre>
+    <h1>🧠 Live JS Neural Network</h1>
+    <div id="status">Training network... please wait...</div>
+    <hr>
+    <div id="output"></div>
 
     <script>
-        const outputConsole = document.getElementById('console');
+        const outputDiv = document.getElementById('output');
         const statusDiv = document.getElementById('status');
-
-        function logToScreen(text) {
-            outputConsole.textContent += text + "\n";
-        }
+        const log = (text) => outputDiv.textContent += text + "\n";
 
         // 1. Activation functions
         const sigmoid = (x) => 1 / (1 + Math.exp(-x));
@@ -68,7 +42,6 @@
             { input:, output: [0] }
         ];
 
-        // 3. Network Architecture
         const inputNodes = 2;
         const hiddenNodes = 3;
         const outputNodes = 1;
@@ -81,13 +54,8 @@
         let biasHidden = Array.from({ length: hiddenNodes }, randomWeight);
         let biasOutput = Array.from({ length: outputNodes }, randomWeight);
 
-        // 4. Training Function (Run asynchronously to keep browser active)
-        async function trainAI() {
-            statusDiv.textContent = "⚡ Training the AI network over 50,000 epochs... Please wait.";
-            
-            // Allow browser UI to update before heavy math starts
-            await new Promise(resolve => setTimeout(resolve, 50));
-
+        // Run asynchronously so the browser UI stays alive during heavy math
+        setTimeout(() => {
             for (let epoch = 0; epoch < epochs; epoch++) {
                 for (const data of trainingData) {
                     // --- FORWARD PROPAGATION ---
@@ -139,20 +107,13 @@
             }
 
             statusDiv.textContent = "✅ Training Complete!";
-            statusDiv.style.color = "#7ee787";
-            
-            // 5. Evaluate and Print Results
-            logToScreen("--- AI EVALUATION RESULTS ---");
+            log("--- AI Evaluation Results ---");
             trainingData.forEach(data => {
                 let hiddenOutputs = weightsInputHidden.map((weights, h) => sigmoid(dotProduct(data.input, weights) + biasHidden[h]));
                 let finalOutputs = weightsHiddenOutput.map((weights, o) => sigmoid(dotProduct(hiddenOutputs, weights) + biasOutput[o]));
-                
-                logToScreen(`Input: [${data.input.join(', ')}] -> Target: [${data.output}] -> AI Guess: [${finalOutputs[0].toFixed(4)}]`);
+                log(`Input: [${data.input.join(', ')}] -> Target: [${data.output}] -> AI Guess: [${finalOutputs[0].toFixed(4)}]`);
             });
-        }
-
-        // Start training loop automatically on load
-        trainAI();
+        }, 100);
     </script>
 </body>
 </html>
