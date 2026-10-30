@@ -9,19 +9,12 @@
     html { scroll-behavior:smooth; }
     body { background:#0d0e12; color:#fff; font-family:Arial, sans-serif; margin:0; line-height:1.5; }
     .layout { display:flex; min-height:100vh; }
-    .sidebar {
-      width:250px; flex-shrink:0; background:#0d0e12; border-right:1px solid #1f2027;
-      padding:14px 0; position:sticky; top:0; height:100vh; overflow-y:auto;
-    }
-    .sidebar nav a {
-      display:flex; align-items:center; gap:18px; padding:14px 22px;
-      color:#e5e5ea; text-decoration:none; font-size:18px;
-    }
-    .sidebar nav a:hover { background:#1c1d24; }
-    .sidebar nav a.active { background:#1c1d24; }
-    .sidebar nav a svg { width:30px; height:30px; flex-shrink:0; fill:none; stroke:#fff; stroke-width:2; }
-    .sidebar nav a.home { color:#a1a1aa; }
-    .sidebar .divider { height:1px; background:#1f2027; margin:10px 0; }
+    .sidebar { width:250px; flex-shrink:0; border-right:1px solid #1f2027; padding:14px 0; position:sticky; top:0; height:100vh; overflow-y:auto; }
+    .sidebar a { display:flex; align-items:center; gap:16px; padding:13px 22px; color:#e5e5ea; text-decoration:none; font-size:17px; }
+    .sidebar a:hover { background:#1c1d24; }
+    .sidebar a.home { color:#a1a1aa; }
+    .dot { width:14px; height:14px; border-radius:50%; background:#fff; flex-shrink:0; }
+    .divider { height:1px; background:#1f2027; margin:10px 0; }
     .content { flex:1; min-width:0; }
     header { padding:40px 30px 24px; border-bottom:1px solid #1f2027; }
     header h1 { font-size:40px; margin:0 0 8px; }
@@ -32,29 +25,18 @@
     .section h2 { font-size:26px; margin:0 0 6px; }
     .section .intro { color:#a1a1aa; font-size:15px; margin:0 0 18px; }
     .menu { display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:18px; }
-    .card {
-      display:flex; flex-direction:column; background:#1c1d24; border-radius:12px;
-      padding:20px; text-decoration:none; color:#fff; min-height:180px;
-      transition:transform 0.15s ease, background 0.15s ease;
-    }
+    .card { display:flex; flex-direction:column; background:#1c1d24; border-radius:12px; padding:20px; text-decoration:none; color:#fff; min-height:170px; transition:transform 0.15s ease, background 0.15s ease; }
     .card:hover { background:#2a2b35; transform:translateY(-3px); }
     .card .title { font-size:21px; font-weight:bold; margin-bottom:8px; }
     .card .desc { font-size:15px; color:#c7c7cc; flex-grow:1; }
-    .card .tag {
-      align-self:flex-start; margin-top:12px; font-size:11px; text-transform:uppercase;
-      letter-spacing:1px; padding:4px 10px; border-radius:20px; background:#0d0e12; color:#f9e2af;
-    }
-    .how { background:#1c1d24; border-radius:12px; padding:24px; }
-    .how h2 { font-size:20px; margin:0 0 12px; }
-    .how ul { margin:0; padding-left:20px; color:#c7c7cc; }
-    .how li { margin-bottom:8px; }
+    .card .tag { align-self:flex-start; margin-top:12px; font-size:11px; text-transform:uppercase; letter-spacing:1px; padding:4px 10px; border-radius:20px; background:#0d0e12; color:#f9e2af; }
     footer { text-align:center; padding:22px; color:#6e6e78; font-size:14px; border-top:1px solid #1f2027; }
     @media (max-width:760px) {
       .layout { flex-direction:column; }
       .sidebar { width:100%; height:auto; position:static; border-right:none; border-bottom:1px solid #1f2027; }
       .sidebar nav { display:flex; flex-wrap:wrap; }
-      .sidebar nav a { padding:10px 14px; font-size:15px; }
-      .sidebar .divider { display:none; }
+      .sidebar a { padding:10px 14px; font-size:15px; }
+      .divider { display:none; }
       header h1 { font-size:30px; }
       main { padding:20px; }
     }
@@ -64,39 +46,13 @@
   <div class="layout">
     <aside class="sidebar">
       <nav>
-        <a class="home" href="#top">
-          <svg viewBox="0 0 30 30"><path d="M4 14 L15 5 L26 14 V26 H18 V19 H12 V26 H4 Z" fill="#fff" stroke="none"/></svg>
-          Home
-        </a>
-        <a href="#recent">
-          <svg viewBox="0 0 30 30"><circle cx="15" cy="15" r="12"/><path d="M15 8 V15 L20 18"/></svg>
-          Recently Played
-        </a>
-        <a href="#new">
-          <svg viewBox="0 0 30 30"><circle cx="15" cy="15" r="13" fill="#fff" stroke="none"/><path d="M15 8 V22 M8 15 H22" stroke="#0d0e12" stroke-width="3.5"/></svg>
-          New
-        </a>
+        <a class="home" href="#top"><span class="dot"></span>Home</a>
         <div class="divider"></div>
-        <a href="#arcade">
-          <svg viewBox="0 0 30 30"><circle cx="15" cy="10" r="6" fill="#fff" stroke="none"/><path d="M15 16 V24"/><path d="M8 26 H22"/></svg>
-          Arcade
-        </a>
-        <a href="#driving">
-          <svg viewBox="0 0 30 30"><path d="M5 18 L8 11 H22 L25 18 V23 H5 Z"/><circle cx="9" cy="23" r="2"/><circle cx="21" cy="23" r="2"/></svg>
-          Driving
-        </a>
-        <a href="#classic">
-          <svg viewBox="0 0 30 30"><path d="M4 22 L10 10 L16 22 L22 10 L27 18"/></svg>
-          Classic
-        </a>
-        <a href="#physics">
-          <svg viewBox="0 0 30 30"><path d="M3 26 Q15 0 27 26"/><circle cx="15" cy="10" r="4" fill="#fff" stroke="none"/></svg>
-          Physics
-        </a>
-        <a href="#puzzle">
-          <svg viewBox="0 0 30 30"><rect x="4" y="4" width="10" height="10" rx="2"/><rect x="16" y="4" width="10" height="10" rx="2"/><rect x="4" y="16" width="10" height="10" rx="2"/><rect x="16" y="16" width="10" height="10" rx="2"/></svg>
-          Puzzle and Strategy
-        </a>
+        <a href="#arcade"><span class="dot"></span>Arcade</a>
+        <a href="#driving"><span class="dot"></span>Driving</a>
+        <a href="#classic"><span class="dot"></span>Classic</a>
+        <a href="#physics"><span class="dot"></span>Physics</a>
+        <a href="#puzzle"><span class="dot"></span>Puzzle and Strategy</a>
       </nav>
     </aside>
 
@@ -104,34 +60,10 @@
       <header>
         <h1>My Game Site</h1>
         <p>Pick a game, play for a few minutes, and come back for more. Arcade action, puzzles, and a little strategy, all in one place.</p>
-        <div class="stats">8 games in 5 categories</div>
+        <div class="stats">10 games in 5 categories</div>
       </header>
 
       <main>
-        <section class="section" id="recent">
-          <h2>Recently Played</h2>
-          <p class="intro">Pick up where you left off. Games you open will appear here.</p>
-          <div class="menu">
-            <a class="card" href="tictactoe.html">
-              <div class="title">Tic-Tac-Toe</div>
-              <div class="desc">Take on the computer in a quick round. Can you find a way to win?</div>
-              <span class="tag">Strategy</span>
-            </a>
-          </div>
-        </section>
-
-        <section class="section" id="new">
-          <h2>New</h2>
-          <p class="intro">The latest additions to the site.</p>
-          <div class="menu">
-            <a class="card" href="tictactoe.html">
-              <div class="title">Tic-Tac-Toe</div>
-              <div class="desc">A classic game with a computer opponent that never misses a block.</div>
-              <span class="tag">New</span>
-            </a>
-          </div>
-        </section>
-
         <section class="section" id="arcade">
           <h2>Arcade</h2>
           <p class="intro">Fast rounds with simple controls and high scores to beat.</p>
@@ -144,6 +76,11 @@
             <a class="card" href="flappy-duck.html">
               <div class="title">Flappy Duck</div>
               <div class="desc">Flap through the pipe gaps. One tap at a time, see how far you get.</div>
+              <span class="tag">Arcade</span>
+            </a>
+            <a class="card" href="whackamole.html">
+              <div class="title">Whack-a-Mole</div>
+              <div class="desc">Whack the moles as they pop up before the 30 seconds run out.</div>
               <span class="tag">Arcade</span>
             </a>
           </div>
@@ -199,17 +136,18 @@
               <div class="desc">Solve a color lock, a wall code, a sliding puzzle, and find the key to get out.</div>
               <span class="tag">Puzzle</span>
             </a>
+            <a class="card" href="tictactoe.html">
+              <div class="title">Tic-Tac-Toe</div>
+              <div class="desc">Take on the computer in a quick round. Can you find a way to win?</div>
+              <span class="tag">Strategy</span>
+            </a>
+            <a class="card" href="slidingpuzzle.html">
+              <div class="title">Sliding Puzzle</div>
+              <div class="desc">Slide the numbered tiles back into order in as few moves as you can.</div>
+              <span class="tag">Puzzle</span>
+            </a>
           </div>
         </section>
-
-        <div class="how">
-          <h2>How It Works</h2>
-          <ul>
-            <li>Click a category in the sidebar to jump to its games.</li>
-            <li>Click <strong>Home</strong> at the top of the sidebar to return here.</li>
-            <li>Every game page has a <strong>Back to menu</strong> link at the top.</li>
-          </ul>
-        </div>
       </main>
 
       <footer>My Game Site. Choose a game and have fun.</footer>
