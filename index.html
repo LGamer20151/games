@@ -3,249 +3,244 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Driving Game - Stable Build</title>
+    <title>3D Arcade Driving Game</title>
     <style>
         body {
             margin: 0;
+            padding: 0;
+            background-color: #000;
             overflow: hidden;
-            background-color: #0b0d19;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
         }
         #ui {
             position: absolute;
             top: 20px;
             left: 20px;
             color: white;
-            font-size: 18px;
+            font-size: 20px;
             font-weight: bold;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.9);
             pointer-events: none;
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            z-index: 10;
+            gap: 10px;
         }
-        .nitro-bar {
+        .stat {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 15px;
+            border-radius: 6px;
+            border-left: 4px solid #00ffcc;
+        }
+        .nitro-container {
             width: 150px;
             height: 12px;
             background: #333;
             border: 2px solid white;
             border-radius: 5px;
             overflow: hidden;
+            margin-top: 5px;
         }
         #nitro-fill {
             width: 100%;
             height: 100%;
             background: #ff3333;
-            transition: width 0.1s;
-        }
-        .stat {
-            background: rgba(0, 0, 0, 0.6);
-            padding: 6px 12px;
-            border-radius: 6px;
-            width: max-content;
         }
     </style>
 </head>
 <body>
 
     <div id="ui">
-        <div class="stat">Score: <span id="score-text" style="color: #00ffcc;">0</span></div>
-        <div class="stat">Time: <span id="timer-text" style="color: #ffcc00;">0.00</span>s</div>
-        <div class="stat">Speed: <span id="speed-text">0</span> km/h</div>
-        <div class="stat">
+        <div class="stat" style="border-left-color: #00ffcc;">Score: <span id="score-text" style="color: #00ffcc;">0</span></div>
+        <div class="stat" style="border-left-color: #ffcc00;">Time: <span id="timer-text" style="color: #ffcc00;">0.00</span>s</div>
+        <div class="stat" style="border-left-color: #ff0055;">Speed: <span id="speed-text">0</span> km/h</div>
+        <div class="stat" style="border-left-color: #ffaa00;">
             <div>Nitro (SHIFT)</div>
-            <div class="nitro-bar"><div id="nitro-fill"></div></div>
+            <div class="nitro-container"><div id="nitro-fill"></div></div>
         </div>
     </div>
 
-    <!-- Multi-source fallback loading script for Three.js engine -->
-    <script src="https://unpkg.com"></script>
+    <canvas id="gameCanvas"></canvas>
 
     <script>
-        // Fallback option check if the primary script was blocked
-        if (typeof THREE === 'undefined') {
-            document.write('<script src="https://jsdelivr.net"><\/script>');
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
         }
-    </script>
+        window.addEventListener("resize", resize);
+        resize();
 
-    <script>
-        // Ensure core library initialized safely before executing 3D assets setup
-        window.addEventListener('DOMContentLoaded', () => {
-            if (typeof THREE === 'undefined') {
-                alert("Game engine scripts were blocked. Try disabling extensions like ad blockers or Brave Shields for this page.");
-                return;
+        // --- GAME VARIABLES ---
+        let speed = 0;
+        let position = 0;
+        let playerX = 0;
+        let score = 0;
+        let startTime = Date.now();
+
+        // Road Geometry definition parameters
+        const trackLength = 8000;
+        const roadWidth = 2000;
+        const cameraHeight = 1000;
+        const cameraDepth = 0.8;
+
+        // Build a continuous track structure of segments
+        const segments = [];
+        for (let i = 0; i < trackLength; i++) {
+            let curve = 0;
+            let hill = 0;
+
+            // Generate turns periodically down the track
+            if (i > 300 && i < 700) curve = 2.5;
+            if (i > 1000 && i < 1400) curve = -3;
+            
+            // Build custom steep launch hills (Ramps!)
+            if (i > 500 && i < 540) hill = Math.sin((i - 500) / 40 * Math.PI) * 1200;
+            if (i > 1200 && i < 1240) hill = Math.sin((i - 1200) / 40 * Math.PI) * 1500;
+            if (i > i > 2000 && i < 2040) hill = Math.sin((i - 2000) / 40 * Math.PI) * 1800;
+
+            segments.push({
+                index: i,
+                p1: { world: { x: 0, y: (i > 500 && i < 540 ? hill : i > 1200 && i < 1240 ? hill : 0), z: i * 200 }, screen: { x: 0, y: 0, w: 0 } },
+                p2: { world: { x: 0, y: 0, z: (i + 1) * 200 }, screen: { x: 0, y: 0, w: 0 } },
+                curve: curve,
+                color: Math.floor(i / 3) % 2 ? { road: '#3a3a3e', grass: '#101216', rumble: '#00ffcc' } : { road: '#333336', grass: '#0b0c0f', rumble: '#ffffff' }
+            });
+        }
+        
+        // Link segment heights together smoothly
+        for(let i=1; i<trackLength; i++) {
+            segments[i-1].p2.world.y = segments[i].p1.world.y;
+        }
+
+        // --- KEY LISTENERS ---
+        const keys = { w: false, a: false, s: false, d: false, Shift: false, ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
+        window.addEventListener("keydown", (e) => { if (e.key in keys) keys[e.key] = true; });
+        window.addEventListener("keyup", (e) => { if (e.key in keys) keys[e.key] = false; });
+
+        // Projecting 3D coordinates onto flat 2D Canvas viewport screen space
+        function project(p, cameraX, cameraY, cameraZ) {
+            p.camera = {
+                x: p.world.x - cameraX,
+                y: p.world.y - cameraY,
+                z: p.world.z - cameraZ
+            };
+            const scale = cameraDepth / (p.camera.z / cameraHeight);
+            p.screen.x = Math.round((canvas.width / 2) + (scale * p.camera.x  * canvas.width / 2));
+            p.screen.y = Math.round((canvas.height / 2) - (scale * p.camera.y * canvas.height / 2));
+            p.screen.w = Math.round(scale * roadWidth * canvas.width / 2);
+        }
+
+        // --- RENDERING & GAME ANIMATION SYSTEM ---
+        function loop() {
+            requestAnimationFrame(loop);
+
+            // Update running clocks
+            const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+            document.getElementById('timer-text').innerText = elapsed;
+
+            const moveForward = keys.w || keys.ArrowUp;
+            const moveBackward = keys.s || keys.ArrowDown;
+            const turnLeft = keys.a || keys.ArrowLeft;
+            const turnRight = keys.d || keys.ArrowRight;
+            const nitro = keys.Shift;
+
+            // Physics execution speeds
+            let maxSpd = nitro ? 240 : 140;
+            if (moveForward) {
+                speed = Math.min(speed + (nitro ? 3 : 1.5), maxSpd);
+            } else if (moveBackward) {
+                speed = Math.max(speed - 4, -40);
+            } else {
+                speed = Math.max(speed - 0.8, 0);
             }
 
-            // --- 1. SETUP THREE.JS SCENE ---
-            const scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x0f1423);
-            scene.fog = new THREE.FogExp2(0x0f1423, 0.008);
-
-            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            const renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.shadowMap.enabled = true;
-            document.body.appendChild(renderer.domElement);
-
-            // --- 2. LIGHTS ---
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-            scene.add(ambientLight);
-
-            const dirLight = new THREE.DirectionLight(0x00ffff, 0.8);
-            dirLight.position.set(50, 100, 50);
-            scene.add(dirLight);
-
-            // --- 3. FLOORS & GRID LINES ---
-            const floorGeo = new THREE.PlaneGeometry(10000, 10000);
-            const floorMat = new THREE.MeshStandardMaterial({ color: 0x111116 });
-            const floor = new THREE.Mesh(floorGeo, floorMat);
-            floor.rotation.x = -Math.PI / 2;
-            scene.add(floor);
-
-            const gridHelper = new THREE.GridHelper(2000, 100, 0x00ffcc, 0x444444);
-            gridHelper.position.y = 0.05;
-            scene.add(gridHelper);
-
-            // --- 4. DATA TRACKING ---
-            let score = 0;
-            let startTime = Date.now();
-            const obstacles = [];
-            const rings = [];
-
-            // --- 5. BUILD MAP PIECES ---
-            function spawnStuntPoint(x, z, height) {
-                const rampGeo = new THREE.BoxGeometry(16, height, 32);
-                const rampMat = new THREE.MeshStandardMaterial({ color: 0x3344ff });
-                const ramp = new THREE.Mesh(rampGeo, rampMat);
-                ramp.position.set(x, height / 2, z);
-                ramp.rotation.x = -0.18; 
-                scene.add(ramp);
-                
-                obstacles.push({ x, z, w: 16, h: height, l: 32 });
-
-                const ringGeo = new THREE.TorusGeometry(4, 0.4, 8, 24);
-                const ringMat = new THREE.MeshBasicMaterial({ color: 0x00ffcc });
-                const ring = new THREE.Mesh(ringGeo, ringMat);
-                ring.position.set(x, height + 8, z - 35);
-                scene.add(ring);
-                
-                rings.push({ mesh: ring, collected: false });
+            // Steer adjustments updates
+            if (speed > 1) {
+                if (turnLeft) playerX -= 0.04 * (speed / 100);
+                if (turnRight) playerX += 0.04 * (speed / 100);
             }
 
-            spawnStuntPoint(0, -100, 6);
-            spawnStuntPoint(-20, -250, 9);
-            spawnStuntPoint(20, -420, 12);
-            spawnStuntPoint(0, -600, 16);
+            // Continuous movement loops updates
+            position += speed * 5;
+            if (position >= trackLength * 200) position -= trackLength * 200;
 
-            // --- 6. ASSEMBLE CAR ---
-            const car = new THREE.Group();
+            const startSeg = Math.floor(position / 200);
+            const currentSegment = segments[startSeg];
             
-            const bodyGeo = new THREE.BoxGeometry(2.2, 0.8, 4.5);
-            const bodyMat = new THREE.MeshStandardMaterial({ color: 0xff0055 });
-            const carBody = new THREE.Mesh(bodyGeo, bodyMat);
-            carBody.position.y = 0.5;
-            car.add(carBody);
+            // Turn tracking calculations updates
+            playerX = playerX - (speed / 150) * 0.01 * currentSegment.curve;
 
-            const cabinGeo = new THREE.BoxGeometry(1.6, 0.6, 2);
-            const cabinMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
-            const carCabin = new THREE.Mesh(cabinGeo, cabinMat);
-            carCabin.position.set(0, 1.1, -0.2);
-            car.add(carCabin);
+            // Simple point increments systems based on high speeds
+            if (speed > 10) {
+                score += nitro ? 3 : 1;
+                document.getElementById('score-text').innerText = score;
+            }
 
-            car.position.set(0, 0, 50);
-            scene.add(car);
+            // Update UI widgets indicators graphics layouts values
+            document.getElementById('speed-text').innerText = Math.round(speed * 1.5);
+            document.getElementById('nitro-fill').style.width = nitro && speed > 50 ? '30%' : '100%';
 
-            // --- 7. VELOCITY VARIABLES ---
-            let speed = 0;
-            const maxSpeed = 1.4;
-            const maxNitroSpeed = 2.5;
-            const acceleration = 0.015;
-            const friction = 0.008;
-            const turnSpeed = 0.025;
-            
-            let carVelocityY = 0;
-            let isGrounded = true;
-            const gravity = -0.012;
+            // Clear Background
+            ctx.fillStyle = "#0a0c16";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // --- 8. INPUT LISTENERS ---
-            const keys = { w: false, a: false, s: false, d: false, Shift: false, ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
-            window.addEventListener('keydown', (e) => { if (e.key in keys) keys[e.key] = true; });
-            window.addEventListener('keyup', (e) => { if (e.key in keys) keys[e.key] = false; });
+            // Render Sky Horizon Stars background effect
+            ctx.fillStyle = "#1e223a";
+            ctx.fillRect(0, 0, canvas.width, canvas.height / 2);
 
-            // --- 9. FRAME UPDATES TICKER ---
-            function animate() {
-                requestAnimationFrame(animate);
+            // --- DRAW SYSTEM SEGMENTS ---
+            let maxy = canvas.height;
+            let xOffset = 0;
+            let curveTotal = 0;
 
-                const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
-                document.getElementById('timer-text').innerText = elapsed;
+            // Render from back-to-front perspective depths lines segments loop
+            for (let n = 0; n < 120; n++) {
+                const seg = segments[(startSeg + n) % trackLength];
+                const looped = (startSeg + n) >= trackLength;
+                
+                project(seg.p1, playerX * roadWidth - xOffset, cameraHeight + currentSegment.p1.world.y, position - (looped ? trackLength * 200 : 0));
+                
+                xOffset += curveTotal;
+                curveTotal += seg.curve;
 
-                const moveForward = keys.w || keys.ArrowUp;
-                const moveBackward = keys.s || keys.ArrowDown;
-                const turnLeft = keys.a || keys.ArrowLeft;
-                const turnRight = keys.d || keys.ArrowRight;
-                const nitro = keys.Shift;
+                if (seg.p1.camera.z <= cameraDepth || seg.p1.screen.y >= maxy) continue;
 
-                let topSpeed = nitro ? maxNitroSpeed : maxSpeed;
+                if (n > 0) {
+                    const prev = segments[(startSeg + n - 1) % trackLength];
+                    if (prev.p1.screen.y <= seg.p1.screen.y) continue;
 
-                if (nitro && speed > 0.1) {
-                    bodyMat.color.setHex(0x00ffff);
-                    document.getElementById('nitro-fill').style.width = '25%';
-                } else {
-                    bodyMat.color.setHex(0xff0055);
-                    document.getElementById('nitro-fill').style.width = '100%';
-                }
+                    // Draw Grass polygon borders side fields
+                    ctx.fillStyle = seg.color.grass;
+                    ctx.beginPath();
+                    ctx.moveTo(0, prev.p1.screen.y);
+                    ctx.lineTo(0, seg.p1.screen.y);
+                    ctx.lineTo(canvas.width, seg.p1.screen.y);
+                    ctx.lineTo(canvas.width, prev.p1.screen.y);
+                    ctx.fill();
 
-                if (moveForward && isGrounded) {
-                    speed = Math.min(speed + acceleration, topSpeed);
-                } else if (moveBackward && isGrounded) {
-                    speed = Math.max(speed - 0.03, -maxSpeed / 2);
-                } else {
-                    if (speed > 0) speed = Math.max(speed - friction, 0);
-                    if (speed < 0) speed = Math.min(speed + friction, 0);
-                }
+                    // Draw Asphalt Center Road Layout
+                    ctx.fillStyle = seg.color.road;
+                    ctx.beginPath();
+                    ctx.moveTo(prev.p1.screen.x - prev.p1.screen.w, prev.p1.screen.y);
+                    ctx.lineTo(seg.p1.screen.x - seg.p1.screen.w, seg.p1.screen.y);
+                    ctx.lineTo(seg.p1.screen.x + seg.p1.screen.w, seg.p1.screen.y);
+                    ctx.lineTo(prev.p1.screen.x + prev.p1.screen.w, prev.p1.screen.y);
+                    ctx.fill();
 
-                if (Math.abs(speed) > 0.05) {
-                    const rotDir = speed > 0 ? 1 : -1;
-                    if (turnLeft) car.rotation.y += turnSpeed * rotDir;
-                    if (turnRight) car.rotation.y -= turnSpeed * rotDir;
-                }
-
-                car.position.x -= Math.sin(car.rotation.y) * speed;
-                car.position.z -= Math.cos(car.rotation.y) * speed;
-
-                carVelocityY += gravity;
-                car.position.y += carVelocityY;
-
-                if (car.position.y <= 0) {
-                    car.position.y = 0;
-                    carVelocityY = 0;
-                    isGrounded = true;
-                }
-
-                obstacles.forEach(ramp => {
-                    const dx = car.position.x - ramp.x;
-                    const dz = car.position.z - ramp.z;
-
-                    if (Math.abs(dx) < ramp.w / 2 + 1 && Math.abs(dz) < ramp.l / 2 + 2) {
-                        const pct = (ramp.l / 2 - dz) / ramp.l;
-                        const rampHeightAtPoint = Math.max(0, pct * ramp.h * 1.15);
-
-                        if (car.position.y <= rampHeightAtPoint) {
-                            car.position.y = rampHeightAtPoint;
-                            carVelocityY = speed * 0.14;
-                            isGrounded = true;
-                        }
-                    }
-                });
-
-                if (carVelocityY > 0.04) isGrounded = false;
-
-                rings.forEach(ring => {
-                    if (!ring.collected) {
-                        ring.mesh.rotation.y += 0.02;
-                        const distance = car.position.distanceTo(ring.mesh.position);
-                        if (distance < 5) {
-                            ring.collected = true;
-                            scene.remove(ring.mesh);
-                            score += 100;
+                    // Draw Side Rumble strips edges indicators
+                    ctx.fillStyle = seg.color.rumble;
+                    const w1 = prev.p1.screen.w * 0.1;
+                    const w2 = seg.p1.screen.w * 0.1;
+                    
+                    // Left Rumble
+                    ctx.beginPath();
+                    ctx.moveTo(prev.p1.screen.x - prev.p1.screen.w, prev.p1.screen.y);
+                    ctx.lineTo(seg.p1.screen.x - seg.p1.screen.w, seg.p1.screen.y);
+                    ctx.lineTo(seg.p1.screen.x - seg.p1.screen.w + w2, seg.p1.screen.y);
