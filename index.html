@@ -3,13 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neon Stunt Car Playground</title>
+    <title>3D Stunt Car Playground</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000000; font-family: sans-serif; }
-        #ui { position: absolute; top: 20px; left: 20px; color: #00ffff; text-shadow: 0 0 5px #00ffff; pointer-events: none; z-index: 10; }
+        /* Force the document to take up the full screen size */
+        html, body { 
+            margin: 0; 
+            padding: 0; 
+            width: 100%; 
+            height: 100%; 
+            overflow: hidden; 
+            background-color: #050505; 
+            font-family: sans-serif; 
+        }
+        /* Lock the canvas to full screen windows */
+        #gameCanvas { 
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw; 
+            height: 100vh; 
+            display: block;
+            z-index: 1;
+        }
+        /* Push the UI over the top of the canvas layout */
+        #ui { 
+            position: absolute; 
+            top: 20px; 
+            left: 20px; 
+            color: white; 
+            text-shadow: 1px 1px 3px black; 
+            pointer-events: none; 
+            z-index: 10; 
+        }
         #speedometer { font-size: 32px; font-weight: bold; font-family: monospace; }
-        #controls { margin-top: 10px; font-size: 14px; opacity: 0.8; color: #ff00ff; text-shadow: 0 0 5px #ff00ff; }
-        canvas { display: block; width: 100vw; height: 100vh; }
+        #controls { margin-top: 10px; font-size: 14px; opacity: 0.8; }
     </style>
     <script src="https://cloudflare.com"></script>
 </head>
@@ -19,80 +46,93 @@
         <div id="controls">WASD / Arrows to Drive | Space to Brake | R to Reset</div>
     </div>
 
+    <!-- Explicitly declaring the canvas template element here -->
+    <canvas id="gameCanvas"></canvas>
+
     <script>
-        // --- Core Setup ---
+        // --- Core WebGL Engine Setup ---
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x000000); // Pitch black sky background
+        scene.background = new THREE.Color(0xa0b0d0);
+        scene.fog = new THREE.FogExp2(0xa0b0d0, 0.005);
 
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        
+        // Link directly to our hardcoded canvas element
+        const canvasContainer = document.getElementById('gameCanvas');
+        const renderer = new THREE.WebGLRenderer({ canvas: canvasContainer, antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        document.body.appendChild(renderer.domElement);
+        renderer.shadowMap.enabled = true;
 
-        // --- Physics & Track Entities ---
+        // --- Environmental Lights ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(100, 200, 50);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 1024;
+        dirLight.shadow.mapSize.height = 1024;
+        scene.add(dirLight);
+
+        // --- Physics Track Environment Boundary Surfaces ---
         const gravity = -18.0;
         const obstacles = [];
 
-        // Ground Floor - Grid uses MeshBasicMaterial so it glows without needing light
         const groundGeo = new THREE.PlaneGeometry(1000, 1000);
-        const groundMat = new THREE.MeshBasicMaterial({ color: 0x050505 }); // Dark dark grey floor
+        const groundMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 });
         const ground = new THREE.Mesh(groundGeo, groundMat);
         ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
         scene.add(ground);
         
-        // Vibrant glowing grid overlay
-        const grid = new THREE.GridHelper(1000, 100, 0xff00ff, 0x004444);
+        const grid = new THREE.GridHelper(1000, 100, 0x444444, 0x333333);
         grid.position.y = 0.01;
         scene.add(grid);
 
-        // Neon Glow Ramp Builder
-        function createNeonRamp(w, h, d, x, y, z, rotX, neonColor) {
+        function createRamp(w, h, d, x, y, z, rotX, color = 0xdd3333) {
             const geo = new THREE.BoxGeometry(w, h, d);
-            // MeshBasicMaterial guarantees the color shows up even with no lights
-            const mat = new THREE.MeshBasicMaterial({ color: 0x111111 }); 
+            const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.5 });
             const mesh = new THREE.Mesh(geo, mat);
             mesh.position.set(x, y, z);
             mesh.rotation.x = rotX;
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
             scene.add(mesh);
-
-            // Add bright wireframe outlines to make the ramps visible
-            const wireframeGeo = new THREE.EdgesGeometry(geo);
-            const wireframeMat = new THREE.LineBasicMaterial({ color: neonColor, linewidth: 2 });
-            const wireframe = new THREE.LineSegments(wireframeGeo, wireframeMat);
-            mesh.add(wireframe);
-
             obstacles.push(mesh);
             return mesh;
         }
 
-        // Stunt Infrastructure (Glowing Ramps)
-        createNeonRamp(20, 2, 40, 0, 0.5, -60, 0.15, 0x00ffff); // Cyan Ramp
-        createNeonRamp(25, 2, 30, 40, -1, -40, 0.3, 0xffff00);  // Yellow Ramp
-        createNeonRamp(30, 2, 80, -50, 5, -80, -0.05, 0xff00ff); // Magenta Platform
+        // Stunt Arena Obstacles
+        createRamp(20, 2, 40, 0, 0.5, -60, 0.15); 
+        createRamp(25, 2, 30, 40, -1, -40, 0.3, 0xffaa00); 
+        createRamp(30, 2, 80, -50, 5, -80, -0.05, 0x3388ff); 
 
-        // --- Neon Cyberpunk Vehicle Setup ---
+        // --- Compound Vehicle Structural Rig ---
         const car = new THREE.Group();
         car.position.set(0, 1, 0);
         scene.add(car);
 
-        // Car Body (Bright Glowing Chassis Outline)
-        const carChassisGeo = new THREE.BoxGeometry(1.8, 0.6, 4);
-        const carBodyMesh = new THREE.Mesh(carChassisGeo, new THREE.MeshBasicMaterial({ color: 0x222222 }));
-        carBodyMesh.position.y = 0.4;
-        car.add(carBodyMesh);
+        const bodyMat = new THREE.MeshStandardMaterial({ color: 0xff0055, roughness: 0.2, metalness: 0.8 });
+        const chassis = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.6, 4), bodyMat);
+        chassis.position.y = 0.4;
+        chassis.castShadow = true;
+        car.add(chassis);
 
-        const bodyWireframeGeo = new THREE.EdgesGeometry(carChassisGeo);
-        const bodyWireframeMat = new THREE.LineBasicMaterial({ color: 0x00ffff, linewidth: 3 }); // Neon Cyan Car
-        const bodyWireframe = new THREE.LineSegments(bodyWireframeGeo, bodyWireframeMat);
-        carBodyMesh.add(bodyWireframe);
+        const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.5, 2), new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1 }));
+        cabin.position.set(0, 0.85, -0.2);
+        cabin.castShadow = true;
+        car.add(cabin);
 
-        // Glowing Wheels Setup
-        const wheelGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.4, 16).rotateZ(Math.PI / 2);
-        const wheelWireGeo = new THREE.EdgesGeometry(wheelGeo);
-        const wheelWireMat = new THREE.LineBasicMaterial({ color: 0xff00ff }); // Magenta Wheels
+        const wing = new THREE.Mesh(new THREE.BoxGeometry(2, 0.1, 0.5), bodyMat);
+        wing.position.set(0, 0.2, 2.1);
+        car.add(wing);
+
+        // Wheels System Grid Layout
+        const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9 });
+        const wheelGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.4, 24).rotateZ(Math.PI / 2);
+
         const wheels = [];
-        
         const wheelPositions = [
             { x: -1, y: 0.3, z: 1.2, isFront: true },   
             { x: 1, y: 0.3, z: 1.2, isFront: true },    
@@ -104,16 +144,15 @@
             const pivot = new THREE.Group();
             pivot.position.set(pos.x, pos.y, pos.z);
             
-            const wheelMesh = new THREE.Mesh(wheelGeo, new THREE.MeshBasicMaterial({ color: 0x111111 }));
-            const wheelWire = new THREE.LineSegments(wheelWireGeo, wheelWireMat);
-            wheelMesh.add(wheelWire);
-            
+            const wheelMesh = new THREE.Mesh(wheelGeo, wheelMat);
+            wheelMesh.castShadow = true;
             pivot.add(wheelMesh);
+            
             car.add(pivot);
             wheels.push({ pivot: pivot, mesh: wheelMesh, isFront: pos.isFront });
         });
 
-        // --- Keyboard Controls Matrix ---
+        // --- Keyboard Input Handling Matrix ---
         const keys = { Forward: false, Backward: false, Left: false, Right: false, Brake: false };
         
         const parseKeys = (e, status) => {
@@ -137,7 +176,7 @@
             velocity.set(0,0,0);
         }
 
-        // --- Game Physics Logic Loop ---
+        // --- Physics Quantities & Vector States ---
         let speed = 0;
         const maxSpeed = 65;
         const acceleration = 35;
@@ -150,11 +189,13 @@
         const clock = new THREE.Clock();
         const speedometerEl = document.getElementById('speedometer');
 
+        // --- Main Simulation Loop Execution Block ---
         function animate() {
             requestAnimationFrame(animate);
 
             const dt = Math.min(clock.getDelta(), 0.1);
 
+            // Handle Input Vector Translations
             if (keys.Forward) {
                 speed += acceleration * dt;
                 if (speed > maxSpeed) speed = maxSpeed;
@@ -175,8 +216,11 @@
                 steeringAngle = THREE.MathUtils.lerp(steeringAngle, 0, dt * 10);
             }
 
+            // Safe Wheel Transformation Loops
             wheels.forEach(w => {
-                if (w.isFront) w.pivot.rotation.y = steeringAngle;
+                if (w.isFront) {
+                    w.pivot.rotation.y = steeringAngle;
+                }
                 w.mesh.rotation.x += (speed * dt) / 0.4;
             });
 
@@ -188,6 +232,7 @@
             velocity.x = forwardDir.x * speed;
             velocity.z = forwardDir.z * speed;
 
+            // Surface Checking Mechanics
             let groundHeight = 0;
             car.isOnRamp = false;
             
@@ -213,25 +258,3 @@
             } else {
                 velocity.y = 0;
                 car.position.y = groundHeight;
-            }
-
-            car.position.addScaledVector(velocity, dt);
-
-            if (car.position.y < -30) resetCar();
-
-            // Camera System Follow Setup
-            const targetCamOffset = new THREE.Vector3(0, 3, -7).applyQuaternion(car.quaternion);
-            const targetCamPos = car.position.clone().add(targetCamOffset);
-            camera.position.lerp(targetCamPos, dt * 6);
-            
-            const lookAtTarget = car.position.clone().add(new THREE.Vector3(0, 0.8, 0));
-            camera.lookAt(lookAtTarget);
-
-            // Dashboard Metrics Readout
-            const displaySpeed = Math.abs(Math.round(speed * 3.6));
-            speedometerEl.textContent = `${displaySpeed.toString().padStart(3, '0')} KM/H`;
-
-            renderer.render(scene, camera);
-        }
-
-        window.addEventListener('resize', () => {
