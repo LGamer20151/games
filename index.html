@@ -6,40 +6,42 @@
   <title>My Game Site</title>
   <style>
     body { background:#1e1e2e; color:#fff; font-family:Arial, sans-serif; text-align:center; margin:0; padding:40px 20px; }
-    h1 { margin-bottom:30px; }
-    .menu { display:flex; flex-wrap:wrap; gap:20px; justify-content:center; }
-    .card { background:#313244; border-radius:10px; padding:24px; width:200px; text-decoration:none; color:#fff; transition:transform 0.2s; }
-    .card:hover { transform:scale(1.05); background:#45475a; }
-    .card h2 { margin:0 0 8px; color:#89b4fa; }
-    .card p { margin:0; color:#a6adc8; font-size:14px; }
+    h1 { font-size:40px; margin-bottom:40px; }
+    .menu { display:flex; flex-wrap:wrap; justify-content:center; gap:20px; max-width:1200px; margin:0 auto; }
+    .menu a {
+      display:flex; flex-direction:column; justify-content:center;
+      width:220px; min-height:150px; padding:20px; box-sizing:border-box;
+      border-radius:10px; background:#313244; text-decoration:none;
+      color:#89b4fa; font-size:26px; font-weight:bold;
+    }
+    .menu a:hover { background:#45475a; color:#b4befe; }
+    .menu a span { display:block; font-size:16px; font-weight:normal; color:#a6adc8; margin-top:10px; line-height:1.4; }
   </style>
 </head>
 <body>
   <h1>My Game Site</h1>
+
   <div class="menu">
-    <a class="card" href="plinko.html">
-      <h2>Plinko</h2>
-      <p>Drop discs and win points.</p>
+    <a href="plinko.html">Plinko
+      <span>Drop discs and win points.</span>
     </a>
-    <a class="card" href="snake.html">
-      <h2>Snake</h2>
-      <p>Eat food and grow longer.</p>
+    <a href="snake.html">Snake
+      <span>Eat food and grow longer.</span>
     </a>
-    <a class="card" href="drift.html">
-      <h2>Drift Boss</h2>
-      <p>Slide around corners and rack up points.</p>
+    <a href="drift-boss.html">Drift Boss
+      <span>Slide around corners and rack up points.</span>
     </a>
-    <a class="card" href="obby.html">
-      <h2>Obby</h2>
-      <p>Jump across platforms to the flag.</p>
+    <a href="obby.html">Obby
+      <span>Jump across platforms to the flag.</span>
     </a>
-    <a class="card" href="flappy.html">
-      <h2>Flappy Duck</h2>
-      <p>Flap through the pipe gaps.</p>
+    <a href="flappy-duck.html">Flappy Duck
+      <span>Flap through the pipe gaps.</span>
     </a>
-    <a class="card" href="arua.html">
-      <h2>Arua</h2>
-      <p>Bounce off the spinning balls.</p>
+    <a href="arua.html">Arua
+      <span>Bounce the brain off the kiwis.</span>
+    </a>
+    <a href="escape.html">Escape Room
+      <span>Solve the puzzles and get out.</span>
     </a>
   </div>
 </body>
