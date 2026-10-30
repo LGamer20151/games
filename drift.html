@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Drift Boss</title>
+  <style>
+    body { background:#1e1e2e; color:#fff; font-family:Arial, sans-serif; text-align:center; margin:0; padding:20px; }
+    canvas { background:#11111b; border-radius:8px; display:block; margin:0 auto; }
+    a { color:#89b4fa; display:inline-block; margin-top:14px; }
+    #info { font-size:20px; margin-top:10px; }
+  </style>
+</head>
+<body>
+  <h1>Drift Boss</h1>
+  <canvas id="track" width="600" height="400"></canvas>
+  <div id="info">Score: 0 | Drift: 0</div>
+  <p>Arrow keys: steer and accelerate. Space: handbrake.</p>
+  <a href="index.html">Back to menu</a>
+
+<script>
+const canvas = document.getElementById('track');
+const ctx = canvas.getContext('2d');
+const info = document.getElementById('info');
+
+const W = canvas.width, H = canvas.height;
+const keys = {};
+let score = 0;
+
+// Oval track: a ring between two ellipses
+const cx = W / 2, cy = H / 2;
+function onTrack(x, y) {
+  const a = Math.hypot((x - cx) / 240, (y - cy) / 160);
+  return a > 0.7 && a < 1.0;
+}
+
+const car = { x: cx, y: cy - 130, angle: 0, speed: 0, vx: 0, vy: 0 };
+
+function update() {
+  const accel = keys['ArrowUp'] ? 0.25 : 0;
+  const brake = keys['ArrowDown'] ? -0.2 : 0;
+  const turn = (keys['ArrowLeft'] ? -1 : 0) + (keys['ArrowRight'] ? 1 : 0);
+  const handbrake = keys[' '];
+
+  car.speed += accel + brake;
+  car.speed *= handbrake ? 0.9 : 0.985;
+  car.speed = Math.max(-2, Math.min(6, car.speed));
+  car.angle += turn * 0.05 * (Math.abs(car.speed) / 6);
+
+  const forwardX = Math.cos(car.angle), forwardY = Math.sin(car.angle);
+  const grip = handbrake ? 0.02 : 0.15;
+  car.vx += (forwardX * car.speed - car.vx) * grip;
+  car.vy += (forwardY * car.speed - car.vy) * grip;
+
+  car.x += car.vx;
+  car.y += car.vy;
+
+  // Wall bounce: keep the car on the track
+  if (!onTrack(car.x, car.y)) {
+    car.x -= car.vx * 2;
+    car.y -= car.vy * 2;
+    car.vx *= -0.3;
+    car.vy *= -0.3;
+    car.speed *= 0.5;
+  }
+
+  // Drift score: sideways slide while moving fast
+  const slide = Math.abs(car.vx * -forwardY + car.vy * forwardX);
+  if (slide > 1 && Math.abs(car.speed) > 2) {
+    score += Math.round(slide * 2);
+  }
+  info.textContent = 'Score: ' + score + ' | Drift: ' + Math.round(slide * 10);
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  // Track surface
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, 240, 160, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#45475a';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, 168, 112, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#11111b';
+  ctx.fill();
+
+  // Car
+  ctx.save();
+  ctx.translate(car.x, car.y);
+  ctx.rotate(car.angle);
+  ctx.fillStyle = '#f38ba8';
+  ctx.fillRect(-12, -7, 24, 14);
+  ctx.restore();
+}
+
+window.addEventListener('keydown', e => {
+  if (e.key.startsWith('Arrow') || e.key === ' ') {
+    keys[e.key] = true;
+    e.preventDefault();
+  }
+});
+window.addEventListener('keyup', e => { keys[e.key] = false; });
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
