@@ -6,10 +6,6 @@
   <title>2D Stickman Parkour - Neon Trial (Double Jump Fix)</title>
   <style>
     :root {
-      --bg: #111;
-      --fg: #fff;
-      --plat: #2d313f;
-      --accent: #00f3ff;
       --win: #00ff6b;
     }
     html, body {
@@ -29,6 +25,7 @@
       display: block;
       width: 100%;
       height: 100%;
+      background: #0b0b14;
     }
     #hud {
       position: absolute;
@@ -70,9 +67,6 @@
       border: none;
       cursor: pointer;
     }
-    @media (max-width: 600px) {
-      #victoryScreen { font-size: 22px; }
-    }
   </style>
 </head>
 <body>
@@ -87,223 +81,225 @@
   </div>
 
   <script>
-    // Canvas and context
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    const victoryScreen = document.getElementById('victoryScreen');
-    const restartBtn = document.getElementById('restartBtn');
-    let w = window.innerWidth;
-    let h = window.innerHeight;
+    (function () {
+      // DOM ready check
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+      const victoryScreen = document.getElementById('victoryScreen');
+      const restartBtn = document.getElementById('restartBtn');
+      const hud = document.getElementById('hud');
+      const goalEl = document.getElementById('goal');
+      let w = 0, h = 0;
 
-    function resize() {
-      w = window.innerWidth;
-      h = window.innerHeight;
-      canvas.width = w;
-      canvas.height = h;
-      rebuildLevelLayout();
-    }
-    window.addEventListener('resize', resize);
-    resize();
+      // Resize handler
+      function resize() {
+        w = window.innerWidth;
+        h = window.innerHeight;
+        canvas.width = w;
+        canvas.height = h;
+        // Rebuild level to fit new size
+        rebuildLevelLayout();
+      }
+      window.addEventListener('resize', resize);
 
-    // Game constants
-    const GRAVITY = 0.6;
-    const FRICTION = 0.85;
-    const RUN_SPEED = 0.8;
-    const MAX_SPEED = 6;
-    const JUMP_FORCE = -12;
+      // Game constants
+      const GRAVITY = 0.6;
+      const FRICTION = 0.85;
+      const RUN_SPEED = 0.8;
+      const MAX_SPEED = 6;
+      const JUMP_FORCE = -12;
 
-    // World and player
-    const platforms = [];
-    let goal = { x: 0, y: 0, width: 30, height: 100, reached: false };
+      // World and player
+      const platforms = [];
+      let goal = { x: 0, y: 0, width: 30, height: 100, reached: false };
 
-    // Player
-    const player = {
-      x: 100, y: 100,
-      vx: 0, vy: 0,
-      width: 20, height: 48,
-      grounded: false,
-      doubleJumpAvailable: true,
-      facing: 'right',
-      color: '#fff'
-    };
+      // Player
+      const player = {
+        x: 100, y: 100,
+        vx: 0, vy: 0,
+        width: 20, height: 48,
+        grounded: false,
+        doubleJumpAvailable: true,
+        facing: 'right',
+        color: '#fff'
+      };
 
-    // Jump press guard (per-press)
-    let jumpLock = false;
+      // Jump press guard (per-press)
+      let jumpLock = false;
 
-    function rebuildLevelLayout() {
-      // Simple neon platform layout based on viewport size
-      platforms.length = 0;
-      const baseY = h - 80;
-      platforms.push({ x: 0, y: baseY, width: 400, height: 80, color: '#2d313f' });
-      platforms.push({ x: 460, y: h - 160, width: 120, height: 20, color: '#00f3ff' });
-      platforms.push({ x: 650, y: h - 250, width: 120, height: 20, color: '#00f3ff' });
-      platforms.push({ x: 840, y: h - 200, width: 140, height: 20, color: '#ff0055' });
-      platforms.push({ x: 1050, y: h - 300, width: 120, height: 20, color: '#00f3ff' });
-      platforms.push({ x: 1250, y: h - 400, width: Math.max(100, w - 1250 + 100), height: 400, color: '#2d313f' });
-      goal.x = w - 150;
-      goal.y = h - 500;
-    }
-    rebuildLevelLayout();
-
-    // Input
-    const keys = {};
-    window.addEventListener('keydown', (e) => {
-      const key = e.key.toLowerCase();
-      keys[key] = true;
-
-      // Jump input with per-press lock
-      if (key === ' ' || key === 'arrowup' || key === 'w') {
-        if (!jumpLock) {
-          jumpLock = true;
-          if (player.grounded) {
-            // First jump
-            player.vy = JUMP_FORCE;
-            player.grounded = false;
-          } else if (player.doubleJumpAvailable) {
-            // Second jump (double jump)
-            player.vy = JUMP_FORCE * 0.85;
-            player.doubleJumpAvailable = false;
-          }
-        }
+      function rebuildLevelLayout() {
+        platforms.length = 0;
+        // Simple neon platform layout
+        const baseY = h - 80;
+        platforms.push({ x: 0, y: baseY, width: 400, height: 80, color: '#2d313f' });
+        platforms.push({ x: 460, y: h - 160, width: 120, height: 20, color: '#00f3ff' });
+        platforms.push({ x: 650, y: h - 250, width: 120, height: 20, color: '#00f3ff' });
+        platforms.push({ x: 840, y: h - 200, width: 140, height: 20, color: '#ff0055' });
+        platforms.push({ x: 1050, y: h - 300, width: 120, height: 20, color: '#00f3ff' });
+        platforms.push({ x: 1250, y: h - 400, width: Math.max(100, w - 1250 + 100), height: 400, color: '#2d313f' });
+        goal.x = w - 150;
+        goal.y = h - 500;
       }
 
-      if (key === 'r') resetGame();
-    });
-    window.addEventListener('keyup', (e) => {
-      const key = e.key.toLowerCase();
-      keys[key] = false;
-      if (key === ' ' || key === 'arrowup' || key === 'w') {
+      resize();
+      rebuildLevelLayout();
+
+      // Input
+      const keys = {};
+      window.addEventListener('keydown', (e) => {
+        const key = e.key.toLowerCase();
+        keys[key] = true;
+
+        // Jump with per-press lock
+        if (key === ' ' || key === 'arrowup' || key === 'w') {
+          if (!jumpLock) {
+            jumpLock = true;
+            if (player.grounded) {
+              player.vy = JUMP_FORCE;
+              player.grounded = false;
+            } else if (player.doubleJumpAvailable) {
+              player.vy = JUMP_FORCE * 0.85;
+              player.doubleJumpAvailable = false;
+            }
+          }
+        }
+
+        if (key === 'r') resetGame();
+      });
+      window.addEventListener('keyup', (e) => {
+        const key = e.key.toLowerCase();
+        keys[key] = false;
+        if (key === ' ' || key === 'arrowup' || key === 'w') {
+          jumpLock = false;
+        }
+      });
+
+      function resetGame() {
+        rebuildLevelLayout();
+        player.x = 100;
+        player.y = h - 200;
+        player.vx = 0;
+        player.vy = 0;
+        player.grounded = false;
+        player.doubleJumpAvailable = true;
         jumpLock = false;
+        goal.reached = false;
+        victoryScreen.style.display = 'none';
       }
-    });
 
-    // Reset
-    function resetGame() {
-      rebuildLevelLayout();
-      player.x = 100;
-      player.y = h - 200;
-      player.vx = 0;
-      player.vy = 0;
-      player.grounded = false;
-      player.doubleJumpAvailable = true;
-      jumpLock = false;
-      goal.reached = false;
-      victoryScreen.style.display = 'none';
-    }
-    resetGame();
-
-    // AABB helpers
-    function rectsOverlap(a, b) {
-      return a.x < b.x + b.width && a.x + a.width > b.x &&
-             a.y < b.y + b.height && a.y + a.height > b.y;
-    }
-
-    // Update physics
-    function update(dt) {
-      if (goal.reached) return;
-
-      // Horizontal movement
-      if (keys['a'] || keys['arrowleft']) {
-        player.vx -= RUN_SPEED;
-        player.facing = 'left';
-      } else if (keys['d'] || keys['arrowright']) {
-        player.vx += RUN_SPEED;
-        player.facing = 'right';
-      } else {
-        player.vx *= FRICTION;
+      // AABB helper
+      function rectsOverlap(a, b) {
+        return a.x < b.x + b.width && a.x + a.width > b.x &&
+               a.y < b.y + b.height && a.y + a.height > b.y;
       }
-      if (player.vx > MAX_SPEED) player.vx = MAX_SPEED;
-      if (player.vx < -MAX_SPEED) player.vx = -MAX_SPEED;
 
-      // Apply gravity
-      player.vy += GRAVITY;
+      // Update loop
+      let lastTime = performance.now();
+      function update(now) {
+        const dt = (now - lastTime) / 16.666; // normalize to ~60fps units
+        lastTime = now;
 
-      // Integrate
-      player.x += player.vx;
-      player.y += player.vy;
-
-      // Ground collision with platforms
-      player.grounded = false;
-      for (const plat of platforms) {
-        const pr = { x: player.x, y: player.y, width: player.width, height: player.height };
-        const p2 = { x: plat.x, y: plat.y, width: plat.width, height: plat.height };
-        if (rectsOverlap(pr, p2)) {
-          // Resolve with simple axis separation
-          const dx = (pr.x + pr.width / 2) - (p2.x + p2.width / 2);
-          const dy = (pr.y + pr.height / 2) - (p2.y + p2.height / 2);
-          const overlapX = (pr.width + p2.width) / 2 - Math.abs(dx);
-          const overlapY = (pr.height + p2.height) / 2 - Math.abs(dy);
-          if (overlapX < overlapY) {
-            // Resolve in X
-            if (dx > 0) {
-              player.x += overlapX;
-            } else {
-              player.x -= overlapX;
-            }
-            player.vx = 0;
+        if (!goal.reached) {
+          // Horizontal input
+          if (keys['a'] || keys['arrowleft']) {
+            player.vx -= RUN_SPEED;
+            player.facing = 'left';
+          } else if (keys['d'] || keys['arrowright']) {
+            player.vx += RUN_SPEED;
+            player.facing = 'right';
           } else {
-            // Resolve in Y
-            if (dy > 0) {
-              player.y += overlapY;
-              player.vy = 0;
-              player.grounded = true;
-              player.doubleJumpAvailable = true; // re-enable after landing
-            } else {
-              player.y -= overlapY;
-              player.vy = 0;
+            player.vx *= FRICTION;
+          }
+          if (player.vx > MAX_SPEED) player.vx = MAX_SPEED;
+          if (player.vx < -MAX_SPEED) player.vx = -MAX_SPEED;
+
+          // Gravity
+          player.vy += GRAVITY;
+
+          // Integrate
+          player.x += player.vx;
+          player.y += player.vy;
+
+          // Platforms collision
+          player.grounded = false;
+          for (const plat of platforms) {
+            const pr = { x: player.x, y: player.y, width: player.width, height: player.height };
+            const p2 = { x: plat.x, y: plat.y, width: plat.width, height: plat.height };
+            if (rectsOverlap(pr, p2)) {
+              const dx = (pr.x + pr.width / 2) - (p2.x + p2.width / 2);
+              const dy = (pr.y + pr.height / 2) - (p2.y + p2.height / 2);
+              const overlapX = (pr.width + p2.width) / 2 - Math.abs(dx);
+              const overlapY = (pr.height + p2.height) / 2 - Math.abs(dy);
+              if (overlapX < overlapY) {
+                if (dx > 0) player.x += overlapX; else player.x -= overlapX;
+                player.vx = 0;
+              } else {
+                if (dy > 0) {
+                  player.y += overlapY;
+                  player.vy = 0;
+                  player.grounded = true;
+                  player.doubleJumpAvailable = true;
+                } else {
+                  player.y -= overlapY;
+                  player.vy = 0;
+                }
+              }
             }
           }
+
+          if (player.y > h + 200) resetGame();
+
+          // Goal check
+          if (Math.abs(player.x - goal.x) < 40 && Math.abs(player.y - goal.y) < 40) {
+            goal.reached = true;
+            victoryScreen.style.display = 'flex';
+          }
         }
+
+        render();
+        requestAnimationFrame(update);
       }
 
-      // World bounds
-      if (player.y > h + 200) resetGame();
+      // Render
+      function render() {
+        ctx.clearRect(0, 0, w, h);
 
-      // Goal check
-      if (Math.abs((player.x) - goal.x) < 40 && Math.abs((player.y) - goal.y) < 40) {
-        goal.reached = true;
-        victoryScreen.style.display = 'flex';
+        // Neon sky gradient for ambience
+        const g = ctx.createLinearGradient(0, 0, 0, h);
+        g.addColorStop(0, '#0b1020');
+        g.addColorStop(1, '#0b0b14');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, w, h);
+
+        // Draw platforms
+        for (const plat of platforms) {
+          ctx.fillStyle = plat.color;
+          ctx.fillRect(plat.x, plat.y, plat.width, plat.height);
+          ctx.strokeStyle = '#ffffff22';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(plat.x, plat.y, plat.width, plat.height);
+        }
+
+        // Draw goal marker
+        ctx.fillStyle = '#00ff6b';
+        ctx.fillRect(goal.x, goal.y, 40, 6);
+
+        // Draw player (simple rectangle)
+        ctx.fillStyle = player.color;
+        ctx.fillRect(player.x, player.y, player.width, player.height);
       }
-    }
 
-    // Render
-    function render() {
-      ctx.clearRect(0, 0, w, h);
+      // Start loop after first paint
+      requestAnimationFrame((t) => {
+        lastTime = t;
+        update(t);
+      });
 
-      // Draw platforms
-      for (const plat of platforms) {
-        ctx.fillStyle = plat.color;
-        ctx.fillRect(plat.x, plat.y, plat.width, plat.height);
-        // subtle outline
-        ctx.strokeStyle = '#ffffff22';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(plat.x, plat.y, plat.width, plat.height);
+      // Optional: restart button
+      if (restartBtn) {
+        restartBtn.addEventListener('click', resetGame);
       }
-
-      // Draw goal
-      ctx.fillStyle = '#00ff6b';
-      ctx.fillRect(goal.x, goal.y, goal.width, goal.height);
-
-      // Draw player (simple block)
-      ctx.fillStyle = player.color;
-      ctx.fillRect(player.x, player.y, player.width, player.height);
-
-      // You can add more neon glow or simple shadow if desired
-    }
-
-    // Animation loop
-    let last = performance.now();
-    function loop(now) {
-      const dt = Math.min(0.033, (now - last) / 1000);
-      last = now;
-      update(dt);
-      render();
-      requestAnimationFrame(loop);
-    }
-    requestAnimationFrame(loop);
-
-    // Restart button
-    restartBtn.addEventListener('click', resetGame);
+    })();
   </script>
 </body>
 </html>
