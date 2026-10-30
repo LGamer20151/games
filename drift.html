@@ -15,7 +15,7 @@
   <h1>Drift Boss</h1>
   <canvas id="track" width="600" height="400"></canvas>
   <div id="info">Score: 0 | Drift: 0</div>
-  <p>Arrow keys or WASD: steer and accelerate. Space: handbrake.</p>
+  <p>WASD or arrow keys: steer and accelerate. Space: handbrake.</p>
 
 <script>
 const canvas = document.getElementById('track');
@@ -36,10 +36,9 @@ function onTrack(x, y) {
 const car = { x: cx, y: cy - 130, angle: 0, speed: 0, vx: 0, vy: 0 };
 
 function update() {
-  const accel = (keys['ArrowUp'] || keys['w'] || keys['W']) ? 0.25 : 0;
-  const brake = (keys['ArrowDown'] || keys['s'] || keys['S']) ? -0.2 : 0;
-  const turn = ((keys['ArrowLeft'] || keys['a'] || keys['A']) ? -1 : 0)
-             + ((keys['ArrowRight'] || keys['d'] || keys['D']) ? 1 : 0);
+  const accel = (keys['arrowup'] || keys['w']) ? 0.25 : 0;
+  const brake = (keys['arrowdown'] || keys['s']) ? -0.2 : 0;
+  const turn = ((keys['arrowleft'] || keys['a']) ? -1 : 0) + ((keys['arrowright'] || keys['d']) ? 1 : 0);
   const handbrake = keys[' '];
 
   car.speed += accel + brake;
@@ -94,14 +93,19 @@ function draw() {
   ctx.restore();
 }
 
+const controls = ['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'w', 'a', 's', 'd', ' '];
+
 window.addEventListener('keydown', e => {
-  const controls = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd', 'W', 'A', 'S', 'D', ' '];
-  if (controls.includes(e.key)) {
-    keys[e.key] = true;
+  const key = e.key.toLowerCase();
+  if (controls.includes(key)) {
+    keys[key] = true;
     e.preventDefault();
   }
 });
-window.addEventListener('keyup', e => { keys[e.key] = false; });
+
+window.addEventListener('keyup', e => {
+  keys[e.key.toLowerCase()] = false;
+});
 
 function loop() {
   update();
