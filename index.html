@@ -60,18 +60,17 @@
         const scoreDisplay = document.getElementById('score-val');
 
         let score = 0;
-        const gravity = 0.2;
-        const bounce = 0.55; // Bounciness factor
+        const gravity = 0.25;
+        const bounce = 0.55; 
 
-        // Game Arrays
         const balls = [];
         const pegs = [];
         const buckets = [];
         const effects = [];
 
-        // Setup Score Buckets at bottom
         const bucketCounts = 9;
         const bucketWidth = canvas.width / bucketCounts;
+        // FIXED TYPO HERE: Added actual score rewards
         const bucketScores =;
         const bucketColors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#22c55e', '#eab308', '#f97316', '#ef4444'];
 
@@ -87,7 +86,6 @@
             });
         }
 
-        // Setup Triangle Grid of Pegs
         const rows = 10;
         const startY = 120;
         const rowSpacing = 45;
@@ -108,25 +106,22 @@
             }
         }
 
-        // Mouse Tracker for visual aid
         let mouseX = canvas.width / 2;
         canvas.addEventListener('mousemove', (e) => {
             const rect = canvas.getBoundingClientRect();
             mouseX = e.clientX - rect.left;
         });
 
-        // Drop Ball on Click
         canvas.addEventListener('click', (e) => {
             const rect = canvas.getBoundingClientRect();
             const clickX = e.clientX - rect.left;
             const clickY = e.clientY - rect.top;
 
-            // Restrict spawning to the top clear zone
             if (clickY < 80) {
                 balls.push({
                     x: clickX,
                     y: clickY,
-                    vx: (Math.random() - 0.5) * 1.5, // slight initial random sway
+                    vx: (Math.random() - 0.5) * 2, 
                     vy: 2,
                     radius: 9,
                     color: '#38bdf8'
@@ -134,21 +129,17 @@
             }
         });
 
-        // Spawn scoring text particle effect
         function spawnEffect(x, y, text, color) {
             effects.push({ x, y, text, color, alpha: 1, vy: -1 });
         }
 
-        // Game Loop
         function update() {
-            // Update Balls Physics
             for (let i = balls.length - 1; i >= 0; i--) {
                 let b = balls[i];
                 b.vy += gravity;
                 b.x += b.vx;
                 b.y += b.vy;
 
-                // Wall Collisions
                 if (b.x - b.radius < 0) {
                     b.x = b.radius;
                     b.vx *= -bounce;
@@ -157,7 +148,6 @@
                     b.vx *= -bounce;
                 }
 
-                // Peg Collisions
                 pegs.forEach(peg => {
                     let dx = b.x - peg.x;
                     let dy = b.y - peg.y;
@@ -165,7 +155,6 @@
                     let minDist = b.radius + peg.radius;
 
                     if (dist < minDist) {
-                        // Push out of overlapping peg
                         let overlap = minDist - dist;
                         let nx = dx / dist;
                         let ny = dy / dist;
@@ -173,36 +162,30 @@
                         b.x += nx * overlap;
                         b.y += ny * overlap;
 
-                        // Calculate bounce vector
                         let dotProduct = b.vx * nx + b.vy * ny;
                         b.vx = (b.vx - 2 * dotProduct * nx) * bounce;
                         b.vy = (b.vy - 2 * dotProduct * ny) * bounce;
+                        b.vx += (Math.random() - 0.5) * 0.5;
 
-                        // Add small friction/chaos randomness to avoid stuck paths
-                        b.vx += (Math.random() - 0.5) * 0.4;
-
-                        peg.pulse = 8; // trigger flash animation
+                        peg.pulse = 8; 
                     }
                 });
 
-                // Check Bucket / Slot Landing
                 if (b.y + b.radius >= canvas.height - 45) {
-                    // Determine which bucket it fell into
                     for (let j = 0; j < buckets.length; j++) {
                         let bucket = buckets[j];
                         if (b.x >= bucket.x && b.x <= bucket.x + bucket.w) {
                             score += bucket.score;
                             scoreDisplay.textContent = score;
-                            bucket.flash = 15; // Flash effect
+                            bucket.flash = 15; 
                             spawnEffect(bucket.x + bucket.w/2, bucket.y - 10, `+${bucket.score}`, bucket.color);
                             break;
                         }
                     }
-                    balls.splice(i, 1); // Delete ball
+                    balls.splice(i, 1); 
                 }
             }
 
-            // Decay visual animations
             pegs.forEach(p => { if (p.pulse > 0) p.pulse--; });
             buckets.forEach(b => { if (b.flash > 0) b.flash--; });
             for (let i = effects.length - 1; i >= 0; i--) {
@@ -215,17 +198,13 @@
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Draw Top Spawn Guideline Tracker
-            ctx.strokeStyle = 'rgba(56, 189, 248, 0.15)';
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.2)';
             ctx.lineWidth = 2;
-            ctx.setLineDash([4, 4]);
             ctx.beginPath();
             ctx.moveTo(mouseX, 0);
             ctx.lineTo(mouseX, 80);
             ctx.stroke();
-            ctx.setLineDash([]);
 
-            // Draw Top Zone border
             ctx.strokeStyle = '#334155';
             ctx.lineWidth = 1;
             ctx.beginPath();
@@ -233,45 +212,33 @@
             ctx.lineTo(canvas.width, 80);
             ctx.stroke();
 
-            // Draw Pegs
             pegs.forEach(peg => {
                 ctx.beginPath();
                 ctx.arc(peg.x, peg.y, peg.radius + (peg.pulse * 0.4), 0, Math.PI * 2);
                 ctx.fillStyle = peg.pulse > 0 ? '#f43f5e' : '#94a3b8';
-                ctx.shadowBlur = peg.pulse > 0 ? 15 : 0;
-                ctx.shadowColor = '#f43f5e';
                 ctx.fill();
-                ctx.shadowBlur = 0;
             });
 
-            // Draw Score Slots / Buckets
             buckets.forEach(bucket => {
                 ctx.fillStyle = bucket.flash > 0 ? '#ffffff' : bucket.color;
                 ctx.fillRect(bucket.x + 2, bucket.y, bucket.w - 4, bucket.h);
 
-                // Slot Dividers
                 ctx.fillStyle = '#475569';
                 ctx.fillRect(bucket.x, bucket.y - 15, 4, bucket.h + 15);
 
-                // Score Values text
                 ctx.fillStyle = bucket.flash > 0 ? '#000000' : '#0f172a';
-                ctx.font = 'bold 15px sans-serif';
+                ctx.font = 'bold 14px sans-serif';
                 ctx.textAlign = 'center';
                 ctx.fillText(bucket.score, bucket.x + bucket.w / 2, bucket.y + 32);
             });
 
-            // Draw Balls
             balls.forEach(b => {
                 ctx.beginPath();
                 ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
                 ctx.fillStyle = b.color;
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = b.color;
                 ctx.fill();
-                ctx.shadowBlur = 0;
             });
 
-            // Draw Floating Floating Text Effects
             effects.forEach(eff => {
                 ctx.fillStyle = eff.color;
                 ctx.globalAlpha = eff.alpha;
@@ -285,3 +252,10 @@
         function loop() {
             update();
             draw();
+            requestAnimationFrame(loop);
+        }
+
+        loop();
+    </script>
+</body>
+</html>
