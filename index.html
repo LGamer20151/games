@@ -1,98 +1,158 @@
-// 1. Activation functions
-const sigmoid = (x) => 1 / (1 + Math.exp(-x));
-const sigmoidDerivative = (y) => y * (1 - y); // y is already the sigmoid output
-
-// Helper functions for matrix operations
-const dotProduct = (vecA, vecB) => vecA.reduce((sum, val, i) => sum + val * vecB[i], 0);
-const randomWeight = () => Math.random() * 2 - 1; // Random number between -1 and 1
-
-// 2. Training Data (XOR Problem)
-const trainingData = [
-    { input:, output: [0] },
-    { input:, output: [1] },
-    { input:, output: [1] },
-    { input:, output: [0] }
-];
-
-// 3. Network Structure Configuration
-const inputNodes = 2;
-const hiddenNodes = 3;
-const outputNodes = 1;
-const learningRate = 0.5;
-const epochs = 50000;
-
-// Initialize Weights and Biases with random values
-let weightsInputHidden = Array.from({ length: hiddenNodes }, () => Array.from({ length: inputNodes }, randomWeight));
-let weightsHiddenOutput = Array.from({ length: outputNodes }, () => Array.from({ length: hiddenNodes }, randomWeight));
-
-let biasHidden = Array.from({ length: hiddenNodes }, randomWeight);
-let biasOutput = Array.from({ length: outputNodes }, randomWeight);
-
-// 4. Training Loop
-console.log("Training the AI network... Please wait.");
-
-for (let epoch = 0; epoch < epochs; epoch++) {
-    for (const data of trainingData) {
-        // --- FORWARD PROPAGATION ---
-        // Calculate Hidden Layer outputs
-        let hiddenOutputs = [];
-        for (let h = 0; h < hiddenNodes; h++) {
-            let sum = dotProduct(data.input, weightsInputHidden[h]) + biasHidden[h];
-            hiddenOutputs.push(sigmoid(sum));
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JavaScript AI Neural Network</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #0d1117;
+            color: #c9d1d9;
+            padding: 40px;
+            max-width: 800px;
+            margin: 0 auto;
         }
-
-        // Calculate Final Output Layer outputs
-        let finalOutputs = [];
-        for (let o = 0; o < outputNodes; o++) {
-            let sum = dotProduct(hiddenOutputs, weightsHiddenOutput[o]) + biasOutput[o];
-            finalOutputs.push(sigmoid(sum));
+        h1 {
+            color: #58a6ff;
+            border-bottom: 1px solid #21262d;
+            padding-bottom: 10px;
         }
-
-        // --- BACKPROPAGATION ---
-        // Calculate output layer errors & gradients
-        let outputErrors = [];
-        let outputGradients = [];
-        for (let o = 0; o < outputNodes; o++) {
-            let error = data.output[o] - finalOutputs[o];
-            outputErrors.push(error);
-            outputGradients.push(error * sigmoidDerivative(finalOutputs[o]));
+        #console {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 20px;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            color: #7ee787;
         }
-
-        // Calculate hidden layer errors & gradients
-        let hiddenErrors = new Array(hiddenNodes).fill(0);
-        let hiddenGradients = [];
-        for (let h = 0; h < hiddenNodes; h++) {
-            for (let o = 0; o < outputNodes; o++) {
-                hiddenErrors[h] += outputGradients[o] * weightsHiddenOutput[o][h];
-            }
-            hiddenGradients.push(hiddenErrors[h] * sigmoidDerivative(hiddenOutputs[h]));
+        .status {
+            color: #e3b341;
+            font-style: italic;
+            margin-bottom: 15px;
         }
+    </style>
+</head>
+<body>
 
-        // --- UPDATE WEIGHTS & BIASES ---
-        // Update Hidden-to-Output weights and output biases
-        for (let o = 0; o < outputNodes; o++) {
-            for (let h = 0; h < hiddenNodes; h++) {
-                weightsHiddenOutput[o][h] += learningRate * outputGradients[o] * hiddenOutputs[h];
-            }
-            biasOutput[o] += learningRate * outputGradients[o];
-        }
-
-        // Update Input-to-Hidden weights and hidden biases
-        for (let h = 0; h < hiddenNodes; h++) {
-            for (let i = 0; i < inputNodes; i++) {
-                weightsInputHidden[h][i] += learningRate * hiddenGradients[h] * data.input[i];
-            }
-            biasHidden[h] += learningRate * hiddenGradients[h];
-        }
-    }
-}
-
-// 5. Test the Trained AI
-console.log("\n--- AI Evaluation Results ---");
-trainingData.forEach(data => {
-    // Single forward pass for evaluation
-    let hiddenOutputs = weightsInputHidden.map((weights, h) => sigmoid(dotProduct(data.input, weights) + biasHidden[h]));
-    let finalOutputs = weightsHiddenOutput.map((weights, o) => sigmoid(dotProduct(hiddenOutputs, weights) + biasOutput[o]));
+    <h1>🧠 Browser-Based AI Neural Network</h1>
+    <p>This network trains entirely in your browser using vanilla JavaScript to solve the XOR logic gate problem.</p>
     
-    console.log(`Input: [${data.input.join(', ')}] -> Target: [${data.output}] -> AI Guess: [${finalOutputs[0].toFixed(4)}]`);
-});
+    <div id="status" class="status">Initializing network and weights...</div>
+    <pre id="console"></pre>
+
+    <script>
+        const outputConsole = document.getElementById('console');
+        const statusDiv = document.getElementById('status');
+
+        function logToScreen(text) {
+            outputConsole.textContent += text + "\n";
+        }
+
+        // 1. Activation functions
+        const sigmoid = (x) => 1 / (1 + Math.exp(-x));
+        const sigmoidDerivative = (y) => y * (1 - y);
+
+        const dotProduct = (vecA, vecB) => vecA.reduce((sum, val, i) => sum + val * vecB[i], 0);
+        const randomWeight = () => Math.random() * 2 - 1;
+
+        // 2. Training Data (XOR Problem)
+        const trainingData = [
+            { input:, output: [0] },
+            { input:, output: [1] },
+            { input:, output: [1] },
+            { input:, output: [0] }
+        ];
+
+        // 3. Network Architecture
+        const inputNodes = 2;
+        const hiddenNodes = 3;
+        const outputNodes = 1;
+        const learningRate = 0.5;
+        const epochs = 50000;
+
+        let weightsInputHidden = Array.from({ length: hiddenNodes }, () => Array.from({ length: inputNodes }, randomWeight));
+        let weightsHiddenOutput = Array.from({ length: outputNodes }, () => Array.from({ length: hiddenNodes }, randomWeight));
+
+        let biasHidden = Array.from({ length: hiddenNodes }, randomWeight);
+        let biasOutput = Array.from({ length: outputNodes }, randomWeight);
+
+        // 4. Training Function (Run asynchronously to keep browser active)
+        async function trainAI() {
+            statusDiv.textContent = "⚡ Training the AI network over 50,000 epochs... Please wait.";
+            
+            // Allow browser UI to update before heavy math starts
+            await new Promise(resolve => setTimeout(resolve, 50));
+
+            for (let epoch = 0; epoch < epochs; epoch++) {
+                for (const data of trainingData) {
+                    // --- FORWARD PROPAGATION ---
+                    let hiddenOutputs = [];
+                    for (let h = 0; h < hiddenNodes; h++) {
+                        let sum = dotProduct(data.input, weightsInputHidden[h]) + biasHidden[h];
+                        hiddenOutputs.push(sigmoid(sum));
+                    }
+
+                    let finalOutputs = [];
+                    for (let o = 0; o < outputNodes; o++) {
+                        let sum = dotProduct(hiddenOutputs, weightsHiddenOutput[o]) + biasOutput[o];
+                        finalOutputs.push(sigmoid(sum));
+                    }
+
+                    // --- BACKPROPAGATION ---
+                    let outputErrors = [];
+                    let outputGradients = [];
+                    for (let o = 0; o < outputNodes; o++) {
+                        let error = data.output[o] - finalOutputs[o];
+                        outputErrors.push(error);
+                        outputGradients.push(error * sigmoidDerivative(finalOutputs[o]));
+                    }
+
+                    let hiddenErrors = new Array(hiddenNodes).fill(0);
+                    let hiddenGradients = [];
+                    for (let h = 0; h < hiddenNodes; h++) {
+                        for (let o = 0; o < outputNodes; o++) {
+                            hiddenErrors[h] += outputGradients[o] * weightsHiddenOutput[o][h];
+                        }
+                        hiddenGradients.push(hiddenErrors[h] * sigmoidDerivative(hiddenOutputs[h]));
+                    }
+
+                    // --- UPDATE WEIGHTS & BIASES ---
+                    for (let o = 0; o < outputNodes; o++) {
+                        for (let h = 0; h < hiddenNodes; h++) {
+                            weightsHiddenOutput[o][h] += learningRate * outputGradients[o] * hiddenOutputs[h];
+                        }
+                        biasOutput[o] += learningRate * outputGradients[o];
+                    }
+
+                    for (let h = 0; h < hiddenNodes; h++) {
+                        for (let i = 0; i < inputNodes; i++) {
+                            weightsInputHidden[h][i] += learningRate * hiddenGradients[h] * data.input[i];
+                        }
+                        biasHidden[h] += learningRate * hiddenGradients[h];
+                    }
+                }
+            }
+
+            statusDiv.textContent = "✅ Training Complete!";
+            statusDiv.style.color = "#7ee787";
+            
+            // 5. Evaluate and Print Results
+            logToScreen("--- AI EVALUATION RESULTS ---");
+            trainingData.forEach(data => {
+                let hiddenOutputs = weightsInputHidden.map((weights, h) => sigmoid(dotProduct(data.input, weights) + biasHidden[h]));
+                let finalOutputs = weightsHiddenOutput.map((weights, o) => sigmoid(dotProduct(hiddenOutputs, weights) + biasOutput[o]));
+                
+                logToScreen(`Input: [${data.input.join(', ')}] -> Target: [${data.output}] -> AI Guess: [${finalOutputs[0].toFixed(4)}]`);
+            });
+        }
+
+        // Start training loop automatically on load
+        trainAI();
+    </script>
+</body>
+</html>
