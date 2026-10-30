@@ -24,11 +24,11 @@ const scoreEl = document.getElementById('score');
 
 const W = canvas.width, H = canvas.height;
 const KIWI_R = 220;     // size of each kiwi
-const KIWI_Y = H - 120; // height of both kiwi centers (raise or lower this)
+const KIWI_Y = H;       // height of both kiwi centers (H = bottom corners)
 const BRAIN_R = 14;
 const GRAVITY = 0.25;
 
-// Both kiwis sit at the same height, centered on the left and right edges
+// Both kiwis sit on the bottom-left and bottom-right corners
 const kiwis = [
   { x: 0, y: KIWI_Y, r: KIWI_R },
   { x: W, y: KIWI_Y, r: KIWI_R }
