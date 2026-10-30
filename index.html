@@ -3,201 +3,233 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stickman Parkour</title>
+<title>Voxel Craft</title>
 <style>
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #0f1015; font-family: sans-serif; }
-  canvas { display: block; }
-  #hud { position: absolute; top: 12px; left: 12px; color: #fff; font-weight: bold;
-         text-shadow: 2px 2px 4px #000; pointer-events: none; line-height: 1.5; }
-  #win { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-         color: #00ffcc; font-size: 36px; font-weight: bold; background: rgba(0,0,0,0.9);
-         padding: 28px 56px; border: 2px solid #00ffcc; border-radius: 10px; text-align: center; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #87ceeb; font-family: sans-serif; }
+  #info { position: absolute; top: 12px; left: 12px; color: #fff; font-weight: bold;
+          text-shadow: 2px 2px 4px #000; pointer-events: none; line-height: 1.5; }
+  #crosshair { position: absolute; top: 50%; left: 50%; width: 4px; height: 4px; margin: -2px 0 0 -2px;
+               background: #fff; border-radius: 50%; box-shadow: 0 0 2px #000; pointer-events: none; }
+  #hotbar { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; }
+  .slot { width: 56px; height: 56px; border: 3px solid #333; background: rgba(0,0,0,0.5);
+          color: #fff; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+  .slot.active { border-color: #fff; }
+  #start { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+           background: rgba(0,0,0,0.55); color: #fff; font-size: 28px; font-weight: bold; cursor: pointer; }
 </style>
 </head>
 <body>
-<div id="hud"></div>
-<div id="win"></div>
-<canvas id="c"></canvas>
-<script>
-const canvas = document.getElementById('c');
-const ctx = canvas.getContext('2d');
-const hud = document.getElementById('hud');
-const winBox = document.getElementById('win');
-let W, H;
-function resize() { W = canvas.width = innerWidth; H = canvas.height = innerHeight; }
-addEventListener('resize', resize); resize();
+<div id="info">Voxel Craft<br>WASD: Move | Space: Jump | Mouse: Look<br>Left click: Break | Right click: Place | 1-4: Block | Esc: Pause</div>
+<div id="crosshair"></div>
+<div id="hotbar"></div>
+<div id="start">Click to Play</div>
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
 
-const GRAVITY = 0.55, FRICTION = 0.82, RUN = 0.8, MAX_SPEED = 7, JUMP = -12;
-const keys = {};
-addEventListener('keydown', e => {
-  const k = e.key.toLowerCase();
-  keys[k] = true;
-  if ([' ', 'arrowup', 'w'].includes(k)) { e.preventDefault(); jump(); }
-  if (k === 'r') restart();
-});
-addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
-
-const player = { x: 0, y: 0, vx: 0, vy: 0, w: 20, h: 46, grounded: false, canDouble: true };
-let platforms = [], coins = [], checkpoint = null, goal = null;
-let coinCount = 0, totalCoins = 0, startTime = 0, won = false, spawn = { x: 80, y: 0 };
-const level = [
-  { x: 0, y: 0, w: 380, moving: false },
-  { x: 440, y: -90, w: 120 },
-  { x: 630, y: -170, w: 110 },
-  { x: 810, y: -110, w: 130, moveY: 80, speed: 0.012 },
-  { x: 1020, y: -220, w: 120 },
-  { x: 1220, y: -300, w: 130, moveX: 90, speed: 0.01 },
-  { x: 1450, y: -200, w: 150 },
-  { x: 1680, y: -260, w: 110, fall: true },
-  { x: 1880, y: -150, w: 260 }
+const WORLD = 40, HEIGHT = 16;
+const BLOCKS = [
+  { name: 'Grass', color: 0x5fae3c, top: 0x6fc24a },
+  { name: 'Dirt',  color: 0x8b5a2b, top: 0x8b5a2b },
+  { name: 'Stone', color: 0x7d7d7d, top: 0x7d7d7d },
+  { name: 'Wood',  color: 0x8a6436, top: 0xb08850 }
 ];
-const coinSpots = [[480, -140], [670, -220], [850, -170], [1060, -270], [1270, -350], [1500, -250], [1930, -200]];
+let selected = 0;
 
-function buildLevel() {
-  platforms = level.map(p => ({ ...p, baseX: p.x, baseY: p.y, h: 22, fallTimer: 0, falling: false }));
-  coins = coinSpots.map(([x, y]) => ({ x, y, taken: false }));
-  totalCoins = coins.length;
-  goal = { x: 2060, y: -230 };
-}
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87ceeb);
+scene.fog = new THREE.Fog(0x87ceeb, 30, 70);
+const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.1, 200);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
+scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+const sun = new THREE.DirectionalLight(0xffffff, 0.8);
+sun.position.set(20, 40, 10);
+scene.add(sun);
 
-function restart() {
-  buildLevel();
-  Object.assign(player, { x: spawn.x, y: H - 300, vx: 0, vy: 0, grounded: false, canDouble: true });
-  coinCount = 0; won = false; winBox.style.display = 'none';
-  startTime = performance.now();
-  checkpoint = { x: 500, y: -90 };
-}
-restart();
-
-function jump() {
-  if (won) return;
-  if (player.grounded) { player.vy = JUMP; player.grounded = false; }
-  else if (player.canDouble) { player.vy = JUMP * 0.85; player.canDouble = false; }
-}
-
-function update(dt) {
-  if (won) return;
-  const worldGround = H - 120;
-  if (keys['a'] || keys['arrowleft']) player.vx -= RUN * dt;
-  if (keys['d'] || keys['arrowright']) player.vx += RUN * dt;
-  player.vx *= Math.pow(FRICTION, dt);
-  player.vx = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, player.vx));
-  player.vy += GRAVITY * dt;
-
-  const prevY = player.y, prevX = player.x;
-  player.x += player.vx * dt;
-  player.y += player.vy * dt;
-  if (player.x < -200) player.x = -200;
-
-  platforms.forEach(p => {
-    if (p.moveY) p.y = p.baseY + Math.sin(performance.now() * p.speed) * p.moveY;
-    if (p.moveX) p.x = p.baseX + Math.sin(performance.now() * p.speed) * p.moveX;
-    if (p.fall && p.falling) { p.fallTimer += dt; p.y += p.fallTimer * 0.5; }
-  });
-
-  player.grounded = false;
-  for (const p of platforms) {
-    const groundY = worldGround + p.y;
-    const top = groundY;
-    const overlapX = player.x + player.w > p.x && player.x < p.x + p.w;
-    const wasAbove = prevY + player.h <= top + 1;
-    if (overlapX && player.vy >= 0 && wasAbove && player.y + player.h >= top) {
-      player.y = top - player.h;
-      player.vy = 0;
-      player.grounded = true;
-      player.canDouble = true;
-      if (p.fall && !p.falling) p.falling = true;
-    }
+const world = new Map();
+const key = (x, y, z) => `${x},${y},${z}`;
+const geo = new THREE.BoxGeometry(1, 1, 1);
+const matCache = {};
+function mat(i, face) {
+  const k = i + ':' + face;
+  if (!matCache[k]) {
+    const col = face === 'top' ? BLOCKS[i].top : BLOCKS[i].color;
+    matCache[k] = new THREE.MeshLambertMaterial({ color: col });
   }
+  return matCache[k];
+}
+const meshes = [];
 
-  if (player.y > H + 300) restart();
+function makeMesh(x, y, z, type) {
+  const mats = [mat(type, 'side'), mat(type, 'side'), mat(type, 'top'), mat(type, 'bottom'), mat(type, 'side'), mat(type, 'side')];
+  const m = new THREE.Mesh(geo, mats);
+  m.position.set(x + 0.5, y + 0.5, z + 0.5);
+  scene.add(m);
+  meshes.push(m);
+  return m;
+}
 
-  for (const c of coins) {
-    if (!c.taken) {
-      const cx = c.x, cy = worldGround + c.y;
-      if (Math.hypot(player.x + player.w / 2 - cx, player.y + player.h / 2 - cy) < 26) {
-        c.taken = true; coinCount++;
+function setBlock(x, y, z, type) {
+  const k = key(x, y, z);
+  if (world.has(k)) {
+    const old = world.get(k);
+    scene.remove(old.mesh);
+    world.delete(k);
+  }
+  if (type !== null) world.set(k, { type, mesh: makeMesh(x, y, z, type) });
+}
+
+function hasBlock(x, y, z) { return world.has(key(x, y, z)); }
+
+function generate() {
+  const half = WORLD / 2;
+  for (let x = -half; x < half; x++) {
+    for (let z = -half; z < half; z++) {
+      const h = Math.floor(3 + Math.sin(x * 0.15) * 2 + Math.cos(z * 0.2) * 2 + Math.sin((x + z) * 0.1) * 1.5);
+      for (let y = 0; y <= h; y++) {
+        let type = y === h ? 0 : (y > h - 3 ? 1 : 2);
+        setBlock(x, y, z, type);
+      }
+      if (Math.random() < 0.02 && Math.abs(x) > 3 && Math.abs(z) > 3) {
+        for (let t = 1; t <= 4; t++) setBlock(x, h + t, z, 3);
+        for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++)
+          for (let dy = 3; dy <= 5; dy++) if (!hasBlock(x + dx, h + dy, z + dz) && Math.abs(dx) + Math.abs(dz) < 4)
+            setBlock(x + dx, h + dy, z + dz, 0);
       }
     }
   }
+}
+generate();
 
-  if (checkpoint) {
-    const cy = worldGround + checkpoint.y;
-    if (player.x > checkpoint.x && Math.abs(player.y - cy) < 80) spawn = { x: checkpoint.x, y: cy };
-  }
-
-  if (player.x + player.w > goal.x && player.y + player.h > worldGround + goal.y - 20 && player.y < worldGround + goal.y + 80) {
-    won = true;
-    const secs = ((performance.now() - startTime) / 1000).toFixed(1);
-    winBox.innerHTML = `LEVEL CLEARED!<br><span style="font-size:20px;color:#fff">Time: ${secs}s | Coins: ${coinCount}/${totalCoins}</span><br><span style="font-size:18px;color:#fff">Press R to play again</span>`;
-    winBox.style.display = 'block';
-  }
+function groundAt(x, z) {
+  for (let y = HEIGHT; y >= 0; y--) if (hasBlock(Math.floor(x), y, Math.floor(z))) return y + 1;
+  return 0;
 }
 
-function draw() {
-  ctx.fillStyle = '#0f1015';
-  ctx.fillRect(0, 0, W, H);
-  const camX = Math.max(0, player.x - W / 3);
-  const worldGround = H - 120;
+const player = { pos: new THREE.Vector3(0, 0, 0), vel: new THREE.Vector3(), onGround: false };
+player.pos.y = groundAt(0, 0) + 2;
+camera.position.copy(player.pos);
+camera.position.y += 1.6;
 
-  ctx.save();
-  ctx.translate(-camX, 0);
-
-  for (const p of platforms) {
-    const px = p.x, py = worldGround + p.y;
-    ctx.fillStyle = p.fall && p.falling ? '#ff3b3b' : '#00d4ff';
-    ctx.shadowColor = ctx.fillStyle;
-    ctx.shadowBlur = 12;
-    ctx.fillRect(px, py, p.w, p.h);
+let yaw = 0, pitch = 0;
+const keys = {};
+addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (e.code === 'Space' && player.onGround) { player.vel.y = 8; player.onGround = false; }
+  if (e.code.startsWith('Digit')) {
+    const n = parseInt(e.code.slice(5));
+    if (n >= 1 && n <= BLOCKS.length) { selected = n - 1; buildHotbar(); }
   }
-  ctx.shadowBlur = 0;
+});
+addEventListener('keyup', e => keys[e.code] = false);
 
-  ctx.fillStyle = '#ffd700';
-  for (const c of coins) {
-    if (c.taken) continue;
-    ctx.beginPath();
-    ctx.arc(c.x, worldGround + c.y, 8, 0, Math.PI * 2);
-    ctx.fill();
-  }
+const start = document.getElementById('start');
+document.addEventListener('click', () => {
+  if (document.pointerLockElement !== renderer.domElement) renderer.domElement.requestPointerLock();
+});
+document.addEventListener('pointerlockchange', () => {
+  start.style.display = document.pointerLockElement === renderer.domElement ? 'none' : 'flex';
+});
+document.addEventListener('mousemove', e => {
+  if (document.pointerLockElement !== renderer.domElement) return;
+  yaw -= e.movementX * 0.002;
+  pitch -= e.movementY * 0.002;
+  pitch = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, pitch));
+});
 
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(checkpoint.x, worldGround + checkpoint.y - 60, 4, 60);
-  ctx.fillStyle = '#ff4fa3';
-  ctx.fillRect(checkpoint.x + 4, worldGround + checkpoint.y - 60, 18, 12);
-
-  ctx.shadowColor = '#00ffcc';
-  ctx.shadowBlur = 20;
-  ctx.fillStyle = '#00ffcc';
-  ctx.fillRect(goal.x, worldGround + goal.y - 60, 30, 80);
-  ctx.shadowBlur = 0;
-
-  const x = player.x + player.w / 2, top = player.y, hip = player.y + 30, bottom = player.y + player.h;
-  const legSwing = Math.abs(player.vx) > 0.5 && player.grounded ? Math.sin(performance.now() / 60) * 8 : 0;
-  ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.arc(x, top + 8, 8, 0, Math.PI * 2);
-  ctx.moveTo(x, top + 16); ctx.lineTo(x, hip);
-  ctx.moveTo(x, top + 22); ctx.lineTo(x - 10, top + 30);
-  ctx.moveTo(x, top + 22); ctx.lineTo(x + 10, top + 30);
-  ctx.moveTo(x, hip); ctx.lineTo(x - 8 + legSwing, bottom);
-  ctx.moveTo(x, hip); ctx.lineTo(x + 8 - legSwing, bottom);
-  ctx.stroke();
-  ctx.restore();
-
-  hud.innerHTML = `Coins: ${coinCount}/${totalCoins}<br>Time: ${((performance.now() - startTime) / 1000).toFixed(1)}s<br>` +
-    `A/D or Arrows: Move | W/Space/Up: Jump (double) | R: Restart`;
+const raycaster = new THREE.Raycaster();
+const center = new THREE.Vector2(0, 0);
+function targetBlock() {
+  raycaster.setFromCamera(center, camera);
+  const hits = raycaster.intersectObjects(meshes, false);
+  if (!hits.length) return null;
+  const h = hits[0];
+  const p = h.point.clone().add(h.face.normal.clone().multiplyScalar(-0.01));
+  const hit = { x: Math.floor(p.x), y: Math.floor(p.y), z: Math.floor(p.z) };
+  const pn = h.point.clone().add(h.face.normal.clone().multiplyScalar(0.01));
+  const place = { x: Math.floor(pn.x), y: Math.floor(pn.y), z: Math.floor(pn.z) };
+  return { hit, place };
 }
 
-let last = performance.now();
-function loop(now) {
-  const dt = Math.min(2, (now - last) / 16.67);
-  last = now;
-  update(dt);
-  draw();
-  requestAnimationFrame(loop);
+renderer.domElement.addEventListener('mousedown', e => {
+  if (document.pointerLockElement !== renderer.domElement) return;
+  const t = targetBlock();
+  if (!t) return;
+  if (e.button === 0) setBlock(t.hit.x, t.hit.y, t.hit.z, null);
+  if (e.button === 2) {
+    const pp = player.pos;
+    const overlaps = (t.place.x === Math.floor(pp.x) && t.place.z === Math.floor(pp.z) &&
+                      (t.place.y === Math.floor(pp.y) || t.place.y === Math.floor(pp.y + 1)));
+    if (!overlaps) setBlock(t.place.x, t.place.y, t.place.z, selected);
+  }
+});
+renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
+
+const hotbar = document.getElementById('hotbar');
+function buildHotbar() {
+  hotbar.innerHTML = '';
+  BLOCKS.forEach((b, i) => {
+    const d = document.createElement('div');
+    d.className = 'slot' + (i === selected ? ' active' : '');
+    d.style.background = '#' + b.color.toString(16).padStart(6, '0');
+    d.textContent = i + 1;
+    hotbar.appendChild(d);
+  });
 }
-requestAnimationFrame(loop);
+buildHotbar();
+
+function collides(px, py, pz) {
+  const r = 0.3;
+  for (const ox of [-r, r]) for (const oz of [-r, r]) for (const oy of [0, 1.7]) {
+    if (hasBlock(Math.floor(px + ox), Math.floor(py + oy), Math.floor(pz + oz))) return true;
+  }
+  return false;
+}
+
+const clock = new THREE.Clock();
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+
+  const forward = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
+  const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
+  const move = new THREE.Vector3();
+  if (keys['KeyW']) move.add(forward);
+  if (keys['KeyS']) move.sub(forward);
+  if (keys['KeyD']) move.add(right);
+  if (keys['KeyA']) move.sub(right);
+  if (move.lengthSq() > 0) move.normalize().multiplyScalar(5 * dt);
+
+  player.vel.y -= 25 * dt;
+  let nx = player.pos.x + move.x;
+  if (!collides(nx, player.pos.y, player.pos.z)) player.pos.x = nx;
+  let nz = player.pos.z + move.z;
+  if (!collides(player.pos.x, player.pos.y, nz)) player.pos.z = nz;
+  let ny = player.pos.y + player.vel.y * dt;
+  if (!collides(player.pos.x, ny, player.pos.z)) {
+    player.pos.y = ny;
+    player.onGround = false;
+  } else {
+    if (player.vel.y < 0) player.onGround = true;
+    player.vel.y = 0;
+  }
+  if (player.pos.y < -20) player.pos.set(0, groundAt(0, 0) + 2, 0);
+
+  camera.position.set(player.pos.x, player.pos.y + 1.6, player.pos.z);
+  camera.rotation.set(pitch, yaw, 0, 'YXZ');
+  renderer.render(scene, camera);
+}
+animate();
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
 </script>
 </body>
 </html>
