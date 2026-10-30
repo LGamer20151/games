@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Driving Game - Upgraded</title>
+    <title>3D Driving Game - Stable Build</title>
     <style>
         body {
             margin: 0;
             overflow: hidden;
-            background-color: #000;
+            background-color: #0b0d19;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         #ui {
@@ -23,6 +23,7 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
+            z-index: 10;
         }
         .nitro-bar {
             width: 150px;
@@ -39,7 +40,7 @@
             transition: width 0.1s;
         }
         .stat {
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.6);
             padding: 6px 12px;
             border-radius: 6px;
             width: max-content;
@@ -58,200 +59,193 @@
         </div>
     </div>
 
-    <!-- Load Three.js -->
-    <script src="https://cloudflare.com"></script>
+    <!-- Multi-source fallback loading script for Three.js engine -->
+    <script src="https://unpkg.com"></script>
 
     <script>
-        // --- 1. SETUP THREE.JS ENGINE ---
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x0f1423); // Dark sci-fi sky
-        scene.fog = new THREE.FogExp2(0x0f1423, 0.008);
-
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.shadowMap.enabled = true;
-        document.body.appendChild(renderer.domElement);
-
-        // --- 2. LIGHTS ---
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
-        scene.add(ambientLight);
-
-        const dirLight = new THREE.DirectionLight(0x00ffff, 0.8);
-        dirLight.position.set(50, 100, 50);
-        scene.add(dirLight);
-
-        // --- 3. INFINITE FLOOR AND GRID WORLD ---
-        const floorGeo = new THREE.PlaneGeometry(10000, 10000);
-        const floorMat = new THREE.MeshStandardMaterial({ color: 0x111116 });
-        const floor = new THREE.Mesh(floorGeo, floorMat);
-        floor.rotation.x = -Math.PI / 2;
-        scene.add(floor);
-
-        // Grid floor overlay for infinite sense of speed
-        const gridHelper = new THREE.GridHelper(2000, 100, 0x00ffcc, 0x444444);
-        gridHelper.position.y = 0.05;
-        scene.add(gridHelper);
-
-        // --- 4. GAME VARIABLES ---
-        let score = 0;
-        let startTime = Date.now();
-        const obstacles = [];
-        const rings = [];
-
-        // --- 5. BUILD TRACK RAMPS AND RINGS ---
-        function spawnStuntPoint(x, z, height) {
-            // Build the Ramp Mesh
-            const rampGeo = new THREE.BoxGeometry(16, height, 32);
-            const rampMat = new THREE.MeshStandardMaterial({ color: 0x3344ff });
-            const ramp = new THREE.Mesh(rampGeo, rampMat);
-            ramp.position.set(x, height / 2, z);
-            ramp.rotation.x = -0.18; 
-            scene.add(ramp);
-            
-            obstacles.push({ x, z, w: 16, h: height, l: 32 });
-
-            // Build Floating Neon Score Ring right in front of the ramp launch point
-            const ringGeo = new THREE.TorusGeometry(4, 0.4, 8, 24);
-            const ringMat = new THREE.MeshBasicMaterial({ color: 0x00ffcc, wireframe: false });
-            const ring = new THREE.Mesh(ringGeo, ringMat);
-            
-            // Align the ring so the car can drive directly through it
-            ring.position.set(x, height + 8, z - 35);
-            scene.add(ring);
-            
-            rings.push({ mesh: ring, collected: false, radius: 4 });
+        // Fallback option check if the primary script was blocked
+        if (typeof THREE === 'undefined') {
+            document.write('<script src="https://jsdelivr.net"><\/script>');
         }
+    </script>
 
-        // Spawn a line of ramps and stunt rings stretching down the map grid
-        spawnStuntPoint(0, -100, 6);
-        spawnStuntPoint(-15, -250, 9);
-        spawnStuntPoint(15, -400, 12);
-        spawnStuntPoint(0, -600, 15);
-
-        // --- 6. CREATE PLAYER CAR ---
-        const car = new THREE.Group();
-        
-        const bodyGeo = new THREE.BoxGeometry(2.2, 0.8, 4.5);
-        const bodyMat = new THREE.MeshStandardMaterial({ color: 0xff0055 });
-        const carBody = new THREE.Mesh(bodyGeo, bodyMat);
-        carBody.position.y = 0.5;
-        car.add(carBody);
-
-        const cabinGeo = new THREE.BoxGeometry(1.6, 0.6, 2);
-        const cabinMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
-        const carCabin = new THREE.Mesh(cabinGeo, cabinMat);
-        carCabin.position.set(0, 1.1, -0.2);
-        car.add(carCabin);
-
-        car.position.set(0, 0, 50);
-        scene.add(car);
-
-        // --- 7. CAR DRIVING PHYSICS ---
-        let speed = 0;
-        const maxSpeed = 1.4;
-        const maxNitroSpeed = 2.5;
-        const acceleration = 0.015;
-        const friction = 0.008;
-        const turnSpeed = 0.025;
-        
-        let carVelocityY = 0;
-        let isGrounded = true;
-        const gravity = -0.012;
-
-        // --- 8. INPUT HANDLER ---
-        const keys = { w: false, a: false, s: false, d: false, Shift: false, ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
-        window.addEventListener('keydown', (e) => { if (e.key in keys) keys[e.key] = true; });
-        window.addEventListener('keyup', (e) => { if (e.key in keys) keys[e.key] = false; });
-
-        // --- 9. MAIN GAME LOOP ---
-        function animate() {
-            requestAnimationFrame(animate);
-
-            // Calculate active game time running
-            const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
-            document.getElementById('timer-text').innerText = elapsed;
-
-            const moveForward = keys.w || keys.ArrowUp;
-            const moveBackward = keys.s || keys.ArrowDown;
-            const turnLeft = keys.a || keys.ArrowLeft;
-            const turnRight = keys.d || keys.ArrowRight;
-            const nitro = keys.Shift;
-
-            let topSpeed = nitro ? maxNitroSpeed : maxSpeed;
-
-            // Nitro active visuals
-            if (nitro && speed > 0.1) {
-                bodyMat.color.setHex(0x00ffff); // Turns glowing neon cyan
-                document.getElementById('nitro-fill').style.width = '25%';
-            } else {
-                bodyMat.color.setHex(0xff0055); // Resets to original hot magenta pink
-                document.getElementById('nitro-fill').style.width = '100%';
+    <script>
+        // Ensure core library initialized safely before executing 3D assets setup
+        window.addEventListener('DOMContentLoaded', () => {
+            if (typeof THREE === 'undefined') {
+                alert("Game engine scripts were blocked. Try disabling extensions like ad blockers or Brave Shields for this page.");
+                return;
             }
 
-            // Speed physics handling
-            if (moveForward && isGrounded) {
-                speed = Math.min(speed + acceleration, topSpeed);
-            } else if (moveBackward && isGrounded) {
-                speed = Math.max(speed - 0.03, -maxSpeed / 2);
-            } else {
-                if (speed > 0) speed = Math.max(speed - friction, 0);
-                if (speed < 0) speed = Math.min(speed + friction, 0);
+            // --- 1. SETUP THREE.JS SCENE ---
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0f1423);
+            scene.fog = new THREE.FogExp2(0x0f1423, 0.008);
+
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            document.body.appendChild(renderer.domElement);
+
+            // --- 2. LIGHTS ---
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionLight(0x00ffff, 0.8);
+            dirLight.position.set(50, 100, 50);
+            scene.add(dirLight);
+
+            // --- 3. FLOORS & GRID LINES ---
+            const floorGeo = new THREE.PlaneGeometry(10000, 10000);
+            const floorMat = new THREE.MeshStandardMaterial({ color: 0x111116 });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            scene.add(floor);
+
+            const gridHelper = new THREE.GridHelper(2000, 100, 0x00ffcc, 0x444444);
+            gridHelper.position.y = 0.05;
+            scene.add(gridHelper);
+
+            // --- 4. DATA TRACKING ---
+            let score = 0;
+            let startTime = Date.now();
+            const obstacles = [];
+            const rings = [];
+
+            // --- 5. BUILD MAP PIECES ---
+            function spawnStuntPoint(x, z, height) {
+                const rampGeo = new THREE.BoxGeometry(16, height, 32);
+                const rampMat = new THREE.MeshStandardMaterial({ color: 0x3344ff });
+                const ramp = new THREE.Mesh(rampGeo, rampMat);
+                ramp.position.set(x, height / 2, z);
+                ramp.rotation.x = -0.18; 
+                scene.add(ramp);
+                
+                obstacles.push({ x, z, w: 16, h: height, l: 32 });
+
+                const ringGeo = new THREE.TorusGeometry(4, 0.4, 8, 24);
+                const ringMat = new THREE.MeshBasicMaterial({ color: 0x00ffcc });
+                const ring = new THREE.Mesh(ringGeo, ringMat);
+                ring.position.set(x, height + 8, z - 35);
+                scene.add(ring);
+                
+                rings.push({ mesh: ring, collected: false });
             }
 
-            // Steering handling mechanics
-            if (Math.abs(speed) > 0.05) {
-                const rotDir = speed > 0 ? 1 : -1;
-                if (turnLeft) car.rotation.y += turnSpeed * rotDir;
-                if (turnRight) car.rotation.y -= turnSpeed * rotDir;
-            }
+            spawnStuntPoint(0, -100, 6);
+            spawnStuntPoint(-20, -250, 9);
+            spawnStuntPoint(20, -420, 12);
+            spawnStuntPoint(0, -600, 16);
 
-            // Apply forward velocity angles
-            car.position.x -= Math.sin(car.rotation.y) * speed;
-            car.position.z -= Math.cos(car.rotation.y) * speed;
+            // --- 6. ASSEMBLE CAR ---
+            const car = new THREE.Group();
+            
+            const bodyGeo = new THREE.BoxGeometry(2.2, 0.8, 4.5);
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0xff0055 });
+            const carBody = new THREE.Mesh(bodyGeo, bodyMat);
+            carBody.position.y = 0.5;
+            car.add(carBody);
 
-            // Vertical axis airborne gravity physics loop
-            carVelocityY += gravity;
-            car.position.y += carVelocityY;
+            const cabinGeo = new THREE.BoxGeometry(1.6, 0.6, 2);
+            const cabinMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
+            const carCabin = new THREE.Mesh(cabinGeo, cabinMat);
+            carCabin.position.set(0, 1.1, -0.2);
+            car.add(carCabin);
 
-            if (car.position.y <= 0) {
-                car.position.y = 0;
-                carVelocityY = 0;
-                isGrounded = true;
-            }
+            car.position.set(0, 0, 50);
+            scene.add(car);
 
-            // Collision evaluation across placed ramps
-            obstacles.forEach(ramp => {
-                const dx = car.position.x - ramp.x;
-                const dz = car.position.z - ramp.z;
+            // --- 7. VELOCITY VARIABLES ---
+            let speed = 0;
+            const maxSpeed = 1.4;
+            const maxNitroSpeed = 2.5;
+            const acceleration = 0.015;
+            const friction = 0.008;
+            const turnSpeed = 0.025;
+            
+            let carVelocityY = 0;
+            let isGrounded = true;
+            const gravity = -0.012;
 
-                if (Math.abs(dx) < ramp.w / 2 + 1 && Math.abs(dz) < ramp.l / 2 + 2) {
-                    const pct = (ramp.l / 2 - dz) / ramp.l;
-                    const rampHeightAtPoint = Math.max(0, pct * ramp.h * 1.15);
+            // --- 8. INPUT LISTENERS ---
+            const keys = { w: false, a: false, s: false, d: false, Shift: false, ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
+            window.addEventListener('keydown', (e) => { if (e.key in keys) keys[e.key] = true; });
+            window.addEventListener('keyup', (e) => { if (e.key in keys) keys[e.key] = false; });
 
-                    if (car.position.y <= rampHeightAtPoint) {
-                        car.position.y = rampHeightAtPoint;
-                        carVelocityY = speed * 0.14; // Launches car up into space
-                        isGrounded = true;
-                    }
+            // --- 9. FRAME UPDATES TICKER ---
+            function animate() {
+                requestAnimationFrame(animate);
+
+                const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+                document.getElementById('timer-text').innerText = elapsed;
+
+                const moveForward = keys.w || keys.ArrowUp;
+                const moveBackward = keys.s || keys.ArrowDown;
+                const turnLeft = keys.a || keys.ArrowLeft;
+                const turnRight = keys.d || keys.ArrowRight;
+                const nitro = keys.Shift;
+
+                let topSpeed = nitro ? maxNitroSpeed : maxSpeed;
+
+                if (nitro && speed > 0.1) {
+                    bodyMat.color.setHex(0x00ffff);
+                    document.getElementById('nitro-fill').style.width = '25%';
+                } else {
+                    bodyMat.color.setHex(0xff0055);
+                    document.getElementById('nitro-fill').style.width = '100%';
                 }
-            });
 
-            if (carVelocityY > 0.04) isGrounded = false;
-
-            // --- 10. COLLISION CHECK FOR SCORE RINGS ---
-            rings.forEach(ring => {
-                if (!ring.collected) {
-                    // Rotate the rings continuously for visual polish
-                    ring.mesh.rotation.y += 0.02;
-
-                    // Calculate straight-line 3D distance between car and the floating ring center
-                    const distance = car.position.distanceTo(ring.mesh.position);
-
-                    if (distance < 5) { // Inside pickup clearance bubble bounds
-                        ring.collected = true;
-                        scene.remove(ring.mesh); // Despawn visually from world
-                        score += 100;
-                        document.getElementById('score-text').innerText = score;
-                    }
+                if (moveForward && isGrounded) {
+                    speed = Math.min(speed + acceleration, topSpeed);
+                } else if (moveBackward && isGrounded) {
+                    speed = Math.max(speed - 0.03, -maxSpeed / 2);
+                } else {
+                    if (speed > 0) speed = Math.max(speed - friction, 0);
+                    if (speed < 0) speed = Math.min(speed + friction, 0);
                 }
+
+                if (Math.abs(speed) > 0.05) {
+                    const rotDir = speed > 0 ? 1 : -1;
+                    if (turnLeft) car.rotation.y += turnSpeed * rotDir;
+                    if (turnRight) car.rotation.y -= turnSpeed * rotDir;
+                }
+
+                car.position.x -= Math.sin(car.rotation.y) * speed;
+                car.position.z -= Math.cos(car.rotation.y) * speed;
+
+                carVelocityY += gravity;
+                car.position.y += carVelocityY;
+
+                if (car.position.y <= 0) {
+                    car.position.y = 0;
+                    carVelocityY = 0;
+                    isGrounded = true;
+                }
+
+                obstacles.forEach(ramp => {
+                    const dx = car.position.x - ramp.x;
+                    const dz = car.position.z - ramp.z;
+
+                    if (Math.abs(dx) < ramp.w / 2 + 1 && Math.abs(dz) < ramp.l / 2 + 2) {
+                        const pct = (ramp.l / 2 - dz) / ramp.l;
+                        const rampHeightAtPoint = Math.max(0, pct * ramp.h * 1.15);
+
+                        if (car.position.y <= rampHeightAtPoint) {
+                            car.position.y = rampHeightAtPoint;
+                            carVelocityY = speed * 0.14;
+                            isGrounded = true;
+                        }
+                    }
+                });
+
+                if (carVelocityY > 0.04) isGrounded = false;
+
+                rings.forEach(ring => {
+                    if (!ring.collected) {
+                        ring.mesh.rotation.y += 0.02;
+                        const distance = car.position.distanceTo(ring.mesh.position);
+                        if (distance < 5) {
+                            ring.collected = true;
+                            scene.remove(ring.mesh);
+                            score += 100;
