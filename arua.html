@@ -23,15 +23,15 @@ const ctx = canvas.getContext('2d');
 const scoreEl = document.getElementById('score');
 
 const W = canvas.width, H = canvas.height;
-const KIWI_R = 220;     // big kiwis, centered on the bottom corners
+const KIWI_R = 220;     // size of each kiwi
+const KIWI_Y = H - 120; // height of both kiwi centers (raise or lower this)
 const BRAIN_R = 14;
 const GRAVITY = 0.25;
 
-// Centers sit exactly on the bottom-left and bottom-right corners,
-// so only one quarter of each kiwi is visible
+// Both kiwis sit at the same height, centered on the left and right edges
 const kiwis = [
-  { x: 0, y: H, r: KIWI_R },
-  { x: W, y: H, r: KIWI_R }
+  { x: 0, y: KIWI_Y, r: KIWI_R },
+  { x: W, y: KIWI_Y, r: KIWI_R }
 ];
 
 let brain, arua, gameOver, contact;
