@@ -3,149 +3,248 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My ChatGPT Clone</title>
+    <title>3D Driving Game</title>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #212121;
-            color: #eceecf;
             margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-        .chat-container {
-            width: 100%;
-            max-width: 700px;
-            height: 80vh;
-            display: flex;
-            flex-direction: column;
-            background-color: #2f2f2f;
-            border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            background-color: #000;
+            font-family: sans-serif;
         }
-        .messages {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        .message {
-            max-width: 80%;
-            padding: 12px 16px;
-            border-radius: 15px;
-            line-height: 1.5;
-        }
-        .user {
-            background-color: #3e3e3e;
-            align-self: flex-end;
-            color: #fff;
-        }
-        .ai {
-            background-color: transparent;
-            align-self: flex-start;
-            color: #eceecf;
-        }
-        .input-area {
-            padding: 20px;
-            background-color: #2f2f2f;
-            display: flex;
-            gap: 10px;
-        }
-        input {
-            flex: 1;
-            padding: 14px;
-            border-radius: 8px;
-            border: 1px solid #4f4f4f;
-            background-color: #3e3e3e;
-            color: #fff;
-            font-size: 16px;
-            outline: none;
-        }
-        button {
-            padding: 0 20px;
-            background-color: #673ab7;
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
             color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 16px;
+            font-size: 18px;
             font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            pointer-events: none;
         }
-        button:hover {
-            background-color: #512da8;
+        .nitro-bar {
+            width: 150px;
+            height: 15px;
+            background: #333;
+            border: 2px solid white;
+            margin-top: 5px;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        #nitro-fill {
+            width: 100%;
+            height: 100%;
+            background: #ff3333;
+            transition: width 0.1s;
         }
     </style>
 </head>
 <body>
 
-<div class="chat-container">
-    <div class="messages" id="chat-messages">
-        <div class="message ai">Hello! I am your AI assistant. How can I help you today?</div>
+    <div id="ui">
+        <div>Speed: <span id="speed-text">0</span> km/h</div>
+        <div>Hold SHIFT for Nitro!</div>
+        <div class="nitro-bar"><div id="nitro-fill"></div></div>
     </div>
-    <div class="input-area">
-        <input type="text" id="user-input" placeholder="Message AI..." onkeypress="handleKeyPress(event)">
-        <button onclick="sendMessage()">Send</button>
-    </div>
-</div>
 
-<!-- Load the Google Gen AI SDK directly from the web -->
-<script type="importmap">
-  {
-    "imports": {
-      "@google/genai": "https://esm.run"
-    }
-  }
-</script>
+    <!-- Load Three.js Library -->
+    <script src="https://cloudflare.com"></script>
 
-<script type="module">
-    import { GoogleGenAI } from '@google/genai';
+    <script>
+        // --- 1. SETUP THREE.JS SCENE ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xa0b0ff); // Sky blue color
+        scene.fog = new THREE.FogExp2(0xa0b0ff, 0.015);
 
-    // 1. PUT YOUR ACTUAL GEMINI API KEY HERE BETWEEN THE QUOTES
-    const API_KEY = "YOUR_GEMINI_API_KEY"; 
-    const ai = new GoogleGenAI({ apiKey: API_KEY });
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
 
-    window.sendMessage = async function() {
-        const inputElement = document.getElementById('user-input');
-        const messageText = inputElement.value.trim();
-        if (!messageText) return;
+        // --- 2. LIGHTING ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
 
-        inputElement.value = '';
-        appendMessage(messageText, 'user');
+        const dirLight = new THREE.DirectionLight(0xffffff, 0.8);
+        dirLight.position.set(20, 40, 20);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
 
-        try {
-            // 2. Call the AI model directly from the browser window
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.0-flash',
-                contents: messageText,
-            });
+        // --- 3. CREATE TRACK / GROUND ---
+        const floorGeo = new THREE.PlaneGeometry(1000, 1000);
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0x228b22 }); // Grass Green
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        // Add a long grey road asphalt track
+        const roadGeo = new THREE.PlaneGeometry(40, 1000);
+        const roadMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+        const road = new THREE.Mesh(roadGeo, roadMat);
+        road.rotation.x = -Math.PI / 2;
+        road.position.y = 0.01; // slightly above grass to prevent flickering
+        road.receiveShadow = true;
+        scene.add(road);
+
+        // --- 4. CREATE RAMPS & OBSTACLES ---
+        const obstacles = [];
+
+        function createRamp(x, z, width, height, length) {
+            const rampGroup = new THREE.Group();
             
-            appendMessage(response.text, 'ai');
-        } catch (error) {
-            console.error(error);
-            appendMessage('Error: Could not get a response from the AI. Check your API key.', 'ai');
+            const rampGeo = new THREE.BoxGeometry(width, height, length);
+            const rampMat = new THREE.MeshStandardMaterial({ color: 0xffaa00 });
+            const rampMesh = new THREE.Mesh(rampGeo, rampMat);
+            rampMesh.castShadow = true;
+            rampMesh.receiveShadow = true;
+            
+            rampGroup.add(rampMesh);
+            rampGroup.position.set(x, height / 2, z);
+            
+            // Tilt the structure forward to make it an incline ramp
+            rampGroup.rotation.x = -0.2; 
+            
+            scene.add(rampGroup);
+            
+            // Store physical boundary properties for simple collision detection
+            obstacles.push({
+                mesh: rampGroup,
+                x: x, z: z,
+                w: width, h: height, l: length,
+                isRamp: true,
+                angle: 0.2
+            });
         }
-    }
 
-    function appendMessage(text, sender) {
-        const messagesContainer = document.getElementById('chat-messages');
-        const messageElement = document.createElement('div');
-        messageElement.classList.add('message', sender);
-        messageElement.innerText = text;
-        messagesContainer.appendChild(messageElement);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    }
+        // Place down several test ramps down the road track
+        createRamp(0, -100, 15, 6, 30);
+        createRamp(-8, -250, 10, 8, 35);
+        createRamp(8, -400, 12, 10, 40);
 
-    window.handleKeyPress = function(event) {
-        if (event.key === 'Enter') {
-            sendMessage();
+        // --- 5. CREATE CAR (3D Player Character) ---
+        const car = new THREE.Group();
+
+        // Car Body Box Shape
+        const bodyGeo = new THREE.BoxGeometry(2.2, 1, 4.5);
+        const bodyMat = new THREE.MeshStandardMaterial({ color: 0x0077ff });
+        const carBody = new THREE.Mesh(bodyGeo, bodyMat);
+        carBody.position.y = 0.6;
+        carBody.castShadow = true;
+        car.add(carBody);
+
+        // Car Cabin Glass Top Box
+        const cabinGeo = new THREE.BoxGeometry(1.8, 0.7, 2.2);
+        const cabinMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+        const carCabin = new THREE.Mesh(cabinGeo, cabinMat);
+        carCabin.position.set(0, 1.3, -0.3);
+        car.add(carCabin);
+
+        // Helper function to quickly attach simple cylinder wheels
+        function createWheel(x, y, z) {
+            const wheelGeo = new THREE.CylinderGeometry(0.5, 0.5, 0.4, 16);
+            const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+            const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+            wheel.rotation.z = Math.PI / 2;
+            wheel.position.set(x, y, z);
+            wheel.castShadow = true;
+            car.add(wheel);
         }
-    }
-</script>
+        createWheel(1.2, 0.4, 1.5);   // Back Right
+        createWheel(-1.2, 0.4, 1.5);  // Back Left
+        createWheel(1.2, 0.4, -1.5);  // Front Right
+        createWheel(-1.2, 0.4, -1.5); // Front Left
 
-</body>
-</html>
+        car.position.set(0, 0, 50); // Set starting location
+        scene.add(car);
+
+        // --- 6. DRIVING PHYSICS VARIABLES ---
+        let speed = 0;
+        const maxSpeed = 1.2;
+        const maxNitroSpeed = 2.2;
+        const acceleration = 0.015;
+        const braking = 0.03;
+        const friction = 0.006;
+        const turnSpeed = 0.025;
+        
+        let carVelocityY = 0;
+        let isGrounded = true;
+        const gravity = -0.012;
+
+        // --- 7. KEYBOARD CONTROLS ---
+        const keys = { w: false, a: false, s: false, d: false, Shift: false, ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
+
+        window.addEventListener('keydown', (e) => { if (e.key in keys) keys[e.key] = true; });
+        window.addEventListener('keyup', (e) => { if (e.key in keys) keys[e.key] = false; });
+
+        // --- 8. MAIN ANIMATION & REFRESH LOOP ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Determine active movement parameters
+            const moveUp = keys.w || keys.ArrowUp;
+            const moveDown = keys.s || keys.ArrowDown;
+            const turnLeft = keys.a || keys.ArrowLeft;
+            const turnRight = keys.d || keys.ArrowRight;
+            const nitroActive = keys.Shift;
+
+            let currentMaxSpeed = nitroActive ? maxNitroSpeed : maxSpeed;
+
+            // Visual effect feedback during active nitro boost
+            if (nitroActive && speed > 0.1) {
+                bodyMat.color.setHex(0xff1111); // Turns red hot
+                document.getElementById('nitro-fill').style.width = '30%'; // simple visual consumption indicator simulation
+            } else {
+                bodyMat.color.setHex(0x0077ff); // Default sleek blue
+                document.getElementById('nitro-fill').style.width = '100%';
+            }
+
+            // Acceleration Logic
+            if (moveUp && isGrounded) {
+                speed = Math.min(speed + acceleration, currentMaxSpeed);
+            } else if (moveDown && isGrounded) {
+                speed = Math.max(speed - braking, -maxSpeed / 2); // Reverse speed limit
+            } else {
+                // Apply natural friction coasting when no keys are held
+                if (speed > 0) speed = Math.max(speed - friction, 0);
+                if (speed < 0) speed = Math.min(speed + friction, 0);
+            }
+
+            // Steering Logic (Only works while moving)
+            if (Math.abs(speed) > 0.05) {
+                const directionModifier = speed > 0 ? 1 : -1;
+                if (turnLeft) car.rotation.y += turnSpeed * directionModifier * (Math.abs(speed) + 0.2);
+                if (turnRight) car.rotation.y -= turnSpeed * directionModifier * (Math.abs(speed) + 0.2);
+            }
+
+            // Translate Speed Vector onto relative Angular Heading
+            car.position.x -= Math.sin(car.rotation.y) * speed;
+            car.position.z -= Math.cos(car.rotation.y) * speed;
+
+            // --- 9. VERTICAL GRAVITY & COLLISION HANDLING ---
+            carVelocityY += gravity;
+            car.position.y += carVelocityY;
+
+            // Check floor level ground limit fallback bounds
+            if (car.position.y <= 0) {
+                car.position.y = 0;
+                carVelocityY = 0;
+                isGrounded = true;
+            }
+
+            // Simple Box Ramp Checking Logic loop
+            obstacles.forEach(ramp => {
+                // Relative calculation spacing metrics offsets
+                const dx = car.position.x - ramp.x;
+                const dz = car.position.z - ramp.z;
+
+                if (Math.abs(dx) < ramp.w / 2 + 1 && Math.abs(dz) < ramp.l / 2 + 2) {
+                    // Car is inside layout platform footprint boundaries
+                    const positionRatioOnRamp = (ramp.l / 2 - dz) / ramp.l; // position scaling from start to crest edge
+                    const targetHeight = Math.max(0, positionRatioOnRamp * ramp.h * 1.1);
+
+                    if (car.position.y <= targetHeight) {
+                        car.position.y = targetHeight;
+                        carVelocityY = speed * 0.12; // Launches physics momentum forward upwards
+                        isGrounded = true;
+                    }
