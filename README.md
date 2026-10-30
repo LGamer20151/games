@@ -1,2 +1,2 @@
-# games
-Enjoy  all the games
+# Games
+Enjoy all the fun games
