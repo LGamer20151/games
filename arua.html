@@ -23,11 +23,12 @@ const ctx = canvas.getContext('2d');
 const scoreEl = document.getElementById('score');
 
 const W = canvas.width, H = canvas.height;
-const KIWI_R = 170;     // bigger kiwis
+const KIWI_R = 300;     // big kiwis, centered on the bottom corners
 const BRAIN_R = 14;
 const GRAVITY = 0.25;
 
-// Kiwis sit on the bottom-left and bottom-right edges
+// Centers sit exactly on the bottom-left and bottom-right corners,
+// so only one quarter of each kiwi is visible
 const kiwis = [
   { x: 0, y: H, r: KIWI_R },
   { x: W, y: H, r: KIWI_R }
@@ -90,6 +91,12 @@ function update() {
 }
 
 function drawKiwi(k) {
+  ctx.save();
+  // Only draw the part of the kiwi inside the canvas
+  ctx.beginPath();
+  ctx.rect(0, 0, W, H);
+  ctx.clip();
+
   // Brown skin
   ctx.fillStyle = '#6d3a4a';
   ctx.beginPath();
@@ -99,17 +106,17 @@ function drawKiwi(k) {
   // Green flesh
   ctx.fillStyle = '#9be564';
   ctx.beginPath();
-  ctx.arc(k.x, k.y, k.r - 10, 0, Math.PI * 2);
+  ctx.arc(k.x, k.y, k.r - 14, 0, Math.PI * 2);
   ctx.fill();
 
   // Pale center star
   ctx.strokeStyle = '#f5ffd6';
-  ctx.lineWidth = 7;
+  ctx.lineWidth = 9;
   for (let a = 0; a < 8; a++) {
     const ang = (a * Math.PI) / 4;
     ctx.beginPath();
     ctx.moveTo(k.x, k.y);
-    ctx.lineTo(k.x + Math.cos(ang) * (k.r - 25), k.y + Math.sin(ang) * (k.r - 25));
+    ctx.lineTo(k.x + Math.cos(ang) * (k.r - 40), k.y + Math.sin(ang) * (k.r - 40));
     ctx.stroke();
   }
 
@@ -119,9 +126,10 @@ function drawKiwi(k) {
     const ang = (a * Math.PI) / 8;
     const rad = k.r * 0.75;
     ctx.beginPath();
-    ctx.ellipse(k.x + Math.cos(ang) * rad, k.y + Math.sin(ang) * rad, 5, 9, ang, 0, Math.PI * 2);
+    ctx.ellipse(k.x + Math.cos(ang) * rad, k.y + Math.sin(ang) * rad, 6, 12, ang, 0, Math.PI * 2);
     ctx.fill();
   }
+  ctx.restore();
 }
 
 function drawBrain(b) {
