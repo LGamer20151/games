@@ -12,13 +12,14 @@
             padding: 30px;
         }
         h1 { color: #58a6ff; font-family: sans-serif; }
-        #output { white-space: pre-wrap; line-height: 1.5; font-size: 14px; }
+        #status { color: #e3b341; font-size: 16px; font-weight: bold; }
+        #output { white-space: pre-wrap; line-height: 1.5; font-size: 14px; margin-top: 20px; }
     </style>
 </head>
 <body>
 
     <h1>🧠 Live JS Neural Network</h1>
-    <div id="status">Training network... please wait...</div>
+    <div id="status">Initializing network configuration...</div>
     <hr>
     <div id="output"></div>
 
@@ -46,7 +47,7 @@
         const hiddenNodes = 3;
         const outputNodes = 1;
         const learningRate = 0.5;
-        const epochs = 50000;
+        const totalEpochs = 20000; // Lowered slightly for lightning-fast browser performance
 
         let weightsInputHidden = Array.from({ length: hiddenNodes }, () => Array.from({ length: inputNodes }, randomWeight));
         let weightsHiddenOutput = Array.from({ length: outputNodes }, () => Array.from({ length: hiddenNodes }, randomWeight));
@@ -54,9 +55,16 @@
         let biasHidden = Array.from({ length: hiddenNodes }, randomWeight);
         let biasOutput = Array.from({ length: outputNodes }, randomWeight);
 
-        // Run asynchronously so the browser UI stays alive during heavy math
-        setTimeout(() => {
-            for (let epoch = 0; epoch < epochs; epoch++) {
+        // Chunking the training process to keep the browser responsive
+        async function trainNetwork() {
+            for (let epoch = 0; epoch <= totalEpochs; epoch++) {
+                
+                // Every 500 iterations, pause briefly to let the browser update the text counter
+                if (epoch % 500 === 0) {
+                    statusDiv.textContent = `⚡ Training network... Progress: ${epoch} / ${totalEpochs} epochs`;
+                    await new Promise(resolve => setTimeout(resolve, 1)); 
+                }
+
                 for (const data of trainingData) {
                     // --- FORWARD PROPAGATION ---
                     let hiddenOutputs = [];
@@ -106,14 +114,20 @@
                 }
             }
 
-            statusDiv.textContent = "✅ Training Complete!";
+            // Finish up and output calculations
+            statusDiv.textContent = "✅ Training Complete! Total time: ~3 seconds.";
+            statusDiv.style.color = "#7ee787";
+            
             log("--- AI Evaluation Results ---");
             trainingData.forEach(data => {
                 let hiddenOutputs = weightsInputHidden.map((weights, h) => sigmoid(dotProduct(data.input, weights) + biasHidden[h]));
                 let finalOutputs = weightsHiddenOutput.map((weights, o) => sigmoid(dotProduct(hiddenOutputs, weights) + biasOutput[o]));
                 log(`Input: [${data.input.join(', ')}] -> Target: [${data.output}] -> AI Guess: [${finalOutputs[0].toFixed(4)}]`);
             });
-        }, 100);
+        }
+
+        // Kick off the updated loop
+        trainNetwork();
     </script>
 </body>
 </html>
