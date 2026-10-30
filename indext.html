@@ -1,18 +1,32 @@
-import { GoogleGenAI } from "@google/genai";
+import express from 'express';
+import cors from 'cors';
+import { GoogleGenAI } from '@google/genai';
 
-// Initialize the API with your secret key
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const app = express();
+app.use(cors());
+app.use(express.json());
 
-async function askAIWithGoogle(userQuery) {
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.0-flash', // A fast, powerful model
-    contents: userQuery,
-    config: {
-      // This line tells Gemini to use Google Search before answering!
-      tools: [{ googleSearch: {} }], 
-    },
-  });
+// Initialize the Gemini AI with your secret key
+// Replace 'YOUR_GEMINI_API_KEY' with your actual key from Google AI Studio
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || 'YOUR_GEMINI_API_KEY' });
 
-  // This is the final text answer backed by Google Search
-  return response.text; 
-}
+app.post('/api/chat', async (req, res) => {
+  try {
+    const { message } = req.body;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: message,
+    });
+
+    res.json({ reply: response.text });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Something went wrong with the AI.' });
+  }
+});
+
+const PORT = 3000;
+app.listen(PORT, () => {
+  console.log(`AI Server running on http://localhost:${PORT}`);
+});
