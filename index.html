@@ -1,305 +1,232 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>2D Stickman Parkour - Neon Trial (Double Jump Fix)</title>
-  <style>
-    :root {
-      --win: #00ff6b;
+// --- PLINKO GAME ENGINE ---
+// Save this as plinko.js or paste it inside a <script> tag on your webpage.
+
+class PlinkoGame {
+    constructor(canvasId, options = {}) {
+        this.canvas = document.getElementById(canvasId);
+        this.ctx = this.canvas.getContext('2d');
+        
+        // Configuration options
+        this.rows = options.rows || 8;
+        this.pegRadius = options.pegRadius || 5;
+        this.ballRadius = options.ballRadius || 8;
+        this.gravity = options.gravity || 0.2;
+        this.bounce = options.bounce || 0.5; // Elasticity of pegs
+        this.friction = options.friction || 0.99; // Air resistance
+        
+        // Multipliers/Scores for buckets at the bottom
+        this.multipliers = options.multipliers || [10, 5, 2, 0.5, 0.2, 0.5, 2, 5, 10];
+        
+        // State arrays
+        this.pegs = [];
+        this.balls = [];
+        this.buckets = [];
+        
+        // Dynamic scaling
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+        
+        // Event listener for user drop
+        this.canvas.addEventListener('click', (e) => this.handleCanvasClick(e));
+        
+        // Setup initial board
+        this.initBoard();
+        
+        // Start animation loop
+        this.animate = this.animate.bind(this);
+        requestAnimationFrame(this.animate);
     }
-    html, body {
-      height: 100%;
-      margin: 0;
-      background: #0b0b14;
-      color: #e6e6e6;
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial;
-      overflow: hidden;
+
+    resize() {
+        // Adjust bounds dynamically based on container size
+        this.width = this.canvas.parentElement ? this.canvas.parentElement.clientWidth : 600;
+        this.height = options.height || 600;
+        
+        // Account for high-DPI displays
+        const dpr = window.devicePixelRatio || 1;
+        this.canvas.width = this.width * dpr;
+        this.canvas.height = this.height * dpr;
+        this.canvas.style.width = `${this.width}px`;
+        this.canvas.style.height = `${this.height}px`;
+        this.ctx.scale(dpr, dpr);
+        
+        // Re-initialize layouts on resize to keep proportions intact
+        this.initBoard();
     }
-    #gameWrap {
-      position: relative;
-      width: 100%;
-      height: 100vh;
-    }
-    canvas {
-      display: block;
-      width: 100%;
-      height: 100%;
-      background: #0b0b14;
-    }
-    #hud {
-      position: absolute;
-      top: 8px;
-      left: 8px;
-      padding: 8px 12px;
-      background: rgba(0,0,0,0.4);
-      border-radius: 6px;
-      font-size: 14px;
-      color: #fff;
-      user-select: none;
-    }
-    #goal {
-      position: absolute;
-      width: 30px; height: 6px;
-      background: var(--win);
-      right: 40px;
-      bottom: 60px;
-      border-radius: 3px;
-    }
-    #victoryScreen {
-      position: absolute;
-      inset: 0;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      background: rgba(0,0,0,0.6);
-      color: #fff;
-      font-size: 28px;
-      font-weight: bold;
-      text-align: center;
-      padding: 20px;
-    }
-    #victoryScreen button {
-      margin-top: 12px;
-      padding: 8px 14px;
-      font-size: 14px;
-      border-radius: 6px;
-      border: none;
-      cursor: pointer;
-    }
-  </style>
-</head>
-<body>
-  <div id="gameWrap">
-    <canvas id="gameCanvas"></canvas>
-    <div id="hud">STAGE: Neon Trial • W/Space or Up to Jump • A/D to Move • R to Reset</div>
-    <div id="goal"></div>
-    <div id="victoryScreen">
-      Stage Cleared!<br/>Press R to Restart or Click to Play Again
-      <br><button id="restartBtn">Restart</button>
-    </div>
-  </div>
 
-  <script>
-    (function () {
-      // DOM ready check
-      const canvas = document.getElementById('gameCanvas');
-      const ctx = canvas.getContext('2d');
-      const victoryScreen = document.getElementById('victoryScreen');
-      const restartBtn = document.getElementById('restartBtn');
-      const hud = document.getElementById('hud');
-      const goalEl = document.getElementById('goal');
-      let w = 0, h = 0;
-
-      // Resize handler
-      function resize() {
-        w = window.innerWidth;
-        h = window.innerHeight;
-        canvas.width = w;
-        canvas.height = h;
-        // Rebuild level to fit new size
-        rebuildLevelLayout();
-      }
-      window.addEventListener('resize', resize);
-
-      // Game constants
-      const GRAVITY = 0.6;
-      const FRICTION = 0.85;
-      const RUN_SPEED = 0.8;
-      const MAX_SPEED = 6;
-      const JUMP_FORCE = -12;
-
-      // World and player
-      const platforms = [];
-      let goal = { x: 0, y: 0, width: 30, height: 100, reached: false };
-
-      // Player
-      const player = {
-        x: 100, y: 100,
-        vx: 0, vy: 0,
-        width: 20, height: 48,
-        grounded: false,
-        doubleJumpAvailable: true,
-        facing: 'right',
-        color: '#fff'
-      };
-
-      // Jump press guard (per-press)
-      let jumpLock = false;
-
-      function rebuildLevelLayout() {
-        platforms.length = 0;
-        // Simple neon platform layout
-        const baseY = h - 80;
-        platforms.push({ x: 0, y: baseY, width: 400, height: 80, color: '#2d313f' });
-        platforms.push({ x: 460, y: h - 160, width: 120, height: 20, color: '#00f3ff' });
-        platforms.push({ x: 650, y: h - 250, width: 120, height: 20, color: '#00f3ff' });
-        platforms.push({ x: 840, y: h - 200, width: 140, height: 20, color: '#ff0055' });
-        platforms.push({ x: 1050, y: h - 300, width: 120, height: 20, color: '#00f3ff' });
-        platforms.push({ x: 1250, y: h - 400, width: Math.max(100, w - 1250 + 100), height: 400, color: '#2d313f' });
-        goal.x = w - 150;
-        goal.y = h - 500;
-      }
-
-      resize();
-      rebuildLevelLayout();
-
-      // Input
-      const keys = {};
-      window.addEventListener('keydown', (e) => {
-        const key = e.key.toLowerCase();
-        keys[key] = true;
-
-        // Jump with per-press lock
-        if (key === ' ' || key === 'arrowup' || key === 'w') {
-          if (!jumpLock) {
-            jumpLock = true;
-            if (player.grounded) {
-              player.vy = JUMP_FORCE;
-              player.grounded = false;
-            } else if (player.doubleJumpAvailable) {
-              player.vy = JUMP_FORCE * 0.85;
-              player.doubleJumpAvailable = false;
+    initBoard() {
+        this.pegs = [];
+        this.buckets = [];
+        
+        const startY = 80;
+        const spacingY = (this.height - 150) / this.rows;
+        
+        // Generate triangle peg board grid
+        for (let r = 0; r < this.rows; r++) {
+            const pegCount = r + 3; // Top row has 3 pegs, adding 1 each row down
+            const spacingX = this.width / (pegCount + 1);
+            
+            for (let i = 0; i < pegCount; i++) {
+                const x = spacingX * (i + 1);
+                const y = startY + (r * spacingY);
+                this.pegs.push({ x, y, radius: this.pegRadius, active: false, timer: 0 });
             }
-          }
         }
-
-        if (key === 'r') resetGame();
-      });
-      window.addEventListener('keyup', (e) => {
-        const key = e.key.toLowerCase();
-        keys[key] = false;
-        if (key === ' ' || key === 'arrowup' || key === 'w') {
-          jumpLock = false;
+        
+        // Generate score buckets at the bottom
+        const bucketCount = this.multipliers.length;
+        const bucketWidth = this.width / bucketCount;
+        const bucketY = this.height - 40;
+        
+        for (let i = 0; i < bucketCount; i++) {
+            this.buckets.push({
+                x: i * bucketWidth,
+                y: bucketY,
+                width: bucketWidth,
+                height: 40,
+                multiplier: this.multipliers[i],
+                label: `${this.multipliers[i]}x`
+            });
         }
-      });
+    }
 
-      function resetGame() {
-        rebuildLevelLayout();
-        player.x = 100;
-        player.y = h - 200;
-        player.vx = 0;
-        player.vy = 0;
-        player.grounded = false;
-        player.doubleJumpAvailable = true;
-        jumpLock = false;
-        goal.reached = false;
-        victoryScreen.style.display = 'none';
-      }
+    dropBall(startX) {
+        // Enforce boundary logic so user cannot drop outside the game field
+        const safeX = Math.max(this.ballRadius, Math.min(this.width - this.ballRadius, startX));
+        
+        this.balls.push({
+            x: safeX,
+            y: 20,
+            vx: (Math.random() - 0.5) * 0.5, // Tiny structural variance to guarantee physics divergence
+            vy: 1,
+            radius: this.ballRadius,
+            color: `hsl(${Math.random() * 360}, 85%, 60%)` // Distinct random vibrant ball colors
+        });
+    }
 
-      // AABB helper
-      function rectsOverlap(a, b) {
-        return a.x < b.x + b.width && a.x + a.width > b.x &&
-               a.y < b.y + b.height && a.y + a.height > b.y;
-      }
+    handleCanvasClick(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        this.dropBall(clickX);
+    }
 
-      // Update loop
-      let lastTime = performance.now();
-      function update(now) {
-        const dt = (now - lastTime) / 16.666; // normalize to ~60fps units
-        lastTime = now;
-
-        if (!goal.reached) {
-          // Horizontal input
-          if (keys['a'] || keys['arrowleft']) {
-            player.vx -= RUN_SPEED;
-            player.facing = 'left';
-          } else if (keys['d'] || keys['arrowright']) {
-            player.vx += RUN_SPEED;
-            player.facing = 'right';
-          } else {
-            player.vx *= FRICTION;
-          }
-          if (player.vx > MAX_SPEED) player.vx = MAX_SPEED;
-          if (player.vx < -MAX_SPEED) player.vx = -MAX_SPEED;
-
-          // Gravity
-          player.vy += GRAVITY;
-
-          // Integrate
-          player.x += player.vx;
-          player.y += player.vy;
-
-          // Platforms collision
-          player.grounded = false;
-          for (const plat of platforms) {
-            const pr = { x: player.x, y: player.y, width: player.width, height: player.height };
-            const p2 = { x: plat.x, y: plat.y, width: plat.width, height: plat.height };
-            if (rectsOverlap(pr, p2)) {
-              const dx = (pr.x + pr.width / 2) - (p2.x + p2.width / 2);
-              const dy = (pr.y + pr.height / 2) - (p2.y + p2.height / 2);
-              const overlapX = (pr.width + p2.width) / 2 - Math.abs(dx);
-              const overlapY = (pr.height + p2.height) / 2 - Math.abs(dy);
-              if (overlapX < overlapY) {
-                if (dx > 0) player.x += overlapX; else player.x -= overlapX;
-                player.vx = 0;
-              } else {
-                if (dy > 0) {
-                  player.y += overlapY;
-                  player.vy = 0;
-                  player.grounded = true;
-                  player.doubleJumpAvailable = true;
-                } else {
-                  player.y -= overlapY;
-                  player.vy = 0;
+    updatePhysics() {
+        // Clean out balls that exit frame bottom
+        this.balls = this.balls.filter(ball => {
+            // Apply environment constants
+            ball.vy += this.gravity;
+            ball.vx *= this.friction;
+            ball.x += ball.vx;
+            ball.y += ball.vy;
+            
+            // Wall collisions (side bounces)
+            if (ball.x < ball.radius) {
+                ball.x = ball.radius;
+                ball.vx *= -this.bounce;
+            } else if (ball.x > this.width - ball.radius) {
+                ball.x = this.width - ball.radius;
+                ball.vx *= -this.bounce;
+            }
+            
+            // Peg interaction physics resolution
+            this.pegs.forEach(peg => {
+                const dx = ball.x - peg.x;
+                const dy = ball.y - peg.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const minDist = ball.radius + peg.radius;
+                
+                if (distance < minDist) {
+                    // Normalize contact vector
+                    const nx = dx / distance;
+                    const ny = dy / distance;
+                    
+                    // Reposition ball outside peg bound boundary overlap
+                    ball.x = peg.x + nx * minDist;
+                    ball.y = peg.y + ny * minDist;
+                    
+                    // Vector dot-product reflection logic
+                    const dotProduct = ball.vx * nx + ball.vy * ny;
+                    ball.vx = (ball.vx - 2 * dotProduct * nx) * this.bounce;
+                    ball.vy = (ball.vy - 2 * dotProduct * ny) * this.bounce;
+                    
+                    // Activate structural visual pop trigger on peg
+                    peg.active = true;
+                    peg.timer = 8; 
                 }
-              }
+            });
+            
+            // Check landing event inside target slots
+            if (ball.y >= this.height - 40) {
+                this.buckets.forEach(bucket => {
+                    if (ball.x >= bucket.x && ball.x <= bucket.x + bucket.width) {
+                        this.onBallScore(bucket.multiplier);
+                    }
+                });
+                return false; // Safely strip instance out of rendering queue
             }
-          }
+            return true;
+        });
+        
+        // Degrade glowing peg frame step state animations
+        this.pegs.forEach(peg => {
+            if (peg.active) {
+                peg.timer--;
+                if (peg.timer <= 0) peg.active = false;
+            }
+        });
+    }
 
-          if (player.y > h + 200) resetGame();
+    onBallScore(multiplier) {
+        // Dispatches event downstream. Listen to this from your core website script.
+        const event = new CustomEvent('plinkoScore', { detail: { multiplier } });
+        window.dispatchEvent(event);
+    }
 
-          // Goal check
-          if (Math.abs(player.x - goal.x) < 40 && Math.abs(player.y - goal.y) < 40) {
-            goal.reached = true;
-            victoryScreen.style.display = 'flex';
-          }
-        }
+    draw() {
+        this.ctx.clearRect(0, 0, this.width, this.height);
+        
+        // 1. Draw Pegs
+        this.pegs.forEach(peg => {
+            this.ctx.beginPath();
+            this.ctx.arc(peg.x, peg.y, peg.active ? peg.radius * 1.4 : peg.radius, 0, Math.PI * 2);
+            this.ctx.fillStyle = peg.active ? '#ff007f' : '#4a5568';
+            this.ctx.shadowBlur = peg.active ? 15 : 0;
+            this.ctx.shadowColor = '#ff007f';
+            this.ctx.fill();
+            this.ctx.closePath();
+        });
+        this.ctx.shadowBlur = 0; // Reset canvas glow states
+        
+        // 2. Draw Buckets (Score zones)
+        this.buckets.forEach((bucket, idx) => {
+            this.ctx.fillStyle = idx % 2 === 0 ? '#1a202c' : '#2d3748';
+            this.ctx.fillRect(bucket.x, bucket.y, bucket.width, bucket.height);
+            
+            // Border divider lines
+            this.ctx.strokeStyle = '#4a5568';
+            this.ctx.lineWidth = 1;
+            this.ctx.strokeRect(bucket.x, bucket.y, bucket.width, bucket.height);
+            
+            // Text Label inside bucket slots
+            this.ctx.fillStyle = '#e2e8f0';
+            this.ctx.font = 'bold 12px sans-serif';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText(bucket.label, bucket.x + bucket.width / 2, bucket.y + 24);
+        });
+        
+        // 3. Draw active balls
+        this.balls.forEach(ball => {
+            this.ctx.beginPath();
+            this.ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            this.ctx.fillStyle = ball.color;
+            this.ctx.fill();
+            this.ctx.closePath();
+        });
+    }
 
-        render();
-        requestAnimationFrame(update);
-      }
-
-      // Render
-      function render() {
-        ctx.clearRect(0, 0, w, h);
-
-        // Neon sky gradient for ambience
-        const g = ctx.createLinearGradient(0, 0, 0, h);
-        g.addColorStop(0, '#0b1020');
-        g.addColorStop(1, '#0b0b14');
-        ctx.fillStyle = g;
-        ctx.fillRect(0, 0, w, h);
-
-        // Draw platforms
-        for (const plat of platforms) {
-          ctx.fillStyle = plat.color;
-          ctx.fillRect(plat.x, plat.y, plat.width, plat.height);
-          ctx.strokeStyle = '#ffffff22';
-          ctx.lineWidth = 1;
-          ctx.strokeRect(plat.x, plat.y, plat.width, plat.height);
-        }
-
-        // Draw goal marker
-        ctx.fillStyle = '#00ff6b';
-        ctx.fillRect(goal.x, goal.y, 40, 6);
-
-        // Draw player (simple rectangle)
-        ctx.fillStyle = player.color;
-        ctx.fillRect(player.x, player.y, player.width, player.height);
-      }
-
-      // Start loop after first paint
-      requestAnimationFrame((t) => {
-        lastTime = t;
-        update(t);
-      });
-
-      // Optional: restart button
-      if (restartBtn) {
-        restartBtn.addEventListener('click', resetGame);
-      }
-    })();
-  </script>
-</body>
-</html>
+    animate() {
+        this.updatePhysics();
+        this.draw();
+        requestAnimationFrame(this.animate);
+    }
+}
