@@ -1,64 +1,98 @@
-import numpy as np
+// 1. Activation functions
+const sigmoid = (x) => 1 / (1 + Math.exp(-x));
+const sigmoidDerivative = (y) => y * (1 - y); // y is already the sigmoid output
 
-# 1. Activation function & its derivative
-def sigmoid(x):
-    return 1 / (1 + np.exp(-x))
+// Helper functions for matrix operations
+const dotProduct = (vecA, vecB) => vecA.reduce((sum, val, i) => sum + val * vecB[i], 0);
+const randomWeight = () => Math.random() * 2 - 1; // Random number between -1 and 1
 
-def sigmoid_derivative(x):
-    return x * (1 - x)
+// 2. Training Data (XOR Problem)
+const trainingData = [
+    { input:, output: [0] },
+    { input:, output: [1] },
+    { input:, output: [1] },
+    { input:, output: [0] }
+];
 
-# 2. Training Data (XOR Gate Problem)
-# Inputs: 4 samples with 2 features each
-X = np.array([[0, 0],
-              [0, 1],
-              [1, 0],
-              [1, 1]])
+// 3. Network Structure Configuration
+const inputNodes = 2;
+const hiddenNodes = 3;
+const outputNodes = 1;
+const learningRate = 0.5;
+const epochs = 50000;
 
-# Target outputs: XOR logic (0 if same, 1 if different)
-y = np.array([[0], [1], [1], [0]])
+// Initialize Weights and Biases with random values
+let weightsInputHidden = Array.from({ length: hiddenNodes }, () => Array.from({ length: inputNodes }, randomWeight));
+let weightsHiddenOutput = Array.from({ length: outputNodes }, () => Array.from({ length: hiddenNodes }, randomWeight));
 
-# 3. Initialize Network Architecture & Weights
-np.random.seed(42) # For reproducible results
-input_neurons = 2
-hidden_neurons = 3
-output_neurons = 1
+let biasHidden = Array.from({ length: hiddenNodes }, randomWeight);
+let biasOutput = Array.from({ length: outputNodes }, randomWeight);
 
-# Weights and Biases
-weights_hidden = np.random.uniform(size=(input_neurons, hidden_neurons))
-bias_hidden = np.random.uniform(size=(1, hidden_neurons))
+// 4. Training Loop
+console.log("Training the AI network... Please wait.");
 
-weights_output = np.random.uniform(size=(hidden_neurons, output_neurons))
-bias_output = np.random.uniform(size=(1, output_neurons))
+for (let epoch = 0; epoch < epochs; epoch++) {
+    for (const data of trainingData) {
+        // --- FORWARD PROPAGATION ---
+        // Calculate Hidden Layer outputs
+        let hiddenOutputs = [];
+        for (let h = 0; h < hiddenNodes; h++) {
+            let sum = dotProduct(data.input, weightsInputHidden[h]) + biasHidden[h];
+            hiddenOutputs.push(sigmoid(sum));
+        }
 
-learning_rate = 0.5
-epochs = 10000
+        // Calculate Final Output Layer outputs
+        let finalOutputs = [];
+        for (let o = 0; o < outputNodes; o++) {
+            let sum = dotProduct(hiddenOutputs, weightsHiddenOutput[o]) + biasOutput[o];
+            finalOutputs.push(sigmoid(sum));
+        }
 
-# 4. Training Loop
-for epoch in range(epochs):
-    # --- Forward Propagation ---
-    hidden_layer_input = np.dot(X, weights_hidden) + bias_hidden
-    hidden_layer_activation = sigmoid(hidden_layer_input)
+        // --- BACKPROPAGATION ---
+        // Calculate output layer errors & gradients
+        let outputErrors = [];
+        let outputGradients = [];
+        for (let o = 0; o < outputNodes; o++) {
+            let error = data.output[o] - finalOutputs[o];
+            outputErrors.push(error);
+            outputGradients.push(error * sigmoidDerivative(finalOutputs[o]));
+        }
+
+        // Calculate hidden layer errors & gradients
+        let hiddenErrors = new Array(hiddenNodes).fill(0);
+        let hiddenGradients = [];
+        for (let h = 0; h < hiddenNodes; h++) {
+            for (let o = 0; o < outputNodes; o++) {
+                hiddenErrors[h] += outputGradients[o] * weightsHiddenOutput[o][h];
+            }
+            hiddenGradients.push(hiddenErrors[h] * sigmoidDerivative(hiddenOutputs[h]));
+        }
+
+        // --- UPDATE WEIGHTS & BIASES ---
+        // Update Hidden-to-Output weights and output biases
+        for (let o = 0; o < outputNodes; o++) {
+            for (let h = 0; h < hiddenNodes; h++) {
+                weightsHiddenOutput[o][h] += learningRate * outputGradients[o] * hiddenOutputs[h];
+            }
+            biasOutput[o] += learningRate * outputGradients[o];
+        }
+
+        // Update Input-to-Hidden weights and hidden biases
+        for (let h = 0; h < hiddenNodes; h++) {
+            for (let i = 0; i < inputNodes; i++) {
+                weightsInputHidden[h][i] += learningRate * hiddenGradients[h] * data.input[i];
+            }
+            biasHidden[h] += learningRate * hiddenGradients[h];
+        }
+    }
+}
+
+// 5. Test the Trained AI
+console.log("\n--- AI Evaluation Results ---");
+trainingData.forEach(data => {
+    // Single forward pass for evaluation
+    let hiddenOutputs = weightsInputHidden.map((weights, h) => sigmoid(dotProduct(data.input, weights) + biasHidden[h]));
+    let finalOutputs = weightsHiddenOutput.map((weights, o) => sigmoid(dotProduct(hiddenOutputs, weights) + biasOutput[o]));
     
-    output_layer_input = np.dot(hidden_layer_activation, weights_output) + bias_output
-    predicted_output = sigmoid(output_layer_input)
-    
-    # --- Backpropagation ---
-    # Error at output
-    error = y - predicted_output
-    d_predicted_output = error * sigmoid_derivative(predicted_output)
-    
-    # Error at hidden layer
-    error_hidden_layer = d_predicted_output.dot(weights_output.T)
-    d_hidden_layer = error_hidden_layer * sigmoid_derivative(hidden_layer_activation)
-    
-    # --- Updating Weights and Biases ---
-    weights_output += hidden_layer_activation.T.dot(d_predicted_output) * learning_rate
-    bias_output += np.sum(d_predicted_output, axis=0, keepdims=True) * learning_rate
-    
-    weights_hidden += X.T.dot(d_hidden_layer) * learning_rate
-    bias_hidden += np.sum(d_hidden_layer, axis=0, keepdims=True) * learning_rate
-
-# 5. Test the trained AI
-print("Trained AI Predictions for XOR:")
-for i in range(len(X)):
-    print(f"Input: {X[i]} -> Target: {y[i][0]} -> AI Prediction: {predicted_output[i][0]:.4f}")
+    console.log(`Input: [${data.input.join(', ')}] -> Target: [${data.output}] -> AI Guess: [${finalOutputs[0].toFixed(4)}]`);
+});
