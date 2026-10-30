@@ -3,144 +3,190 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stunt Cars</title>
+<title>Stickman Parkour</title>
 <style>
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #87ceeb; font-family: sans-serif; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0f1015; font-family: sans-serif; }
   canvas { display: block; }
   #hud { position: absolute; top: 12px; left: 12px; color: #fff; font-weight: bold;
          text-shadow: 2px 2px 4px #000; pointer-events: none; line-height: 1.5; }
+  #win { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+         color: #00ffcc; font-size: 36px; font-weight: bold; background: rgba(0,0,0,0.9);
+         padding: 28px 56px; border: 2px solid #00ffcc; border-radius: 10px; text-align: center; }
 </style>
 </head>
 <body>
 <div id="hud"></div>
+<div id="win"></div>
 <canvas id="c"></canvas>
 <script>
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 const hud = document.getElementById('hud');
+const winBox = document.getElementById('win');
 let W, H;
 function resize() { W = canvas.width = innerWidth; H = canvas.height = innerHeight; }
 addEventListener('resize', resize); resize();
 
+const GRAVITY = 0.55, FRICTION = 0.82, RUN = 0.8, MAX_SPEED = 7, JUMP = -12;
 const keys = {};
 addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
   keys[k] = true;
-  if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k)) e.preventDefault();
-  if (k === 'r') reset();
-  if (k === 'i') car.engineOn = !car.engineOn;
-  if (k === 'h') car.lights = !car.lights;
-  if (k === 'c') camMode = (camMode + 1) % 2;
+  if ([' ', 'arrowup', 'w'].includes(k)) { e.preventDefault(); jump(); }
+  if (k === 'r') restart();
 });
 addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 
-const car = { x: 0, y: 0, z: 0, angle: 0, speed: 0, nitro: 100, engineOn: true, lights: false, coins: 0 };
-let camMode = 0;
-let coins = [];
-let ramps = [];
-let startTime = 0;
+const player = { x: 0, y: 0, vx: 0, vy: 0, w: 20, h: 46, grounded: false, canDouble: true };
+let platforms = [], coins = [], checkpoint = null, goal = null;
+let coinCount = 0, totalCoins = 0, startTime = 0, won = false, spawn = { x: 80, y: 0 };
+const level = [
+  { x: 0, y: 0, w: 380, moving: false },
+  { x: 440, y: -90, w: 120 },
+  { x: 630, y: -170, w: 110 },
+  { x: 810, y: -110, w: 130, moveY: 80, speed: 0.012 },
+  { x: 1020, y: -220, w: 120 },
+  { x: 1220, y: -300, w: 130, moveX: 90, speed: 0.01 },
+  { x: 1450, y: -200, w: 150 },
+  { x: 1680, y: -260, w: 110, fall: true },
+  { x: 1880, y: -150, w: 260 }
+];
+const coinSpots = [[480, -140], [670, -220], [850, -170], [1060, -270], [1270, -350], [1500, -250], [1930, -200]];
 
-function reset() {
-  car.x = 0; car.y = 0; car.z = 0; car.angle = 0; car.speed = 0; car.nitro = 100; car.coins = 0;
-  startTime = performance.now();
-  coins = [];
-  for (let i = 0; i < 20; i++) {
-    const a = (i / 20) * Math.PI * 2;
-    coins.push({ x: Math.cos(a) * 400, z: Math.sin(a) * 400, taken: false });
-  }
-  ramps = [{ x: 0, z: 200, angle: 0 }, { x: 250, z: -150, angle: 1.2 }];
+function buildLevel() {
+  platforms = level.map(p => ({ ...p, baseX: p.x, baseY: p.y, h: 22, fallTimer: 0, falling: false }));
+  coins = coinSpots.map(([x, y]) => ({ x, y, taken: false }));
+  totalCoins = coins.length;
+  goal = { x: 2060, y: -230 };
 }
-reset();
+
+function restart() {
+  buildLevel();
+  Object.assign(player, { x: spawn.x, y: H - 300, vx: 0, vy: 0, grounded: false, canDouble: true });
+  coinCount = 0; won = false; winBox.style.display = 'none';
+  startTime = performance.now();
+  checkpoint = { x: 500, y: -90 };
+}
+restart();
+
+function jump() {
+  if (won) return;
+  if (player.grounded) { player.vy = JUMP; player.grounded = false; }
+  else if (player.canDouble) { player.vy = JUMP * 0.85; player.canDouble = false; }
+}
 
 function update(dt) {
-  const accel = (keys['w'] || keys['arrowup'] ? 0.25 : 0) - (keys['s'] || keys['arrowdown'] ? 0.2 : 0);
-  let boost = 1;
-  if (keys['shift'] && car.nitro > 0 && accel > 0) { boost = 1.6; car.nitro = Math.max(0, car.nitro - 0.6); }
-  if (car.engineOn) car.speed += accel * boost * dt;
-  car.speed *= keys[' '] ? 0.9 : 0.985;
-  car.speed = Math.max(-8, Math.min(30 * boost, car.speed));
-  const turn = (keys['a'] || keys['arrowleft'] ? 1 : 0) - (keys['d'] || keys['arrowright'] ? 1 : 0);
-  car.angle += turn * 0.03 * Math.min(1, Math.abs(car.speed) / 5) * Math.sign(car.speed || 1);
-  car.x += Math.sin(car.angle) * car.speed;
-  car.z += Math.cos(car.angle) * car.speed;
-  car.nitro = Math.min(100, car.nitro + 0.05);
+  if (won) return;
+  const worldGround = H - 120;
+  if (keys['a'] || keys['arrowleft']) player.vx -= RUN * dt;
+  if (keys['d'] || keys['arrowright']) player.vx += RUN * dt;
+  player.vx *= Math.pow(FRICTION, dt);
+  player.vx = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, player.vx));
+  player.vy += GRAVITY * dt;
+
+  const prevY = player.y, prevX = player.x;
+  player.x += player.vx * dt;
+  player.y += player.vy * dt;
+  if (player.x < -200) player.x = -200;
+
+  platforms.forEach(p => {
+    if (p.moveY) p.y = p.baseY + Math.sin(performance.now() * p.speed) * p.moveY;
+    if (p.moveX) p.x = p.baseX + Math.sin(performance.now() * p.speed) * p.moveX;
+    if (p.fall && p.falling) { p.fallTimer += dt; p.y += p.fallTimer * 0.5; }
+  });
+
+  player.grounded = false;
+  for (const p of platforms) {
+    const groundY = worldGround + p.y;
+    const top = groundY;
+    const overlapX = player.x + player.w > p.x && player.x < p.x + p.w;
+    const wasAbove = prevY + player.h <= top + 1;
+    if (overlapX && player.vy >= 0 && wasAbove && player.y + player.h >= top) {
+      player.y = top - player.h;
+      player.vy = 0;
+      player.grounded = true;
+      player.canDouble = true;
+      if (p.fall && !p.falling) p.falling = true;
+    }
+  }
+
+  if (player.y > H + 300) restart();
 
   for (const c of coins) {
-    if (!c.taken && Math.hypot(c.x - car.x, c.z - car.z) < 30) { c.taken = true; car.coins++; }
+    if (!c.taken) {
+      const cx = c.x, cy = worldGround + c.y;
+      if (Math.hypot(player.x + player.w / 2 - cx, player.y + player.h / 2 - cy) < 26) {
+        c.taken = true; coinCount++;
+      }
+    }
   }
-  for (const r of ramps) {
-    if (Math.hypot(r.x - car.x, r.z - car.z) < 40 && car.speed > 6) car.y = Math.max(car.y, 20 + car.speed * 2);
+
+  if (checkpoint) {
+    const cy = worldGround + checkpoint.y;
+    if (player.x > checkpoint.x && Math.abs(player.y - cy) < 80) spawn = { x: checkpoint.x, y: cy };
   }
-  car.y = Math.max(0, car.y - 1.5);
-}
 
-function project(x, y, z) {
-  const camDist = camMode === 0 ? 220 : 120;
-  const cx = car.x - Math.sin(car.angle) * camDist;
-  const cz = car.z - Math.cos(car.angle) * camDist;
-  const dx = x - cx, dz = z - cz;
-  const depth = dz + 0.001;
-  const scale = 500 / depth;
-  return { sx: W / 2 + dx * scale, sy: H / 2 - (y - (camMode === 0 ? 80 : 40)) * scale, s: scale, d: depth };
-}
-
-function drawGround() {
-  ctx.fillStyle = '#3a7d44';
-  ctx.fillRect(0, H / 2, W, H / 2);
-  ctx.fillStyle = '#c9a66b';
-  ctx.beginPath();
-  ctx.moveTo(W / 2 - 60, H); ctx.lineTo(W / 2 + 60, H); ctx.lineTo(W / 2 + 10, H / 2); ctx.lineTo(W / 2 - 10, H / 2);
-  ctx.fill();
-}
-
-function drawBox(x, y, z, w, h, d, color) {
-  const p = project(x, y, z);
-  if (p.d <= 1) return;
-  ctx.fillStyle = color;
-  ctx.fillRect(p.sx - w * p.s / 2, p.sy - h * p.s, w * p.s, h * p.s);
+  if (player.x + player.w > goal.x && player.y + player.h > worldGround + goal.y - 20 && player.y < worldGround + goal.y + 80) {
+    won = true;
+    const secs = ((performance.now() - startTime) / 1000).toFixed(1);
+    winBox.innerHTML = `LEVEL CLEARED!<br><span style="font-size:20px;color:#fff">Time: ${secs}s | Coins: ${coinCount}/${totalCoins}</span><br><span style="font-size:18px;color:#fff">Press R to play again</span>`;
+    winBox.style.display = 'block';
+  }
 }
 
 function draw() {
-  ctx.fillStyle = '#87ceeb';
+  ctx.fillStyle = '#0f1015';
   ctx.fillRect(0, 0, W, H);
-  drawGround();
+  const camX = Math.max(0, player.x - W / 3);
+  const worldGround = H - 120;
 
-  for (const r of ramps) {
-    const p = project(r.x, 0, r.z);
-    if (p.d > 1) {
-      ctx.fillStyle = '#ff6b00';
-      ctx.beginPath();
-      ctx.moveTo(p.sx - 40 * p.s / 10, p.sy);
-      ctx.lineTo(p.sx + 40 * p.s / 10, p.sy);
-      ctx.lineTo(p.sx, p.sy - 30 * p.s / 10);
-      ctx.fill();
-    }
+  ctx.save();
+  ctx.translate(-camX, 0);
+
+  for (const p of platforms) {
+    const px = p.x, py = worldGround + p.y;
+    ctx.fillStyle = p.fall && p.falling ? '#ff3b3b' : '#00d4ff';
+    ctx.shadowColor = ctx.fillStyle;
+    ctx.shadowBlur = 12;
+    ctx.fillRect(px, py, p.w, p.h);
   }
+  ctx.shadowBlur = 0;
 
+  ctx.fillStyle = '#ffd700';
   for (const c of coins) {
     if (c.taken) continue;
-    const p = project(c.x, 15, c.z);
-    if (p.d > 1) {
-      ctx.fillStyle = '#1e90ff';
-      ctx.beginPath();
-      ctx.arc(p.sx, p.sy, 6 * p.s / 10 + 2, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    ctx.beginPath();
+    ctx.arc(c.x, worldGround + c.y, 8, 0, Math.PI * 2);
+    ctx.fill();
   }
 
-  const carColor = car.lights ? (Math.floor(Date.now() / 250) % 2 ? '#ff0000' : '#0044ff') : '#e63946';
-  ctx.fillStyle = carColor;
-  ctx.fillRect(W / 2 - 40, H - 120 - car.y * 0.2, 80, 36);
-  ctx.fillStyle = '#222';
-  ctx.fillRect(W / 2 - 30, H - 140 - car.y * 0.2, 60, 22);
-  ctx.fillStyle = '#111';
-  ctx.beginPath(); ctx.arc(W / 2 - 28, H - 84 - car.y * 0.2, 10, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(W / 2 + 28, H - 84 - car.y * 0.2, 10, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(checkpoint.x, worldGround + checkpoint.y - 60, 4, 60);
+  ctx.fillStyle = '#ff4fa3';
+  ctx.fillRect(checkpoint.x + 4, worldGround + checkpoint.y - 60, 18, 12);
 
-  const secs = ((performance.now() - startTime) / 1000).toFixed(1);
-  hud.innerHTML = `Coins: ${car.coins}/${coins.length} | Time: ${secs}s | Speed: ${Math.round(Math.abs(car.speed) * 12)} km/h<br>` +
-    `Nitro: ${Math.round(car.nitro)}% | Engine: ${car.engineOn ? 'ON' : 'OFF'} | Lights: ${car.lights ? 'ON' : 'OFF'}<br>` +
-    `WASD/Arrows: Drive | Space: Handbrake | Shift: Nitro | C: Camera | R: Reset | I: Engine | H: Lights`;
+  ctx.shadowColor = '#00ffcc';
+  ctx.shadowBlur = 20;
+  ctx.fillStyle = '#00ffcc';
+  ctx.fillRect(goal.x, worldGround + goal.y - 60, 30, 80);
+  ctx.shadowBlur = 0;
+
+  const x = player.x + player.w / 2, top = player.y, hip = player.y + 30, bottom = player.y + player.h;
+  const legSwing = Math.abs(player.vx) > 0.5 && player.grounded ? Math.sin(performance.now() / 60) * 8 : 0;
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(x, top + 8, 8, 0, Math.PI * 2);
+  ctx.moveTo(x, top + 16); ctx.lineTo(x, hip);
+  ctx.moveTo(x, top + 22); ctx.lineTo(x - 10, top + 30);
+  ctx.moveTo(x, top + 22); ctx.lineTo(x + 10, top + 30);
+  ctx.moveTo(x, hip); ctx.lineTo(x - 8 + legSwing, bottom);
+  ctx.moveTo(x, hip); ctx.lineTo(x + 8 - legSwing, bottom);
+  ctx.stroke();
+  ctx.restore();
+
+  hud.innerHTML = `Coins: ${coinCount}/${totalCoins}<br>Time: ${((performance.now() - startTime) / 1000).toFixed(1)}s<br>` +
+    `A/D or Arrows: Move | W/Space/Up: Jump (double) | R: Restart`;
 }
 
 let last = performance.now();
