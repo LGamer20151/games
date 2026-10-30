@@ -1,68 +1,330 @@
-import java.util.*;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>2D Stickman Parkour - Neon Trial</title>
+  <style>
+    :root {
+      --bg: #111;
+      --fg: #fff;
+      --plat: #2d313f;
+      --accent: #00f3ff;
+      --win: #00ff6b;
+    }
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: #0b0b14;
+      color: #e6e6e6;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+      overflow: hidden;
+    }
+    #gameWrap {
+      position: relative;
+      width: 100%;
+      height: 100vh;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    #hud {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      padding: 8px 12px;
+      background: rgba(0,0,0,0.4);
+      border-radius: 6px;
+      font-size: 14px;
+      color: #fff;
+      user-select: none;
+    }
+    #goal {
+      position: absolute;
+      width: 30px; height: 6px;
+      background: var(--win);
+      right: 40px;
+      bottom: 60px;
+      border-radius: 3px;
+    }
+    #victoryScreen {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.6);
+      color: #fff;
+      font-size: 28px;
+      font-weight: bold;
+      text-align: center;
+      padding: 20px;
+    }
+    #victoryScreen button {
+      margin-top: 12px;
+      padding: 8px 14px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+    }
+    @media (max-width: 600px) {
+      #victoryScreen { font-size: 22px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="gameWrap">
+    <canvas id="gameCanvas"></canvas>
+    <div id="hud">STAGE: Neon Trial • W/Space or Up to Jump • A/D to Move • R to Reset</div>
+    <div id="goal"></div>
+    <div id="victoryScreen">
+      Stage Cleared!<br/>Press R to Restart or Click to Play Again
+      <br><button id="restartBtn">Restart</button>
+    </div>
+  </div>
 
-public class ChatBot {
-    // Simple pair of pattern and response templates
-    private static class Rule {
-        final String pattern;
-        final String[] responses;
-        Rule(String pattern, String... responses) {
-            this.pattern = pattern.toLowerCase();
-            this.responses = responses;
+  <script>
+    // Canvas setup
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const victoryScreen = document.getElementById('victoryScreen');
+    const restartBtn = document.getElementById('restartBtn');
+    let w = window.innerWidth;
+    let h = window.innerHeight;
+    function resize() {
+      w = window.innerWidth;
+      h = window.innerHeight;
+      canvas.width = w;
+      canvas.height = h;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Game constants
+    const GRAVITY = 0.6;
+    const FRICTION = 0.85;
+    const RUN_SPEED = 0.8;
+    const MAX_SPEED = 6;
+    const JUMP_FORCE = -12;
+
+    // World and player
+    const platforms = [];
+    let goal = { x: 0, y: 0, width: 30, height: 100, reached: false };
+
+    // Player
+    const player = {
+      x: 100, y: 100,
+      vx: 0, vy: 0,
+      width: 20, height: 48,
+      grounded: false,
+      doubleJumpAvailable: true,
+      facing: 'right',
+      color: '#fff'
+    };
+
+    function rebuildLevelLayout() {
+      // Simple neon platform layout based on viewport size
+      platforms.length = 0;
+      const baseY = h - 80;
+      platforms.push({ x: 0, y: baseY, width: 400, height: 80, color: '#2d313f' });
+      platforms.push({ x: 460, y: h - 160, width: 120, height: 20, color: '#00f3ff' });
+      platforms.push({ x: 650, y: h - 250, width: 120, height: 20, color: '#00f3ff' });
+      platforms.push({ x: 840, y: h - 200, width: 140, height: 20, color: '#ff0055' });
+      platforms.push({ x: 1050, y: h - 300, width: 120, height: 20, color: '#00f3ff' });
+      platforms.push({ x: 1250, y: h - 400, width: Math.max(100, w - 1250 + 100), height: 400, color: '#2d313f' });
+      goal.x = w - 150;
+      goal.y = h - 500;
+    }
+    rebuildLevelLayout();
+
+    // Input
+    const keys = {};
+    window.addEventListener('keydown', (e) => {
+      keys[e.key.toLowerCase()] = true;
+      if (e.key === ' ' || e.key === 'ArrowUp' || e.key.toLowerCase() === 'w') {
+        if (!goal.reached) {
+          if (player.grounded) {
+            player.vy = JUMP_FORCE;
+            player.grounded = false;
+          } else if (player.doubleJumpAvailable) {
+            player.vy = JUMP_FORCE * 0.85;
+            player.doubleJumpAvailable = false;
+          }
         }
+      }
+      if (e.key.toLowerCase() === 'r') resetGame();
+    });
+    window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
+
+    // Reset
+    function resetGame() {
+      rebuildLevelLayout();
+      player.x = 100;
+      player.y = h - 200;
+      player.vx = 0;
+      player.vy = 0;
+      player.grounded = false;
+      player.doubleJumpAvailable = true;
+      goal.reached = false;
+      victoryScreen.style.display = 'none';
+    }
+    resetGame();
+
+    // AABB helpers
+    function rectsOverlap(a, b) {
+      return a.x < b.x + b.width && a.x + a.width > b.x &&
+             a.y < b.y + b.height && a.y + a.height > b.y;
     }
 
-    private final List<Rule> rules = new ArrayList<>();
-    private final Random random = new Random();
+    // Update physics
+    function updatePhysics(dt) {
+      if (goal.reached) return;
 
-    public ChatBot() {
-        // Greeting
-        addRule("hi|hello|hey", "Hello! How can I help you today?", "Hi there! What would you like to talk about?");
-        // Ask about needs
-        addRule("how are you|how's it going", "I'm just a bunch of code, but I'm here to help you. What would you like to do?", "I'm running smoothly. How can I assist you?");
-        // About Java
-        addRule("java.*(version|versions)?", "I can help you with Java basics, or compare versions. What would you like to know?", 
-                                   "Java is a versatile language running on the JVM. Need a quick guide?");
-        // Coding help
-        addRule("how to|give me a code|code for|write (a|an) (program|function)", 
-                "Sure, tell me the goal and the language. If you want, I can provide a starter example.",
-                "Give me a task description and I will draft a sample implementation.");
-        // Welcome to AI demo
-        addRule("ai|artificial intelligence|machine learning", "AI can mean many things. Do you want a simple chatbot, a game AI, or a data model example?", 
-                                                  "Are you looking for a basic AI for a game or a web service?");
-        // Default fallback
-        addRule(".*", "Tell me more about what you want to build with Java. I can provide code samples for a chatbot, a game AI, or a REST service.");
-    }
+      // Horizontal movement
+      if (keys['a'] || keys['arrowleft']) {
+        player.vx -= RUN_SPEED;
+        player.facing = 'left';
+      } else if (keys['d'] || keys['arrowright']) {
+        player.vx += RUN_SPEED;
+        player.facing = 'right';
+      } else {
+        player.vx *= FRICTION;
+      }
+      if (player.vx > MAX_SPEED) player.vx = MAX_SPEED;
+      if (player.vx < -MAX_SPEED) player.vx = -MAX_SPEED;
 
-    private void addRule(String pattern, String... responses) {
-        rules.add(new Rule(pattern, responses));
-    }
+      // Apply gravity
+      player.vy += GRAVITY;
 
-    private String respond(String input) {
-        String in = input.trim().toLowerCase();
-        for (Rule r : rules) {
-            if (in.matches(".*" + r.pattern + ".*")) {
-                return r.responses[random.nextInt(r.responses.length)];
+      // Integrate
+      player.x += player.vx;
+      player.y += player.vy;
+
+      // Ground collision with platforms
+      player.grounded = false;
+      for (const plat of platforms) {
+        const px = player.x;
+        const py = player.y;
+        const pr = { x: px, y: py, width: player.width, height: player.height };
+        const pr2 = { x: plat.x, y: plat.y, width: plat.width, height: plat.height };
+        if (rectsOverlap(pr, pr2)) {
+          // Simple collision resolution (separating axis)
+          const dx = (pr.x + pr.width / 2) - (pr2.x + pr2.width / 2);
+          const dy = (pr.y + pr.height / 2) - (pr2.y + pr2.height / 2);
+          const overlapX = (pr.width + pr2.width) / 2 - Math.abs(dx);
+          const overlapY = (pr.height + pr2.height) / 2 - Math.abs(dy);
+          if (overlapX < overlapY) {
+            // Resolve in X
+            if (dx > 0) {
+              player.x += overlapX;
+            } else {
+              player.x -= overlapX;
             }
+            player.vx = 0;
+          } else {
+            // Resolve in Y
+            if (dy > 0) {
+              player.y += overlapY;
+              player.vy = 0;
+              player.grounded = true;
+              player.doubleJumpAvailable = true;
+            } else {
+              player.y -= overlapY;
+              player.vy = 0;
+            }
+          }
         }
-        // Fallback
-        return "I'm not sure I understood that. Could you rephrase or share more details?";
+      }
+
+      // World bounds
+      if (player.y > h + 200) resetGame();
+
+      // Goal check
+      if (Math.abs((player.x) - goal.x) < 40 && Math.abs((player.y) - goal.y) < 40) {
+        goal.reached = true;
+        victoryScreen.style.display = 'flex';
+      }
     }
 
-    public static void main(String[] args) {
-        ChatBot bot = new ChatBot();
-        Scanner scanner = new Scanner(System.in);
-        System.out.println("ChatBot: Hi! I can help with Java code examples. Type 'exit' to quit.");
-        while (true) {
-            System.out.print("You: ");
-            String userInput = scanner.nextLine();
-            if (userInput == null) continue;
-            if (userInput.equalsIgnoreCase("exit") || userInput.equalsIgnoreCase("quit")) {
-                System.out.println("ChatBot: Goodbye!");
-                break;
-            }
-            String reply = bot.respond(userInput);
-            System.out.println("ChatBot: " + reply);
-        }
-        scanner.close();
+    // Render
+    function render() {
+      ctx.clearRect(0, 0, w, h);
+
+      // Draw platforms
+      for (const plat of platforms) {
+        ctx.fillStyle = plat.color;
+        ctx.fillRect(plat.x, plat.y, plat.width, plat.height);
+        // outline for visibility
+        ctx.strokeStyle = '#ffffff22';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(plat.x, plat.y, plat.width, plat.height);
+      }
+
+      // Draw goal as a tall neon pole at far right
+      ctx.fillStyle = '#ffd700';
+      ctx.fillRect(goal.x, goal.y, 30, 100);
+      ctx.fillStyle = '#222';
+      ctx.fillRect(goal.x - 8, goal.y - 6, 46, 6);
+
+      // Draw player (stickman)
+      ctx.save();
+      ctx.translate(player.x + player.width / 2, player.y + player.height / 2);
+      ctx.scale(1, 1);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#fff';
+      // Body
+      ctx.beginPath();
+      ctx.moveTo(0, -20);
+      ctx.lineTo(0, 20);
+      ctx.moveTo(0, -20);
+      ctx.lineTo(-10, -10);
+      ctx.moveTo(0, -20);
+      ctx.lineTo(10, -10);
+      ctx.moveTo(0, 20);
+      ctx.lineTo(-8, 34);
+      ctx.lineTo(8, 34);
+      ctx.stroke();
+      // Head
+      ctx.beginPath();
+      ctx.arc(0, -32, 8, 0, Math.PI * 2);
+      ctx.stroke();
+      // Arms
+      ctx.beginPath();
+      ctx.moveTo(-12,  -8);
+      ctx.lineTo(12,  -8);
+      ctx.stroke();
+      // Legs
+      ctx.beginPath();
+      ctx.moveTo(0, 20);
+      ctx.lineTo(-10, 38);
+      ctx.moveTo(0, 20);
+      ctx.lineTo(10, 38);
+      ctx.stroke();
+      ctx.restore();
     }
-}
+
+    let lastTime = performance.now();
+    function loop(now) {
+      const dt = Math.min(32, now - lastTime);
+      lastTime = now;
+      updatePhysics(dt / 16.666);
+      render();
+      requestAnimationFrame(loop);
+    }
+
+    // Start
+    victoryScreen.addEventListener('click', () => {
+      if (victoryScreen.style.display !== 'none') {
+        resetGame();
+      }
+    });
+    restartBtn.addEventListener('click', resetGame);
+
+    // Initial loop
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
