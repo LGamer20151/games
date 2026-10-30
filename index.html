@@ -5,10 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D Stunt Car Playground</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #050505; font-family: sans-serif; }
-        #ui { position: absolute; top: 20px; left: 20px; color: white; text-shadow: 1px 1px 3px black; pointer-events: none; }
+        body { margin: 0; overflow: hidden; background: #0a0e14; font-family: sans-serif; }
+        #ui { position: absolute; top: 20px; left: 20px; color: white; text-shadow: 1px 1px 3px black; pointer-events: none; z-index: 10; }
         #speedometer { font-size: 32px; font-weight: bold; font-family: monospace; }
         #controls { margin-top: 10px; font-size: 14px; opacity: 0.8; }
+        canvas { display: block; width: 100vw; height: 100vh; }
     </style>
     <script src="https://cloudflare.com"></script>
 </head>
@@ -19,14 +20,17 @@
     </div>
 
     <script>
-        // --- Core WebGL Engine Setup ---
+        // --- Fresh Isolated WebGL Initialization ---
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0xa0b0d0);
         scene.fog = new THREE.FogExp2(0xa0b0d0, 0.005);
 
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        
+        // Explicitly isolate canvas initialization settings
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
         renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.shadowMap.enabled = true;
         document.body.appendChild(renderer.domElement);
 
@@ -37,8 +41,8 @@
         const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
         dirLight.position.set(100, 200, 50);
         dirLight.castShadow = true;
-        dirLight.shadow.mapSize.width = 2048;
-        dirLight.shadow.mapSize.height = 2048;
+        dirLight.shadow.mapSize.width = 1048;
+        dirLight.shadow.mapSize.height = 1048;
         scene.add(dirLight);
 
         // --- Physics Track Environment Boundary Surfaces ---
@@ -100,10 +104,10 @@
 
         const wheels = [];
         const wheelPositions = [
-            { x: -1, y: 0.3, z: 1.2, isFront: true },   // Front Left
-            { x: 1, y: 0.3, z: 1.2, isFront: true },    // Front Right
-            { x: -1, y: 0.3, z: -1.2, isFront: false }, // Rear Left
-            { x: 1, y: 0.3, z: -1.2, isFront: false }   // Rear Right
+            { x: -1, y: 0.3, z: 1.2, isFront: true },   
+            { x: 1, y: 0.3, z: 1.2, isFront: true },    
+            { x: -1, y: 0.3, z: -1.2, isFront: false }, 
+            { x: 1, y: 0.3, z: -1.2, isFront: false }   
         ];
 
         wheelPositions.forEach(pos => {
@@ -212,8 +216,8 @@
             if (intersections.length > 0 && intersections.distance <= 2.1) {
                 groundHeight = (car.position.y + 2) - intersections.distance;
                 car.isOnRamp = true;
-                if(intersections[0].object.rotation.x !== 0) {
-                    car.rotation.x = THREE.MathUtils.lerp(car.rotation.x, intersections[0].object.rotation.x, dt * 5);
+                if(intersections.object.rotation.x !== 0) {
+                    car.rotation.x = THREE.MathUtils.lerp(car.rotation.x, intersections.object.rotation.x, dt * 5);
                 }
             } else {
                 car.rotation.x = THREE.MathUtils.lerp(car.rotation.x, 0, dt * 2);
@@ -240,9 +244,3 @@
 
             // Dashboard Metrics Rendering
             const displaySpeed = Math.abs(Math.round(speed * 3.6));
-            speedometerEl.textContent = `${displaySpeed.toString().padStart(3, '0')} KM/H`;
-
-            renderer.render(scene, camera);
-        }
-
-        window.addEventListener('resize', () => {
