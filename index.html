@@ -1,232 +1,131 @@
-// --- PLINKO GAME ENGINE ---
-// Save this as plinko.js or paste it inside a <script> tag on your webpage.
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Plinko</title>
+  <style>
+    body { background:#1e1e2e; color:#fff; font-family:Arial, sans-serif; text-align:center; margin:0; padding:20px; }
+    canvas { background:#11111b; border-radius:8px; display:block; margin:0 auto; }
+    button { margin-top:12px; padding:10px 20px; font-size:16px; cursor:pointer; border:none; border-radius:6px; background:#89b4fa; color:#11111b; }
+    #score { font-size:22px; margin-top:10px; }
+  </style>
+</head>
+<body>
+  <h1>Plinko</h1>
+  <canvas id="board" width="480" height="560"></canvas>
+  <div id="score">Score: 0</div>
+  <button id="drop">Drop Disc</button>
 
-class PlinkoGame {
-    constructor(canvasId, options = {}) {
-        this.canvas = document.getElementById(canvasId);
-        this.ctx = this.canvas.getContext('2d');
-        
-        // Configuration options
-        this.rows = options.rows || 8;
-        this.pegRadius = options.pegRadius || 5;
-        this.ballRadius = options.ballRadius || 8;
-        this.gravity = options.gravity || 0.2;
-        this.bounce = options.bounce || 0.5; // Elasticity of pegs
-        this.friction = options.friction || 0.99; // Air resistance
-        
-        // Multipliers/Scores for buckets at the bottom
-        this.multipliers = options.multipliers || [10, 5, 2, 0.5, 0.2, 0.5, 2, 5, 10];
-        
-        // State arrays
-        this.pegs = [];
-        this.balls = [];
-        this.buckets = [];
-        
-        // Dynamic scaling
-        this.resize();
-        window.addEventListener('resize', () => this.resize());
-        
-        // Event listener for user drop
-        this.canvas.addEventListener('click', (e) => this.handleCanvasClick(e));
-        
-        // Setup initial board
-        this.initBoard();
-        
-        // Start animation loop
-        this.animate = this.animate.bind(this);
-        requestAnimationFrame(this.animate);
-    }
+<script>
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+const scoreEl = document.getElementById('score');
+const dropBtn = document.getElementById('drop');
 
-    resize() {
-        // Adjust bounds dynamically based on container size
-        this.width = this.canvas.parentElement ? this.canvas.parentElement.clientWidth : 600;
-        this.height = options.height || 600;
-        
-        // Account for high-DPI displays
-        const dpr = window.devicePixelRatio || 1;
-        this.canvas.width = this.width * dpr;
-        this.canvas.height = this.height * dpr;
-        this.canvas.style.width = `${this.width}px`;
-        this.canvas.style.height = `${this.height}px`;
-        this.ctx.scale(dpr, dpr);
-        
-        // Re-initialize layouts on resize to keep proportions intact
-        this.initBoard();
-    }
+const W = canvas.width, H = canvas.height;
+const ROWS = 10, PEG_GAP = 40, RADIUS = 8;
+const slotValues = [100, 50, 20, 10, 5, 2, 5, 10, 20, 50, 100];
+const slotCount = slotValues.length;
+const slotWidth = W / slotCount;
 
-    initBoard() {
-        this.pegs = [];
-        this.buckets = [];
-        
-        const startY = 80;
-        const spacingY = (this.height - 150) / this.rows;
-        
-        // Generate triangle peg board grid
-        for (let r = 0; r < this.rows; r++) {
-            const pegCount = r + 3; // Top row has 3 pegs, adding 1 each row down
-            const spacingX = this.width / (pegCount + 1);
-            
-            for (let i = 0; i < pegCount; i++) {
-                const x = spacingX * (i + 1);
-                const y = startY + (r * spacingY);
-                this.pegs.push({ x, y, radius: this.pegRadius, active: false, timer: 0 });
-            }
-        }
-        
-        // Generate score buckets at the bottom
-        const bucketCount = this.multipliers.length;
-        const bucketWidth = this.width / bucketCount;
-        const bucketY = this.height - 40;
-        
-        for (let i = 0; i < bucketCount; i++) {
-            this.buckets.push({
-                x: i * bucketWidth,
-                y: bucketY,
-                width: bucketWidth,
-                height: 40,
-                multiplier: this.multipliers[i],
-                label: `${this.multipliers[i]}x`
-            });
-        }
-    }
+let discs = [];
+let score = 0;
 
-    dropBall(startX) {
-        // Enforce boundary logic so user cannot drop outside the game field
-        const safeX = Math.max(this.ballRadius, Math.min(this.width - this.ballRadius, startX));
-        
-        this.balls.push({
-            x: safeX,
-            y: 20,
-            vx: (Math.random() - 0.5) * 0.5, // Tiny structural variance to guarantee physics divergence
-            vy: 1,
-            radius: this.ballRadius,
-            color: `hsl(${Math.random() * 360}, 85%, 60%)` // Distinct random vibrant ball colors
-        });
+function pegs() {
+  const list = [];
+  for (let r = 0; r < ROWS; r++) {
+    const count = r + 3;
+    const spacing = W / (count + 1);
+    for (let c = 0; c < count; c++) {
+      list.push({ x: spacing * (c + 1), y: 70 + r * PEG_GAP });
     }
-
-    handleCanvasClick(e) {
-        const rect = this.canvas.getBoundingClientRect();
-        const clickX = e.clientX - rect.left;
-        this.dropBall(clickX);
-    }
-
-    updatePhysics() {
-        // Clean out balls that exit frame bottom
-        this.balls = this.balls.filter(ball => {
-            // Apply environment constants
-            ball.vy += this.gravity;
-            ball.vx *= this.friction;
-            ball.x += ball.vx;
-            ball.y += ball.vy;
-            
-            // Wall collisions (side bounces)
-            if (ball.x < ball.radius) {
-                ball.x = ball.radius;
-                ball.vx *= -this.bounce;
-            } else if (ball.x > this.width - ball.radius) {
-                ball.x = this.width - ball.radius;
-                ball.vx *= -this.bounce;
-            }
-            
-            // Peg interaction physics resolution
-            this.pegs.forEach(peg => {
-                const dx = ball.x - peg.x;
-                const dy = ball.y - peg.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                const minDist = ball.radius + peg.radius;
-                
-                if (distance < minDist) {
-                    // Normalize contact vector
-                    const nx = dx / distance;
-                    const ny = dy / distance;
-                    
-                    // Reposition ball outside peg bound boundary overlap
-                    ball.x = peg.x + nx * minDist;
-                    ball.y = peg.y + ny * minDist;
-                    
-                    // Vector dot-product reflection logic
-                    const dotProduct = ball.vx * nx + ball.vy * ny;
-                    ball.vx = (ball.vx - 2 * dotProduct * nx) * this.bounce;
-                    ball.vy = (ball.vy - 2 * dotProduct * ny) * this.bounce;
-                    
-                    // Activate structural visual pop trigger on peg
-                    peg.active = true;
-                    peg.timer = 8; 
-                }
-            });
-            
-            // Check landing event inside target slots
-            if (ball.y >= this.height - 40) {
-                this.buckets.forEach(bucket => {
-                    if (ball.x >= bucket.x && ball.x <= bucket.x + bucket.width) {
-                        this.onBallScore(bucket.multiplier);
-                    }
-                });
-                return false; // Safely strip instance out of rendering queue
-            }
-            return true;
-        });
-        
-        // Degrade glowing peg frame step state animations
-        this.pegs.forEach(peg => {
-            if (peg.active) {
-                peg.timer--;
-                if (peg.timer <= 0) peg.active = false;
-            }
-        });
-    }
-
-    onBallScore(multiplier) {
-        // Dispatches event downstream. Listen to this from your core website script.
-        const event = new CustomEvent('plinkoScore', { detail: { multiplier } });
-        window.dispatchEvent(event);
-    }
-
-    draw() {
-        this.ctx.clearRect(0, 0, this.width, this.height);
-        
-        // 1. Draw Pegs
-        this.pegs.forEach(peg => {
-            this.ctx.beginPath();
-            this.ctx.arc(peg.x, peg.y, peg.active ? peg.radius * 1.4 : peg.radius, 0, Math.PI * 2);
-            this.ctx.fillStyle = peg.active ? '#ff007f' : '#4a5568';
-            this.ctx.shadowBlur = peg.active ? 15 : 0;
-            this.ctx.shadowColor = '#ff007f';
-            this.ctx.fill();
-            this.ctx.closePath();
-        });
-        this.ctx.shadowBlur = 0; // Reset canvas glow states
-        
-        // 2. Draw Buckets (Score zones)
-        this.buckets.forEach((bucket, idx) => {
-            this.ctx.fillStyle = idx % 2 === 0 ? '#1a202c' : '#2d3748';
-            this.ctx.fillRect(bucket.x, bucket.y, bucket.width, bucket.height);
-            
-            // Border divider lines
-            this.ctx.strokeStyle = '#4a5568';
-            this.ctx.lineWidth = 1;
-            this.ctx.strokeRect(bucket.x, bucket.y, bucket.width, bucket.height);
-            
-            // Text Label inside bucket slots
-            this.ctx.fillStyle = '#e2e8f0';
-            this.ctx.font = 'bold 12px sans-serif';
-            this.ctx.textAlign = 'center';
-            this.ctx.fillText(bucket.label, bucket.x + bucket.width / 2, bucket.y + 24);
-        });
-        
-        // 3. Draw active balls
-        this.balls.forEach(ball => {
-            this.ctx.beginPath();
-            this.ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-            this.ctx.fillStyle = ball.color;
-            this.ctx.fill();
-            this.ctx.closePath();
-        });
-    }
-
-    animate() {
-        this.updatePhysics();
-        this.draw();
-        requestAnimationFrame(this.animate);
-    }
+  }
+  return list;
 }
+const pegList = pegs();
+
+function newDisc() {
+  return {
+    x: W / 2 + (Math.random() - 0.5) * 10,
+    y: 20,
+    vx: 0,
+    vy: 0,
+    done: false,
+    slot: null
+  };
+}
+
+function update(d) {
+  d.vy += 0.25;
+  d.x += d.vx;
+  d.y += d.vy;
+
+  for (const p of pegList) {
+    const dx = d.x - p.x, dy = d.y - p.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < RADIUS + 4) {
+      const nx = dx / dist, ny = dy / dist;
+      const dot = d.vx * nx + d.vy * ny;
+      d.vx -= 2 * dot * nx;
+      d.vy -= 2 * dot * ny;
+      d.vx += (Math.random() - 0.5) * 0.6;
+      d.x = p.x + nx * (RADIUS + 4);
+      d.y = p.y + ny * (RADIUS + 4);
+      d.vx *= 0.8;
+      d.vy *= 0.8;
+    }
+  }
+
+  if (d.x < RADIUS) { d.x = RADIUS; d.vx = Math.abs(d.vx); }
+  if (d.x > W - RADIUS) { d.x = W - RADIUS; d.vx = -Math.abs(d.vx); }
+
+  if (d.y > H - 40 - RADIUS) {
+    d.done = true;
+    d.slot = Math.min(slotCount - 1, Math.max(0, Math.floor(d.x / slotWidth)));
+    score += slotValues[d.slot];
+    scoreEl.textContent = 'Score: ' + score;
+  }
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  ctx.fillStyle = '#cdd6f4';
+  for (const p of pegList) {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  for (let i = 0; i < slotCount; i++) {
+    ctx.fillStyle = slotValues[i] >= 50 ? '#f38ba8' : slotValues[i] >= 20 ? '#fab387' : '#a6e3a1';
+    ctx.fillRect(i * slotWidth + 2, H - 40, slotWidth - 4, 40);
+    ctx.fillStyle = '#11111b';
+    ctx.font = 'bold 12px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(slotValues[i], i * slotWidth + slotWidth / 2, H - 16);
+  }
+
+  for (const d of discs) {
+    if (d.done) continue;
+    ctx.fillStyle = '#f9e2af';
+    ctx.beginPath();
+    ctx.arc(d.x, d.y, RADIUS, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function loop() {
+  for (const d of discs) if (!d.done) update(d);
+  discs = discs.filter(d => !d.done);
+  draw();
+  requestAnimationFrame(loop);
+}
+
+dropBtn.addEventListener('click', () => discs.push(newDisc()));
+canvas.addEventListener('click', () => discs.push(newDisc()));
+
+loop();
+</script>
+</body>
+</html>
