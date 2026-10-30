@@ -5,47 +5,96 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>My Game Site</title>
   <style>
-    body { background:#1e1e2e; color:#fff; font-family:Arial, sans-serif; text-align:center; margin:0; padding:40px 20px; }
-    h1 { font-size:40px; margin-bottom:40px; }
-    .menu { display:flex; flex-wrap:wrap; justify-content:center; gap:20px; max-width:1200px; margin:0 auto; }
-    .menu a {
-      display:flex; flex-direction:column; justify-content:center;
-      width:220px; min-height:150px; padding:20px; box-sizing:border-box;
-      border-radius:10px; background:#313244; text-decoration:none;
-      color:#89b4fa; font-size:26px; font-weight:bold;
+    * { box-sizing:border-box; }
+    body { background:#1e1e2e; color:#cdd6f4; font-family:Arial, sans-serif; margin:0; padding:0; line-height:1.5; }
+    header { text-align:center; padding:50px 20px 30px; background:#181825; border-bottom:1px solid #313244; }
+    header h1 { font-size:44px; margin:0 0 10px; color:#fff; }
+    header p { max-width:640px; margin:0 auto; color:#a6adc8; font-size:17px; }
+    .stats { margin-top:20px; font-size:14px; color:#89b4fa; letter-spacing:1px; text-transform:uppercase; }
+    main { max-width:1200px; margin:0 auto; padding:40px 20px; }
+    h2 { font-size:24px; margin:0 0 20px; color:#fff; }
+    .menu { display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:20px; }
+    .card {
+      display:flex; flex-direction:column; background:#313244; border-radius:12px;
+      padding:22px; text-decoration:none; color:#fff; min-height:200px;
+      transition:transform 0.15s ease, background 0.15s ease;
     }
-    .menu a:hover { background:#45475a; color:#b4befe; }
-    .menu a span { display:block; font-size:16px; font-weight:normal; color:#a6adc8; margin-top:10px; line-height:1.4; }
+    .card:hover { background:#45475a; transform:translateY(-4px); }
+    .card .title { font-size:22px; font-weight:bold; color:#89b4fa; margin-bottom:8px; }
+    .card .desc { font-size:15px; color:#bac2de; flex-grow:1; }
+    .card .tag {
+      align-self:flex-start; margin-top:14px; font-size:12px; text-transform:uppercase;
+      letter-spacing:1px; padding:4px 10px; border-radius:20px; background:#1e1e2e; color:#f9e2af;
+    }
+    .how { margin-top:50px; background:#181825; border-radius:12px; padding:26px; }
+    .how h2 { font-size:20px; }
+    .how ul { margin:0; padding-left:20px; color:#bac2de; }
+    .how li { margin-bottom:8px; }
+    footer { text-align:center; padding:24px; color:#6c7086; font-size:14px; border-top:1px solid #313244; }
   </style>
 </head>
 <body>
-  <h1>My Game Site</h1>
+  <header>
+    <h1>My Game Site</h1>
+    <p>Pick a game, play for a few minutes, and come back for more. Arcade action, puzzles, and a little strategy, all in one place.</p>
+    <div class="stats">8 games to play</div>
+  </header>
 
-  <div class="menu">
-    <a href="plinko.html">Plinko
-      <span>Drop discs and win points.</span>
-    </a>
-    <a href="snake.html">Snake
-      <span>Eat food and grow longer.</span>
-    </a>
-    <a href="drift-boss.html">Drift Boss
-      <span>Slide around corners and rack up points.</span>
-    </a>
-    <a href="obby.html">Obby
-      <span>Jump across platforms to the flag.</span>
-    </a>
-    <a href="flappy-duck.html">Flappy Duck
-      <span>Flap through the pipe gaps.</span>
-    </a>
-    <a href="arua.html">Arua
-      <span>Bounce the brain off the kiwis.</span>
-    </a>
-    <a href="escape.html">Escape Room
-      <span>Solve the puzzles and get out.</span>
-    </a>
-    <a href="tictactoe.html">Tic-Tac-Toe
-      <span>Beat the computer in a quick round.</span>
-    </a>
-  </div>
+  <main>
+    <h2>All Games</h2>
+    <div class="menu">
+      <a class="card" href="plinko.html">
+        <div class="title">Plinko</div>
+        <div class="desc">Drop discs through the pegs and watch where they land to win points.</div>
+        <span class="tag">Arcade</span>
+      </a>
+      <a class="card" href="snake.html">
+        <div class="title">Snake</div>
+        <div class="desc">Eat food, avoid walls and your own tail, and grow as long as you can.</div>
+        <span class="tag">Classic</span>
+      </a>
+      <a class="card" href="drift-boss.html">
+        <div class="title">Drift Boss</div>
+        <div class="desc">Slide around corners at speed and rack up points with every drift.</div>
+        <span class="tag">Driving</span>
+      </a>
+      <a class="card" href="obby.html">
+        <div class="title">Obby</div>
+        <div class="desc">Jump across platforms, dodge the gaps, and reach the flag at the top.</div>
+        <span class="tag">Platformer</span>
+      </a>
+      <a class="card" href="flappy-duck.html">
+        <div class="title">Flappy Duck</div>
+        <div class="desc">Flap through the pipe gaps. One tap at a time, see how far you get.</div>
+        <span class="tag">Arcade</span>
+      </a>
+      <a class="card" href="arua.html">
+        <div class="title">Arua</div>
+        <div class="desc">Bounce the brain off the kiwis and keep the ball in play.</div>
+        <span class="tag">Physics</span>
+      </a>
+      <a class="card" href="escape.html">
+        <div class="title">Escape Room</div>
+        <div class="desc">Solve a color lock, a wall code, a sliding puzzle, and find the key to get out.</div>
+        <span class="tag">Puzzle</span>
+      </a>
+      <a class="card" href="tictactoe.html">
+        <div class="title">Tic-Tac-Toe</div>
+        <div class="desc">Take on the computer in a quick round. Can you find a way to win?</div>
+        <span class="tag">Strategy</span>
+      </a>
+    </div>
+
+    <div class="how">
+      <h2>How It Works</h2>
+      <ul>
+        <li>Click any game card to open it in the same tab.</li>
+        <li>Every game page has a <strong>Back to menu</strong> link at the top.</li>
+        <li>Keep all game files in the same folder as this page so the links work.</li>
+      </ul>
+    </div>
+  </main>
+
+  <footer>My Game Site. Choose a game and have fun.</footer>
 </body>
 </html>
