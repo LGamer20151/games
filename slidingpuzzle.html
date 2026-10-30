@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sliding Puzzle</title>
+  <style>
+    body { background:#0d0e12; color:#fff; font-family:Arial, sans-serif; text-align:center; margin:0; padding:20px; }
+    a { color:#89b4fa; }
+    #info { font-size:20px; margin:14px 0; }
+    #grid { display:grid; grid-template-columns:repeat(3, 100px); gap:8px; justify-content:center; }
+    .tile { width:100px; height:100px; border:none; border-radius:10px; background:#1c1d24; color:#fff; font-size:36px; font-weight:bold; cursor:pointer; }
+    .tile.blank { background:transparent; cursor:default; }
+    #shuffle { margin-top:20px; padding:12px 26px; font-size:18px; border:none; border-radius:8px; background:#89b4fa; color:#0d0e12; font-weight:bold; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <a href="index.html">&larr; Back to menu</a>
+  <h1>Sliding Puzzle</h1>
+  <div id="info">Moves: 0</div>
+  <div id="grid"></div>
+  <button id="shuffle">New Puzzle</button>
+<script>
+const grid = document.getElementById('grid');
+const info = document.getElementById('info');
+let tiles = [], moves = 0;
+
+// Build the grid cells once
+for (let i = 0; i < 9; i++) {
+  const b = document.createElement('button');
+  b.className = 'tile';
+  b.addEventListener('click', () => move(i));
+  grid.appendChild(b);
+}
+
+function render() {
+  const cells = grid.querySelectorAll('.tile');
+  cells.forEach((cell, i) => {
+    const v = tiles[i];
+    cell.textContent = v === 0 ? '' : v;
+    cell.classList.toggle('blank', v === 0);
+  });
+  info.textContent = 'Moves: ' + moves;
+  if (isSolved()) info.textContent = 'Solved in ' + moves + ' moves!';
+}
+
+function isSolved() {
+  for (let i = 0; i < 8; i++) if (tiles[i] !== i + 1) return false;
+  return tiles[8] === 0;
+}
+
+// Shuffle by making random legal moves from the solved state,
+// so every puzzle is guaranteed to be solvable
+function newPuzzle() {
+  tiles = [1, 2, 3, 4, 5, 6, 7, 8, 0];
+  let blank = 8, last = -1;
+  for (let step = 0; step < 200; step++) {
+    const r = Math.floor(blank / 3), c = blank % 3;
+    const options = [];
+    if (r > 0) options.push(blank - 3);
+    if (r < 2) options.push(blank + 3);
+    if (c > 0) options.push(blank - 1);
+    if (c < 2) options.push(blank + 1);
+    const valid = options.filter(p => p !== last);
+    const pick = valid[Math.floor(Math.random() * valid.length)];
+    [tiles[blank], tiles[pick]] = [tiles[pick], tiles[blank]];
+    last = blank;
+    blank = pick;
+  }
+  moves = 0;
+  render();
+}
+
+function move(i) {
+  const blank = tiles.indexOf(0);
+  if (isSolved()) return;
+  const r1 = Math.floor(i / 3), c1 = i % 3;
+  const r2 = Math.floor(blank / 3), c2 = blank % 3;
+  const adjacent = Math.abs(r1 - r2) + Math.abs(c1 - c2) === 1;
+  if (!adjacent) return;
+  [tiles[i], tiles[blank]] = [tiles[blank], tiles[i]];
+  moves++;
+  render();
+}
+
+document.getElementById('shuffle').addEventListener('click', newPuzzle);
+newPuzzle();
+</script>
+</body>
+</html>
