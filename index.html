@@ -87,18 +87,21 @@
   </div>
 
   <script>
-    // Canvas setup
+    // Canvas and context
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const victoryScreen = document.getElementById('victoryScreen');
     const restartBtn = document.getElementById('restartBtn');
     let w = window.innerWidth;
     let h = window.innerHeight;
+
     function resize() {
       w = window.innerWidth;
       h = window.innerHeight;
       canvas.width = w;
       canvas.height = h;
+      // Optional: rebuild level on resize to fit new size
+      rebuildLevelLayout();
     }
     window.addEventListener('resize', resize);
     resize();
@@ -152,8 +155,6 @@
             // First jump
             player.vy = JUMP_FORCE;
             player.grounded = false;
-            // Double jump becomes available after landing
-            // We keep doubleJumpAvailable true here so it's ready after landing
           } else if (player.doubleJumpAvailable) {
             // Second jump (double jump)
             player.vy = JUMP_FORCE * 0.85;
@@ -187,7 +188,8 @@
     }
 
     // Update physics
-    function updatePhysics(dt) {
+    let lastTime = performance.now();
+    function update(dt) {
       if (goal.reached) return;
 
       // Horizontal movement
@@ -268,29 +270,32 @@
         ctx.strokeRect(plat.x, plat.y, plat.width, plat.height);
       }
 
-      // Draw goal as a tall neon pole at far right
-      ctx.fillStyle = '#ffd700';
+      // Draw goal
+      ctx.fillStyle = '#00ff6b';
       ctx.fillRect(goal.x, goal.y, goal.width, goal.height);
 
       // Draw player (simple rectangle)
       ctx.fillStyle = player.color;
       ctx.fillRect(player.x, player.y, player.width, player.height);
+
+      // HUD line or debug could go here
     }
 
     // Main loop
-    let last = 0;
-    function loop(ts) {
-      const dt = (ts - last) / 16.666; // normalize to ~60fps units
-      last = ts;
+    function loop(now) {
+      const dt = Math.min(32, now - lastTime); // ms since last frame
+      lastTime = now;
 
-      updatePhysics(dt);
+      update(dt);
       render();
 
       requestAnimationFrame(loop);
     }
-    requestAnimationFrame((ts) => { last = ts; loop(ts); });
 
-    // Restart button
+    // Start loop when page is ready
+    requestAnimationFrame(loop);
+
+    // Optional: restart button
     restartBtn.addEventListener('click', resetGame);
   </script>
 </body>
