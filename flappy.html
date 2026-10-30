@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Flappy Duck</title>
+  <style>
+    body { background:#1e1e2e; color:#fff; font-family:Arial, sans-serif; text-align:center; margin:0; padding:20px; }
+    canvas { background:#11111b; border-radius:8px; display:block; margin:0 auto; cursor:pointer; }
+    a { color:#89b4fa; display:inline-block; margin-top:14px; }
+    #score { font-size:22px; margin-top:10px; }
+  </style>
+</head>
+<body>
+  <a href="index.html">&larr; Back to menu</a>
+  <h1>Flappy Duck</h1>
+  <canvas id="game" width="400" height="500"></canvas>
+  <div id="score">Score: 0</div>
+  <p>Space, W, or Up (or click): flap. Fly through the gaps.</p>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const scoreEl = document.getElementById('score');
+
+const W = canvas.width, H = canvas.height;
+const GRAVITY = 0.45, FLAP = -8, PIPE_W = 60, GAP = 130, PIPE_SPEED = 2.5, SPACING = 220;
+
+let duck, pipes, score, gameOver;
+
+function reset() {
+  duck = { x: 80, y: H / 2, r: 16, vy: 0 };
+  pipes = [];
+  score = 0;
+  gameOver = false;
+  scoreEl.textContent = 'Score: 0';
+  for (let i = 0; i < 3; i++) addPipe(W + i * SPACING);
+}
+
+function addPipe(x) {
+  const top = 60 + Math.random() * (H - GAP - 120);
+  pipes.push({ x, top, passed: false });
+}
+
+function flap() {
+  if (gameOver) { reset(); return; }
+  duck.vy = FLAP;
+}
+
+function update() {
+  if (gameOver) return;
+
+  duck.vy += GRAVITY;
+  duck.y += duck.vy;
+
+  for (const p of pipes) {
+    p.x -= PIPE_SPEED;
+
+    // Collision with top or bottom pipe
+    const inX = duck.x + duck.r > p.x && duck.x - duck.r < p.x + PIPE_W;
+    const inGap = duck.y - duck.r > p.top && duck.y + duck.r < p.top + GAP;
+    if (inX && !inGap) gameOver = true;
+
+    if (!p.passed && p.x + PIPE_W < duck.x) {
+      p.passed = true;
+      score++;
+      scoreEl.textContent = 'Score: ' + score;
+    }
+  }
+
+  // Remove off-screen pipes and add new ones
+  if (pipes.length && pipes[0].x < -PIPE_W) pipes.shift();
+  const last = pipes[pipes.length - 1];
+  if (last && last.x < W - SPACING) addPipe(W);
+
+  // Hitting the ground or ceiling
+  if (duck.y + duck.r > H || duck.y - duck.r < 0) gameOver = true;
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  ctx.fillStyle = '#a6e3a1';
+  for (const p of pipes) {
+    ctx.fillRect(p.x, 0, PIPE_W, p.top);
+    ctx.fillRect(p.x, p.top + GAP, PIPE_W, H - p.top - GAP);
+  }
+
+  // Duck body
+  ctx.fillStyle = '#f9e2af';
+  ctx.beginPath();
+  ctx.arc(duck.x, duck.y, duck.r, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Beak
+  ctx.fillStyle = '#fab387';
+  ctx.beginPath();
+  ctx.moveTo(duck.x + duck.r - 4, duck.y - 3);
+  ctx.lineTo(duck.x + duck.r + 8, duck.y + 2);
+  ctx.lineTo(duck.x + duck.r - 4, duck.y + 6);
+  ctx.fill();
+
+  // Eye
+  ctx.fillStyle = '#11111b';
+  ctx.beginPath();
+  ctx.arc(duck.x + 5, duck.y - 5, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Wing
+  ctx.fillStyle = '#fab387';
+  ctx.beginPath();
+  ctx.ellipse(duck.x - 4, duck.y + 2, 7, 4, -0.3, 0, Math.PI * 2);
+  ctx.fill();
+
+  if (gameOver) {
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 28px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Game Over', W / 2, H / 2);
+    ctx.font = '16px Arial';
+    ctx.fillText('Press Space to play again', W / 2, H / 2 + 30);
+  }
+}
+
+window.addEventListener('keydown', e => {
+  const key = e.key.toLowerCase();
+  if (key === ' ' || key === 'w' || key === 'arrowup') {
+    e.preventDefault();
+    flap();
+  }
+});
+canvas.addEventListener('click', flap);
+
+function loop() {
+  update();
+  draw();
+  setTimeout(() => requestAnimationFrame(loop), 0);
+}
+reset();
+loop();
+</script>
+</body>
+</html>
