@@ -1,271 +1,146 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D Stickman Parkour</title>
-    <style>
-        html, body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: #0f1015;
-            font-family: sans-serif;
-        }
-        #gameCanvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            display: block;
-            z-index: 1;
-        }
-        #ui {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            color: #ffffff;
-            pointer-events: none;
-            z-index: 10;
-        }
-        .hud-item {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 5px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-        }
-        #victoryScreen {
-            display: none;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: #00ffcc;
-            font-size: 48px;
-            font-weight: bold;
-            text-align: center;
-            text-shadow: 0 0 15px #00ffcc;
-            z-index: 20;
-            background: rgba(0,0,0,0.9);
-            padding: 30px 60px;
-            border: 2px solid #00ffcc;
-            border-radius: 10px;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stickman Parkour</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0f1015; font-family: sans-serif; }
+  canvas { display: block; }
+  #hud { position: absolute; top: 15px; left: 15px; color: #fff; font-weight: bold; text-shadow: 2px 2px 4px #000; pointer-events: none; }
+  #win { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+         color: #00ffcc; font-size: 40px; font-weight: bold; background: rgba(0,0,0,0.9);
+         padding: 30px 60px; border: 2px solid #00ffcc; border-radius: 10px; text-align: center; }
+</style>
 </head>
 <body>
-    <div id="ui">
-        <div class="hud-item">STAGE: 1 (The Neon Trial)</div>
-        <div class="hud-item">A / D or Arrow Keys to Move | W, Space, or Up to Jump | R to Reset</div>
-    </div>
-    <div id="victoryScreen">STAGE CLEARED!<br><span style="font-size: 20px; color: white;">Press 'R' to Restart</span></div>
+<div id="hud">STAGE 1: Neon Trial<br>A/D or Arrows: Move | W/Space/Up: Jump (double jump) | R: Reset</div>
+<div id="win">STAGE CLEARED!<br><span style="font-size:20px;color:#fff">Press R to play again</span></div>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const winScreen = document.getElementById('win');
+let W, H;
 
-    <canvas id="gameCanvas"></canvas>
+const GRAVITY = 0.5, FRICTION = 0.85, RUN = 0.7, MAX_SPEED = 6, JUMP = -11;
+const keys = {};
+const player = { x: 100, y: 0, vx: 0, vy: 0, w: 20, h: 48, grounded: false, canDouble: true };
+let platforms = [], goal = {}, won = false;
 
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const victoryScreen = document.getElementById('victoryScreen');
+function layout() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  platforms = [
+    { x: 0, y: H - 80, w: 400, h: 80, color: '#2d313f' },
+    { x: 460, y: H - 160, w: 120, h: 20, color: '#00f3ff' },
+    { x: 650, y: H - 250, w: 120, h: 20, color: '#00f3ff' },
+    { x: 840, y: H - 200, w: 140, h: 20, color: '#ff0055' },
+    { x: 1050, y: H - 300, w: 120, h: 20, color: '#00f3ff' },
+    { x: 1250, y: H - 400, w: Math.max(200, W - 1250 + 100), h: 400, color: '#2d313f' }
+  ];
+  goal = { x: W - 150, y: H - 500, w: 30, h: 100 };
+}
 
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
+function reset() {
+  layout();
+  Object.assign(player, { x: 100, y: H - 200, vx: 0, vy: 0, grounded: false, canDouble: true });
+  won = false;
+  winScreen.style.display = 'none';
+}
 
-        // Physics Dynamics Configs
-        const GRAVITY = 0.5;
-        const FRICTION = 0.85;
-        const RUN_SPEED = 0.7;
-        const MAX_SPEED = 6;
-        const JUMP_FORCE = -11;
+function jump() {
+  if (won) return;
+  if (player.grounded) {
+    player.vy = JUMP;
+    player.grounded = false;
+  } else if (player.canDouble) {
+    player.vy = JUMP * 0.85;
+    player.canDouble = false;
+  }
+}
 
-        const player = {
-            x: 100,
-            y: 100,
-            vx: 0,
-            vy: 0,
-            width: 20,
-            height: 48,
-            grounded: false,
-            doubleJumpAvailable: true,
-            facing: 'right',
-            animFrame: 0
-        };
+window.addEventListener('keydown', e => {
+  const k = e.key.toLowerCase();
+  keys[k] = true;
+  if (e.key === ' ' || e.key === 'ArrowUp' || k === 'w') { e.preventDefault(); jump(); }
+  if (k === 'r') reset();
+});
+window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+window.addEventListener('resize', reset);
 
-        // Complete Stage Infrastructure Array Map Layout
-        let platforms = [];
-        const goal = { x: 0, y: 0, width: 30, height: 100, reached: false };
+function update() {
+  if (!won) {
+    if (keys['a'] || keys['arrowleft']) player.vx -= RUN;
+    if (keys['d'] || keys['arrowright']) player.vx += RUN;
+    player.vx *= FRICTION;
+    player.vx = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, player.vx));
+    player.vy += GRAVITY;
+    player.x += player.vx;
+    player.y += player.vy;
 
-        function rebuildLevelLayout() {
-            const w = window.innerWidth;
-            const h = window.innerHeight;
+    player.grounded = false;
+    for (const p of platforms) {
+      const overlapX = player.x + player.w > p.x && player.x < p.x + p.w;
+      const prevBottom = player.y + player.h - player.vy;
+      if (overlapX && player.vy >= 0 && prevBottom <= p.y && player.y + player.h >= p.y) {
+        player.y = p.y - player.h;
+        player.vy = 0;
+        player.grounded = true;
+        player.canDouble = true;
+      }
+    }
 
-            platforms = [
-                { x: 0, y: h - 80, width: 400, height: 80, color: '#2d313f' },
-                { x: 460, y: h - 160, width: 120, height: 20, color: '#00f3ff' },
-                { x: 650, y: h - 250, width: 120, height: 20, color: '#00f3ff' },
-                { x: 840, y: h - 200, width: 140, height: 20, color: '#ff0055' },
-                { x: 1050, y: h - 300, width: 120, height: 20, color: '#00f3ff' },
-                { x: 1250, y: h - 400, width: w - 1250 + 100, height: 400, color: '#2d313f' }
-            ];
+    if (player.x < 0) player.x = 0;
+    if (player.y > H + 200) reset();
 
-            goal.x = w - 150;
-            goal.y = h - 500;
-        }
-        window.addEventListener('resize', rebuildLevelLayout);
-        rebuildLevelLayout();
+    if (player.x + player.w > goal.x && player.y + player.h > goal.y) {
+      won = true;
+      winScreen.style.display = 'block';
+    }
+  }
+}
 
-        // Control Inputs Systems Map Setup
-        const keys = {};
-        window.addEventListener('keydown', e => {
-            keys[e.key.toLowerCase()] = true;
-            if (e.key === ' ' || e.key === 'ArrowUp' || e.key.toLowerCase() === 'w') {
-                if (!goal.reached) {
-                    if (player.grounded) {
-                        player.vy = JUMP_FORCE;
-                        player.grounded = false;
-                    } else if (player.doubleJumpAvailable) {
-                        player.vy = JUMP_FORCE * 0.85;
-                        player.doubleJumpAvailable = false;
-                    }
-                }
-            }
-            if (e.key.toLowerCase() === 'r') resetGame();
-        });
-        window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+function draw() {
+  ctx.fillStyle = '#0f1015';
+  ctx.fillRect(0, 0, W, H);
 
-        function resetGame() {
-            rebuildLevelLayout();
-            player.x = 100;
-            player.y = window.innerHeight - 200;
-            player.vx = 0;
-            player.vy = 0;
-            player.grounded = false;
-            player.doubleJumpAvailable = true;
-            goal.reached = false;
-            victoryScreen.style.display = 'none';
-        }
-        resetGame();
+  for (const p of platforms) {
+    ctx.fillStyle = p.color;
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = p.color === '#2d313f' ? 0 : 15;
+    ctx.fillRect(p.x, p.y, p.w, p.h);
+  }
+  ctx.shadowBlur = 0;
 
-        function updatePhysics() {
-            if (goal.reached) return;
+  ctx.fillStyle = '#00ffcc';
+  ctx.shadowColor = '#00ffcc';
+  ctx.shadowBlur = 20;
+  ctx.fillRect(goal.x, goal.y, goal.w, goal.h);
+  ctx.shadowBlur = 0;
 
-            if (keys['a'] || keys['arrowleft']) {
-                player.vx -= RUN_SPEED;
-                player.facing = 'left';
-            } else if (keys['d'] || keys['arrowright']) {
-                player.vx += RUN_SPEED;
-                player.facing = 'right';
-            } else {
-                player.vx *= FRICTION;
-            }
+  const x = player.x + player.w / 2, top = player.y, hip = player.y + 30, bottom = player.y + player.h;
+  const legSwing = Math.abs(player.vx) > 0.5 && player.grounded ? Math.sin(Date.now() / 60) * 8 : 0;
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(x, top + 8, 8, 0, Math.PI * 2);
+  ctx.moveTo(x, top + 16); ctx.lineTo(x, hip);
+  ctx.moveTo(x, top + 22); ctx.lineTo(x - 10, top + 30);
+  ctx.moveTo(x, top + 22); ctx.lineTo(x + 10, top + 30);
+  ctx.moveTo(x, hip); ctx.lineTo(x - 8 + legSwing, bottom);
+  ctx.moveTo(x, hip); ctx.lineTo(x + 8 - legSwing, bottom);
+  ctx.stroke();
+}
 
-            if (player.vx > MAX_SPEED) player.vx = MAX_SPEED;
-            if (player.vx < -MAX_SPEED) player.vx = -MAX_SPEED;
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
 
-            player.vy += GRAVITY;
-            player.x += player.vx;
-            player.y += player.vy;
-
-            if (Math.abs(player.vx) > 0.2 && player.grounded) player.animFrame += 0.15;
-            else player.animFrame = 0;
-
-            player.grounded = false;
-
-            // AABB Solid Boundary Resolutions
-            platforms.forEach(plat => {
-                if (player.x < plat.x + plat.width &&
-                    player.x + player.width > plat.x &&
-                    player.y < plat.y + plat.height &&
-                    player.y + player.height > plat.y) {
-                    
-                    let overlapX = Math.min(player.x + player.width - plat.x, plat.x + plat.width - player.x);
-                    let overlapY = Math.min(player.y + player.height - plat.y, plat.y + plat.height - player.y);
-
-                    if (overlapX > overlapY) {
-                        if (player.vy > 0) {
-                            player.y -= overlapY;
-                            player.vy = 0;
-                            player.grounded = true;
-                            player.doubleJumpAvailable = true;
-                        } else if (player.vy < 0) {
-                            player.y += overlapY;
-                            player.vy = 0;
-                        }
-                    } else {
-                        if (player.vx > 0) player.x -= overlapX;
-                        else if (player.vx < 0) player.x += overlapX;
-                        player.vx = 0;
-                    }
-                }
-            });
-
-            // Target Win Flag Goal Node Trigger
-            if (player.x < goal.x + goal.width &&
-                player.x + player.width > goal.x &&
-                player.y < goal.y + goal.height &&
-                player.y + player.height > goal.y) {
-                goal.reached = true;
-                victoryScreen.style.display = 'block';
-            }
-
-            if (player.y > canvas.height) resetGame();
-            if (player.x < 0) player.x = 0;
-        }
-
-        function drawStickman(x, y, frame, facing) {
-            ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 3;
-            ctx.lineCap = 'round';
-
-            let headX = x + 10;
-            let headY = y + 8;
-            let neckY = y + 14;
-            let pelvisY = y + 32;
-
-            let leftLegOffset = Math.sin(frame) * 12;
-            let rightLegOffset = -Math.sin(frame) * 12;
-
-            if (!player.grounded) { leftLegOffset = 10; rightLegOffset = -6; }
-
-            ctx.beginPath();
-            ctx.arc(headX, headY, 6, 0, Math.PI * 2);
-            ctx.fillStyle = '#1a1c23';
-            ctx.fill();
-            ctx.stroke();
-
-            ctx.beginPath(); ctx.moveTo(headX, neckY); ctx.lineTo(headX, pelvisY); ctx.stroke();
-
-            ctx.beginPath(); ctx.moveTo(headX, pelvisY); ctx.lineTo(headX + (facing === 'right' ? leftLegOffset : -leftLegOffset), y + 46); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(headX, pelvisY); ctx.lineTo(headX + (facing === 'right' ? rightLegOffset : -rightLegOffset), y + 46); ctx.stroke();
-
-            ctx.beginPath(); ctx.moveTo(headX, neckY + 2); ctx.lineTo(headX + (facing === 'right' ? rightLegOffset * 0.7 : -rightLegOffset * 0.7) + (facing === 'right' ? 5 : -5), y + 24); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(headX, neckY + 2); ctx.lineTo(headX + (facing === 'right' ? leftLegOffset * 0.7 : -leftLegOffset * 0.7) - (facing === 'right' ? 5 : -5), y + 24); ctx.stroke();
-        }
-
-        function renderScene() {
-            // Draw clear sky gradient layout so we can prove canvas rendering activity
-            let skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            skyGrad.addColorStop(0, '#10121a');
-            skyGrad.addColorStop(1, '#1a1d29');
-            ctx.fillStyle = skyGrad;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Draw level platforms
-            platforms.forEach(plat => {
-                ctx.fillStyle = plat.color;
-                ctx.fillRect(plat.x, plat.y, plat.width, plat.height);
-                if (plat.color !== '#2d313f') {
-                    ctx.strokeStyle = '#ffffff';
-                    ctx.lineWidth = 1;
-                    ctx.strokeRect(plat.x, plat.y, plat.width, plat.height);
-                }
-            });
-
-            // Draw Flag Pole
-            ctx.fillStyle = '#666666';
+reset();
+loop();
+</script>
+</body>
+</html>
