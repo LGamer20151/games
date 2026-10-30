@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Arua</title>
+  <style>
+    body { background:#1e1e2e; color:#fff; font-family:Arial, sans-serif; text-align:center; margin:0; padding:20px; }
+    canvas { background:#11111b; border-radius:8px; display:block; margin:0 auto; cursor:pointer; }
+    a { color:#89b4fa; display:inline-block; margin-top:14px; }
+    #score { font-size:22px; margin-top:10px; }
+  </style>
+</head>
+<body>
+  <a href="index.html">&larr; Back to menu</a>
+  <h1>Arua</h1>
+  <canvas id="game" width="600" height="500"></canvas>
+  <div id="score">Arua: 0</div>
+  <p>Bounce the ball off the spinning balls to collect Arua. Space or click restarts after a game over.</p>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const scoreEl = document.getElementById('score');
+
+const W = canvas.width, H = canvas.height;
+const CX = W / 2, CY = 230;
+const ORBIT = 110;      // distance from the center to each spinning ball
+const BIG_R = 40;       // radius of each spinning ball
+const BALL_R = 10;
+const GRAVITY = 0.25;
+const SPIN_SPEED = 0.03;
+
+let ball, spinners, arua, gameOver, angle, contact;
+
+function reset() {
+  ball = { x: W / 2, y: 60, vx: (Math.random() - 0.5) * 2, vy: 0, r: BALL_R };
+  arua = 0;
+  gameOver = false;
+  angle = 0;
+  contact = [false, false];
+  scoreEl.textContent = 'Arua: 0';
+}
+
+function spinnerPos(i) {
+  const a = angle + i * Math.PI;
+  return {
+    x: CX + Math.cos(a) * ORBIT,
+    y: CY + Math.sin(a) * ORBIT,
+    vx: -Math.sin(a) * ORBIT * SPIN_SPEED,
+    vy: Math.cos(a) * ORBIT * SPIN_SPEED,
+    a
+  };
+}
+
+function update() {
+  if (gameOver) return;
+
+  angle += SPIN_SPEED;
+
+  ball.vy += GRAVITY;
+  ball.x += ball.vx;
+  ball.y += ball.vy;
+
+  // Bounce off the side walls and the ceiling
+  if (ball.x < BALL_R) { ball.x = BALL_R; ball.vx = Math.abs(ball.vx); }
+  if (ball.x > W - BALL_R) { ball.x = W - BALL_R; ball.vx = -Math.abs(ball.vx); }
+  if (ball.y < BALL_R) { ball.y = BALL_R; ball.vy = Math.abs(ball.vy); }
+
+  // Bounce off each spinning ball
+  for (let i = 0; i < 2; i++) {
+    const s = spinnerPos(i);
+    const dx = ball.x - s.x, dy = ball.y - s.y;
+    const d = Math.hypot(dx, dy);
+    const minDist = BIG_R + ball.r;
+
+    if (d < minDist) {
+      if (!contact[i]) {
+        contact[i] = true;
+        arua += 1;
+        scoreEl.textContent = 'Arua: ' + arua;
+      }
+
+      const nx = dx / d, ny = dy / d;
+      // Push the ball out of the spinning ball
+      ball.x = s.x + nx * minDist;
+      ball.y = s.y + ny * minDist;
+
+      // Reflect the ball's velocity relative to the moving spinner
+      const rvx = ball.vx - s.vx, rvy = ball.vy - s.vy;
+      const dot = rvx * nx + rvy * ny;
+      if (dot < 0) {
+        ball.vx -= 1.8 * dot * nx;
+        ball.vy -= 1.8 * dot * ny;
+        // Small random nudge so the ball does not repeat the same path
+        ball.vx += (Math.random() - 0.5) * 0.4;
+      }
+    } else {
+      contact[i] = false;
+    }
+  }
+
+  // Fell through the bottom of the screen
+  if (ball.y > H + BALL_R) {
+    gameOver = true;
+  }
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  // Spinning balls with a stripe that shows the spin
+  for (let i = 0; i < 2; i++) {
+    const s = spinnerPos(i);
+    ctx.fillStyle = i === 0 ? '#f38ba8' : '#89b4fa';
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, BIG_R, 0, Math.PI * 2);
+    ctx.fill();
+
+    const sa = s.a * 2;
+    ctx.strokeStyle = '#11111b';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(s.x + Math.cos(sa) * BIG_R, s.y + Math.sin(sa) * BIG_R);
+    ctx.lineTo(s.x - Math.cos(sa) * BIG_R, s.y - Math.sin(sa) * BIG_R);
+    ctx.stroke();
+  }
+
+  // Main ball
+  ctx.fillStyle = '#f9e2af';
+  ctx.beginPath();
+  ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+  ctx.fill();
+
+  if (gameOver) {
+    ctx.fillStyle = 'rgba(17,17,27,0.7)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 32px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Game Over', W / 2, H / 2 - 20);
+    ctx.font = '22px Arial';
+    ctx.fillText('You collected ' + arua + ' Arua', W / 2, H / 2 + 15);
+    ctx.font = '16px Arial';
+    ctx.fillText('Press Space or click to play again', W / 2, H / 2 + 50);
+  }
+}
+
+window.addEventListener('keydown', e => {
+  if (e.key === ' ') {
+    e.preventDefault();
+    if (gameOver) reset();
+  }
+});
+canvas.addEventListener('click', () => {
+  if (gameOver) reset();
+});
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+reset();
+loop();
+</script>
+</body>
+</html>
