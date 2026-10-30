@@ -23,14 +23,14 @@ const ctx = canvas.getContext('2d');
 const scoreEl = document.getElementById('score');
 
 const W = canvas.width, H = canvas.height;
-const KIWI_R = 150;     // radius of each kiwi
-const BRAIN_R = 14;     // radius of the brain ball
+const KIWI_R = 170;     // bigger kiwis
+const BRAIN_R = 14;
 const GRAVITY = 0.25;
 
-// The two kiwis stay still at the bottom, overlapping in the middle
+// Kiwis sit on the bottom-left and bottom-right edges
 const kiwis = [
-  { x: 160, y: H - 130, r: KIWI_R },
-  { x: 440, y: H - 130, r: KIWI_R }
+  { x: 0, y: H, r: KIWI_R },
+  { x: W, y: H, r: KIWI_R }
 ];
 
 let brain, arua, gameOver, contact;
@@ -70,11 +70,9 @@ function update() {
       }
 
       const nx = dx / d, ny = dy / d;
-      // Push the brain out of the kiwi
       brain.x = k.x + nx * minDist;
       brain.y = k.y + ny * minDist;
 
-      // Reflect the velocity off the surface
       const dot = brain.vx * nx + brain.vy * ny;
       if (dot < 0) {
         brain.vx -= 1.8 * dot * nx;
@@ -101,17 +99,17 @@ function drawKiwi(k) {
   // Green flesh
   ctx.fillStyle = '#9be564';
   ctx.beginPath();
-  ctx.arc(k.x, k.y, k.r - 8, 0, Math.PI * 2);
+  ctx.arc(k.x, k.y, k.r - 10, 0, Math.PI * 2);
   ctx.fill();
 
   // Pale center star
   ctx.strokeStyle = '#f5ffd6';
-  ctx.lineWidth = 6;
+  ctx.lineWidth = 7;
   for (let a = 0; a < 8; a++) {
     const ang = (a * Math.PI) / 4;
     ctx.beginPath();
     ctx.moveTo(k.x, k.y);
-    ctx.lineTo(k.x + Math.cos(ang) * (k.r - 20), k.y + Math.sin(ang) * (k.r - 20));
+    ctx.lineTo(k.x + Math.cos(ang) * (k.r - 25), k.y + Math.sin(ang) * (k.r - 25));
     ctx.stroke();
   }
 
@@ -119,21 +117,19 @@ function drawKiwi(k) {
   ctx.fillStyle = '#1e1e2e';
   for (let a = 0; a < 16; a++) {
     const ang = (a * Math.PI) / 8;
-    const rad = k.r * 0.7;
+    const rad = k.r * 0.75;
     ctx.beginPath();
-    ctx.ellipse(k.x + Math.cos(ang) * rad, k.y + Math.sin(ang) * rad, 4, 7, ang, 0, Math.PI * 2);
+    ctx.ellipse(k.x + Math.cos(ang) * rad, k.y + Math.sin(ang) * rad, 5, 9, ang, 0, Math.PI * 2);
     ctx.fill();
   }
 }
 
 function drawBrain(b) {
-  // Pink brain ball
   ctx.fillStyle = '#f5a9c8';
   ctx.beginPath();
   ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
   ctx.fill();
 
-  // Brain folds
   ctx.strokeStyle = '#c95a8a';
   ctx.lineWidth = 2;
   ctx.beginPath();
