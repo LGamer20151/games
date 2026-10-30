@@ -100,7 +100,6 @@
       h = window.innerHeight;
       canvas.width = w;
       canvas.height = h;
-      // Optional: rebuild level on resize to fit new size
       rebuildLevelLayout();
     }
     window.addEventListener('resize', resize);
@@ -128,6 +127,9 @@
       color: '#fff'
     };
 
+    // Jump press guard (per-press)
+    let jumpLock = false;
+
     function rebuildLevelLayout() {
       // Simple neon platform layout based on viewport size
       platforms.length = 0;
@@ -146,11 +148,13 @@
     // Input
     const keys = {};
     window.addEventListener('keydown', (e) => {
-      keys[e.key.toLowerCase()] = true;
+      const key = e.key.toLowerCase();
+      keys[key] = true;
 
-      // Jump input with single press handling
-      if ([' ', 'arrowup', 'w'].includes(e.key.toLowerCase())) {
-        if (!e.repeat) {
+      // Jump input with per-press lock
+      if (key === ' ' || key === 'arrowup' || key === 'w') {
+        if (!jumpLock) {
+          jumpLock = true;
           if (player.grounded) {
             // First jump
             player.vy = JUMP_FORCE;
@@ -163,9 +167,15 @@
         }
       }
 
-      if (e.key.toLowerCase() === 'r') resetGame();
+      if (key === 'r') resetGame();
     });
-    window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
+    window.addEventListener('keyup', (e) => {
+      const key = e.key.toLowerCase();
+      keys[key] = false;
+      if (key === ' ' || key === 'arrowup' || key === 'w') {
+        jumpLock = false;
+      }
+    });
 
     // Reset
     function resetGame() {
@@ -176,6 +186,7 @@
       player.vy = 0;
       player.grounded = false;
       player.doubleJumpAvailable = true;
+      jumpLock = false;
       goal.reached = false;
       victoryScreen.style.display = 'none';
     }
@@ -188,7 +199,6 @@
     }
 
     // Update physics
-    let lastTime = performance.now();
     function update(dt) {
       if (goal.reached) return;
 
@@ -274,28 +284,25 @@
       ctx.fillStyle = '#00ff6b';
       ctx.fillRect(goal.x, goal.y, goal.width, goal.height);
 
-      // Draw player (simple rectangle)
+      // Draw player (simple block)
       ctx.fillStyle = player.color;
       ctx.fillRect(player.x, player.y, player.width, player.height);
 
-      // HUD line or debug could go here
+      // You can add more neon glow or simple shadow if desired
     }
 
-    // Main loop
+    // Animation loop
+    let last = performance.now();
     function loop(now) {
-      const dt = Math.min(32, now - lastTime); // ms since last frame
-      lastTime = now;
-
+      const dt = Math.min(0.033, (now - last) / 1000);
+      last = now;
       update(dt);
       render();
-
       requestAnimationFrame(loop);
     }
-
-    // Start loop when page is ready
     requestAnimationFrame(loop);
 
-    // Optional: restart button
+    // Restart button
     restartBtn.addEventListener('click', resetGame);
   </script>
 </body>
