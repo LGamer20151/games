@@ -1,132 +1,18 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JS Neural Network</title>
-    <style>
-        body {
-            font-family: monospace;
-            background-color: #0d1117;
-            color: #7ee787;
-            padding: 30px;
-        }
-        h1 { color: #58a6ff; font-family: sans-serif; }
-        #status { color: #e3b341; font-size: 16px; font-weight: bold; }
-        #output { white-space: pre-wrap; line-height: 1.5; font-size: 14px; margin-top: 20px; }
-    </style>
-</head>
-<body>
+import { GoogleGenAI } from "@google/genai";
 
-    <h1>🧠 Live JS Neural Network</h1>
-    <div id="status">Initializing network configuration...</div>
-    <hr>
-    <div id="output"></div>
+// Initialize the API with your secret key
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-    <script>
-        const outputDiv = document.getElementById('output');
-        const statusDiv = document.getElementById('status');
-        const log = (text) => outputDiv.textContent += text + "\n";
+async function askAIWithGoogle(userQuery) {
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.0-flash', // A fast, powerful model
+    contents: userQuery,
+    config: {
+      // This line tells Gemini to use Google Search before answering!
+      tools: [{ googleSearch: {} }], 
+    },
+  });
 
-        // 1. Activation functions
-        const sigmoid = (x) => 1 / (1 + Math.exp(-x));
-        const sigmoidDerivative = (y) => y * (1 - y);
-
-        const dotProduct = (vecA, vecB) => vecA.reduce((sum, val, i) => sum + val * vecB[i], 0);
-        const randomWeight = () => Math.random() * 2 - 1;
-
-        // 2. Correctly formatted Training Data arrays
-        const trainingData = [
-            { input:, output: [0] },
-            { input:, output: [1] },
-            { input:, output: [1] },
-            { input:, output: [0] }
-        ];
-
-        const inputNodes = 2;
-        const hiddenNodes = 3;
-        const outputNodes = 1;
-        const learningRate = 0.5;
-        const totalEpochs = 20000;
-
-        let weightsInputHidden = Array.from({ length: hiddenNodes }, () => Array.from({ length: inputNodes }, randomWeight));
-        let weightsHiddenOutput = Array.from({ length: outputNodes }, () => Array.from({ length: hiddenNodes }, randomWeight));
-
-        let biasHidden = Array.from({ length: hiddenNodes }, randomWeight);
-        let biasOutput = Array.from({ length: outputNodes }, randomWeight);
-
-        async function trainNetwork() {
-            // Short delay to ensure browser finishes rendering text changes
-            await new Promise(resolve => setTimeout(resolve, 200));
-
-            for (let epoch = 0; epoch <= totalEpochs; epoch++) {
-                
-                if (epoch % 500 === 0) {
-                    statusDiv.textContent = `⚡ Training network... Progress: ${epoch} / ${totalEpochs} epochs`;
-                    await new Promise(resolve => setTimeout(resolve, 1)); 
-                }
-
-                for (const data of trainingData) {
-                    // --- FORWARD PROPAGATION ---
-                    let hiddenOutputs = [];
-                    for (let h = 0; h < hiddenNodes; h++) {
-                        let sum = dotProduct(data.input, weightsInputHidden[h]) + biasHidden[h];
-                        hiddenOutputs.push(sigmoid(sum));
-                    }
-
-                    let finalOutputs = [];
-                    for (let o = 0; o < outputNodes; o++) {
-                        let sum = dotProduct(hiddenOutputs, weightsHiddenOutput[o]) + biasOutput[o];
-                        finalOutputs.push(sigmoid(sum));
-                    }
-
-                    // --- BACKPROPAGATION ---
-                    let outputErrors = [];
-                    let outputGradients = [];
-                    for (let o = 0; o < outputNodes; o++) {
-                        let error = data.output[o] - finalOutputs[o];
-                        outputErrors.push(error);
-                        outputGradients.push(error * sigmoidDerivative(finalOutputs[o]));
-                    }
-
-                    let hiddenErrors = new Array(hiddenNodes).fill(0);
-                    let hiddenGradients = [];
-                    for (let h = 0; h < hiddenNodes; h++) {
-                        for (let o = 0; o < outputNodes; o++) {
-                            hiddenErrors[h] += outputGradients[o] * weightsHiddenOutput[o][h];
-                        }
-                        hiddenGradients.push(hiddenErrors[h] * sigmoidDerivative(hiddenOutputs[h]));
-                    }
-
-                    // --- UPDATE WEIGHTS & BIASES ---
-                    for (let o = 0; o < outputNodes; o++) {
-                        for (let h = 0; h < hiddenNodes; h++) {
-                            weightsHiddenOutput[o][h] += learningRate * outputGradients[o] * hiddenOutputs[h];
-                        }
-                        biasOutput[o] += learningRate * outputGradients[o];
-                    }
-
-                    for (let h = 0; h < hiddenNodes; h++) {
-                        for (let i = 0; i < inputNodes; i++) {
-                            weightsInputHidden[h][i] += learningRate * hiddenGradients[h] * data.input[i];
-                        }
-                        biasHidden[h] += learningRate * hiddenGradients[h];
-                    }
-                }
-            }
-
-            statusDiv.textContent = "✅ Training Complete!";
-            statusDiv.style.color = "#7ee787";
-            
-            log("--- AI Evaluation Results ---");
-            trainingData.forEach(data => {
-                let hiddenOutputs = weightsInputHidden.map((weights, h) => sigmoid(dotProduct(data.input, weights) + biasHidden[h]));
-                let finalOutputs = weightsHiddenOutput.map((weights, o) => sigmoid(dotProduct(hiddenOutputs, weights) + biasOutput[o]));
-                log(`Input: [${data.input.join(', ')}] -> Target: [${data.output}] -> AI Guess: [${finalOutputs[0].toFixed(4)}]`);
-            });
-        }
-
-        trainNetwork();
-    </script>
-</body>
-</html>
+  // This is the final text answer backed by Google Search
+  return response.text; 
+}
