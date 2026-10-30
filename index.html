@@ -12,7 +12,9 @@
     header p { max-width:640px; margin:0 auto; color:#a6adc8; font-size:17px; }
     .stats { margin-top:20px; font-size:14px; color:#89b4fa; letter-spacing:1px; text-transform:uppercase; }
     main { max-width:1200px; margin:0 auto; padding:40px 20px; }
-    h2 { font-size:24px; margin:0 0 20px; color:#fff; }
+    .section { margin-bottom:50px; }
+    .section h2 { font-size:26px; margin:0 0 6px; color:#fff; }
+    .section .intro { color:#a6adc8; font-size:15px; margin:0 0 20px; }
     .menu { display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:20px; }
     .card {
       display:flex; flex-direction:column; background:#313244; border-radius:12px;
@@ -26,8 +28,8 @@
       align-self:flex-start; margin-top:14px; font-size:12px; text-transform:uppercase;
       letter-spacing:1px; padding:4px 10px; border-radius:20px; background:#1e1e2e; color:#f9e2af;
     }
-    .how { margin-top:50px; background:#181825; border-radius:12px; padding:26px; }
-    .how h2 { font-size:20px; }
+    .how { margin-top:20px; background:#181825; border-radius:12px; padding:26px; }
+    .how h2 { font-size:20px; margin:0 0 12px; }
     .how ul { margin:0; padding-left:20px; color:#bac2de; }
     .how li { margin-bottom:8px; }
     footer { text-align:center; padding:24px; color:#6c7086; font-size:14px; border-top:1px solid #313244; }
@@ -37,53 +39,84 @@
   <header>
     <h1>My Game Site</h1>
     <p>Pick a game, play for a few minutes, and come back for more. Arcade action, puzzles, and a little strategy, all in one place.</p>
-    <div class="stats">8 games to play</div>
+    <div class="stats">8 games in 5 sections</div>
   </header>
 
   <main>
-    <h2>All Games</h2>
-    <div class="menu">
-      <a class="card" href="plinko.html">
-        <div class="title">Plinko</div>
-        <div class="desc">Drop discs through the pegs and watch where they land to win points.</div>
-        <span class="tag">Arcade</span>
-      </a>
-      <a class="card" href="snake.html">
-        <div class="title">Snake</div>
-        <div class="desc">Eat food, avoid walls and your own tail, and grow as long as you can.</div>
-        <span class="tag">Classic</span>
-      </a>
-      <a class="card" href="drift-boss.html">
-        <div class="title">Drift Boss</div>
-        <div class="desc">Slide around corners at speed and rack up points with every drift.</div>
-        <span class="tag">Driving</span>
-      </a>
-      <a class="card" href="obby.html">
-        <div class="title">Obby</div>
-        <div class="desc">Jump across platforms, dodge the gaps, and reach the flag at the top.</div>
-        <span class="tag">Platformer</span>
-      </a>
-      <a class="card" href="flappy-duck.html">
-        <div class="title">Flappy Duck</div>
-        <div class="desc">Flap through the pipe gaps. One tap at a time, see how far you get.</div>
-        <span class="tag">Arcade</span>
-      </a>
-      <a class="card" href="arua.html">
-        <div class="title">Arua</div>
-        <div class="desc">Bounce the brain off the kiwis and keep the ball in play.</div>
-        <span class="tag">Physics</span>
-      </a>
-      <a class="card" href="escape.html">
-        <div class="title">Escape Room</div>
-        <div class="desc">Solve a color lock, a wall code, a sliding puzzle, and find the key to get out.</div>
-        <span class="tag">Puzzle</span>
-      </a>
-      <a class="card" href="tictactoe.html">
-        <div class="title">Tic-Tac-Toe</div>
-        <div class="desc">Take on the computer in a quick round. Can you find a way to win?</div>
-        <span class="tag">Strategy</span>
-      </a>
-    </div>
+    <section class="section">
+      <h2>Arcade</h2>
+      <p class="intro">Fast rounds with simple controls and high scores to beat.</p>
+      <div class="menu">
+        <a class="card" href="plinko.html">
+          <div class="title">Plinko</div>
+          <div class="desc">Drop discs through the pegs and watch where they land to win points.</div>
+          <span class="tag">Arcade</span>
+        </a>
+        <a class="card" href="flappy-duck.html">
+          <div class="title">Flappy Duck</div>
+          <div class="desc">Flap through the pipe gaps. One tap at a time, see how far you get.</div>
+          <span class="tag">Arcade</span>
+        </a>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Driving</h2>
+      <p class="intro">Speed, drifts, and sharp corners.</p>
+      <div class="menu">
+        <a class="card" href="drift-boss.html">
+          <div class="title">Drift Boss</div>
+          <div class="desc">Slide around corners at speed and rack up points with every drift.</div>
+          <span class="tag">Driving</span>
+        </a>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Classic and Platform</h2>
+      <p class="intro">Timeless favorites and jumping challenges.</p>
+      <div class="menu">
+        <a class="card" href="snake.html">
+          <div class="title">Snake</div>
+          <div class="desc">Eat food, avoid walls and your own tail, and grow as long as you can.</div>
+          <span class="tag">Classic</span>
+        </a>
+        <a class="card" href="obby.html">
+          <div class="title">Obby</div>
+          <div class="desc">Jump across platforms, dodge the gaps, and reach the flag at the top.</div>
+          <span class="tag">Platformer</span>
+        </a>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Physics</h2>
+      <p class="intro">Bounce, aim, and watch the physics work.</p>
+      <div class="menu">
+        <a class="card" href="arua.html">
+          <div class="title">Arua</div>
+          <div class="desc">Bounce the brain off the kiwis and keep the ball in play.</div>
+          <span class="tag">Physics</span>
+        </a>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Puzzle and Strategy</h2>
+      <p class="intro">Think ahead, solve clues, and outplay the computer.</p>
+      <div class="menu">
+        <a class="card" href="escape.html">
+          <div class="title">Escape Room</div>
+          <div class="desc">Solve a color lock, a wall code, a sliding puzzle, and find the key to get out.</div>
+          <span class="tag">Puzzle</span>
+        </a>
+        <a class="card" href="tictactoe.html">
+          <div class="title">Tic-Tac-Toe</div>
+          <div class="desc">Take on the computer in a quick round. Can you find a way to win?</div>
+          <span class="tag">Strategy</span>
+        </a>
+      </div>
+    </section>
 
     <div class="how">
       <h2>How It Works</h2>
