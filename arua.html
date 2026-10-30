@@ -23,14 +23,14 @@ const ctx = canvas.getContext('2d');
 const scoreEl = document.getElementById('score');
 
 const W = canvas.width, H = canvas.height;
-const BIG_R = 45;       // radius of each big ball
+const BIG_R = 115;      // radius of each big ball (bigger, and they overlap in the middle)
 const BALL_R = 10;
 const GRAVITY = 0.25;
 
-// The two big balls stay still at the bottom left and bottom right
+// The two big balls stay still at the bottom, overlapping so the ball can't drop between them
 const spinners = [
-  { x: 130, y: H - 110, r: BIG_R, color: '#f38ba8' },
-  { x: W - 130, y: H - 110, r: BIG_R, color: '#89b4fa' }
+  { x: 200, y: H - 120, r: BIG_R, color: '#f38ba8' },
+  { x: 400, y: H - 120, r: BIG_R, color: '#89b4fa' }
 ];
 
 let ball, arua, gameOver, contact;
