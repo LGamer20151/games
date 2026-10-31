@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simon Says</title>
+  <style>
+    body { background:#0d0e12; color:#fff; font-family:Arial, sans-serif; text-align:center; margin:0; padding:20px; }
+    a { color:#89b4fa; }
+    #info { font-size:20px; margin:14px 0; min-height:28px; }
+    #board { display:grid; grid-template-columns:repeat(2, 150px); gap:16px; justify-content:center; margin:20px auto; }
+    .pad { width:150px; height:150px; border:none; border-radius:16px; cursor:pointer; opacity:0.45; transition:opacity 0.15s ease; }
+    .pad.lit { opacity:1; }
+    .pad:disabled { cursor:default; }
+    #green { background:#a6e3a1; }
+    #red { background:#f38ba8; }
+    #yellow { background:#f9e2af; }
+    #blue { background:#89b4fa; }
+    #start { margin-top:10px; padding:12px 26px; font-size:18px; border:none; border-radius:8px; background:#89b4fa; color:#0d0e12; font-weight:bold; cursor:pointer; }
+    #start:disabled { opacity:0.5; cursor:default; }
+  </style>
+</head>
+<body>
+  <a href="index.html">&larr; Back to menu</a>
+  <h1>Simon Says</h1>
+  <div id="info">Press Start to play</div>
+  <div id="board">
+    <button class="pad" id="green" data-color="green" disabled></button>
+    <button class="pad" id="red" data-color="red" disabled></button>
+    <button class="pad" id="yellow" data-color="yellow" disabled></button>
+    <button class="pad" id="blue" data-color="blue" disabled></button>
+  </div>
+  <button id="start">Start</button>
+<script>
+const COLORS = ['green', 'red', 'yellow', 'blue'];
+const info = document.getElementById('info');
+const startBtn = document.getElementById('start');
+const pads = document.querySelectorAll('.pad');
+
+let sequence = [];
+let playerIndex = 0;
+let acceptingInput = false;
+let best = 0;
+
+function flash(color) {
+  return new Promise(resolve => {
+    const el = document.getElementById(color);
+    el.classList.add('lit');
+    setTimeout(() => {
+      el.classList.remove('lit');
+      setTimeout(resolve, 150);
+    }, 400);
+  });
+}
+
+async function playSequence() {
+  acceptingInput = false;
+  pads.forEach(p => p.disabled = true);
+  info.textContent = 'Watch carefully...';
+  await new Promise(r => setTimeout(r, 600));
+  for (const color of sequence) {
+    await flash(color);
+  }
+  playerIndex = 0;
+  acceptingInput = true;
+  pads.forEach(p => p.disabled = false);
+  info.textContent = 'Your turn. Round ' + sequence.length;
+}
+
+function nextRound() {
+  sequence.push(COLORS[Math.floor(Math.random() * COLORS.length)]);
+  playSequence();
+}
+
+function gameOver() {
+  acceptingInput = false;
+  pads.forEach(p => p.disabled = true);
+  if (sequence.length - 1 > best) best = sequence.length - 1;
+  info.textContent = 'Game over! You reached round ' + (sequence.length - 1) + '. Best: ' + best;
+  startBtn.disabled = false;
+  startBtn.textContent = 'Play Again';
+}
+
+pads.forEach(pad => {
+  pad.addEventListener('click', async () => {
+    if (!acceptingInput) return;
+    const color = pad.dataset.color;
+    if (color !== sequence[playerIndex]) {
+      gameOver();
+      return;
+    }
+    playerIndex++;
+    await flash(color);
+    if (playerIndex === sequence.length) {
+      acceptingInput = false;
+      pads.forEach(p => p.disabled = true);
+      info.textContent = 'Nice! Get ready...';
+      setTimeout(nextRound, 800);
+    }
+  });
+});
+
+startBtn.addEventListener('click', () => {
+  sequence = [];
+  startBtn.disabled = true;
+  startBtn.textContent = 'Start';
+  nextRound();
+});
+</script>
+</body>
+</html>
