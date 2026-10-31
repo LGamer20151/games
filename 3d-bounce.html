@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Bounce</title>
+  <style>
+    body { margin:0; background:#0c0d18; color:#fff; font-family:Arial,sans-serif; text-align:center; }
+    a { color:#8af3ff; }
+    canvas { background:linear-gradient(#0d1e2f,#0a0d1b); border-radius:12px; width:min(92vw,900px); height:auto; display:block; margin:16px auto 0; }
+    #hud { margin-top:14px; font-size:20px; }
+    button { margin-top:16px; padding:12px 22px; font-size:18px; background:#8af3ff; border:none; border-radius:10px; cursor:pointer; font-weight:bold; }
+  </style>
+</head>
+<body>
+  <a href="index.html">&larr; Back to menu</a>
+  <h1>3D Bounce</h1>
+  <div id="hud">Score: 0</div>
+  <canvas id="game" width="900" height="520"></canvas>
+  <br>
+  <button onclick="resetGame()">Restart</button>
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const hud = document.getElementById('hud');
+    let player = { x: 0, y: 0, vy: 0 };
+    let blocks = [];
+    let score = 0;
+    let gameOver = false;
+
+    function resetGame() {
+      player = { x: 0, y: 0, vy: 0 };
+      blocks = [];
+      score = 0;
+      gameOver = false;
+      for (let i = 0; i < 18; i++) blocks.push({ x: (Math.random() - 0.5) * 5, y: -i * 0.7 - 0.5, z: 1 + i * 0.45, r: 22 + Math.random() * 18 });
+    }
+
+    function update(dt) {
+      if (gameOver) return;
+      score += dt * 30;
+      hud.textContent = 'Score: ' + Math.floor(score);
+      player.vy += 0.018;
+      player.y += player.vy;
+      if (player.y > 1) { player.y = 1; player.vy = -Math.abs(player.vy) * 0.7; }
+      if (player.y < -1.7) { player.y = -1.7; player.vy = 0; }
+      for (const block of blocks) {
+        block.z -= dt * 0.8;
+      }
+      blocks = blocks.filter(b => b.z > -0.6);
+      while (blocks.length < 18) {
+        blocks.push({ x: (Math.random() - 0.5) * 5, y: -3 - Math.random() * 2, z: 1.4 + Math.random() * 2, r: 24 + Math.random() * 12 });
+      }
+      for (const block of blocks) {
+        if (Math.abs(block.z) < 0.2 && Math.abs(block.x - player.x) < 0.7 && Math.abs(block.y - player.y) < 0.8) {
+          gameOver = true;
+        }
+      }
+    }
+
+    function project(x, y, z) {
+      const scale = 260 / (z + 6);
+      return { x: canvas.width/2 + x * scale, y: 300 + y * scale, s: scale };
+    }
+
+    function draw() {
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle = '#07111d';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      for (const block of blocks) {
+        const p = project(block.x, block.y, block.z);
+        ctx.fillStyle = '#7dd3fc';
+        ctx.fillRect(p.x - 18, p.y - 18, 36, 36);
+      }
+      const p = project(player.x, player.y, 0.2);
+      ctx.fillStyle = '#fff3a1';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 18, 0, Math.PI * 2);
+      ctx.fill();
+      if (gameOver) {
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 34px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Bounce Lost!', canvas.width/2, canvas.height/2);
+      }
+    }
+
+    function loop(ts) {
+      if (!loop.last) loop.last = ts;
+      const dt = Math.min((ts - loop.last) / 1000, 0.03);
+      loop.last = ts;
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') player.x -= 0.25;
+      if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') player.x += 0.25;
+      if (e.key === ' ' || e.key === 'ArrowUp' || e.key.toLowerCase() === 'w') {
+        if (player.y >= 0.7) player.vy = -0.8;
+      }
+    });
+
+    resetGame();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
