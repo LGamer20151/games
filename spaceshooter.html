@@ -1,77 +1,289 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Space Shooter</title>
-<style>body{background:#0d0e12;color:#fff;font-family:Arial,sans-serif;text-align:center;margin:0;padding:20px}a{color:#89b4fa}canvas{background:#05060a;border-radius:8px;max-width:100%}#info{font-size:20px;margin:12px 0;min-height:28px}button{margin-top:12px;padding:10px 22px;font-size:16px;border:none;border-radius:8px;background:#89b4fa;color:#0d0e12;font-weight:bold;cursor:pointer}</style></head><body>
-<a href="index.html">&larr; Back to menu</a><h1>Space Shooter</h1><div id="info"></div>
-<canvas id="c" width="480" height="420"></canvas><br><button id="btn">Restart</button>
-<script>
-const c=document.getElementById('c'),x=c.getContext('2d'),info=document.getElementById('info');
-const W=480,H=420;
-let ship,bullets,rocks,enemies,score,lives,over,frame,keys={l:false,r:false,f:false},lastShot;
-function reset(){
-  ship={x:W/2,y:H-40,w:36,h:20};
-  bullets=[];rocks=[];enemies=[];
-  score=0;lives=3;over=false;frame=0;lastShot=-100;
-}
-c.addEventListener('mousemove',e=>{const r=c.getBoundingClientRect();ship.x=(e.clientX-r.left)*W/r.width;});
-c.addEventListener('click',()=>{if(over)reset();else keys.f=true;});
-document.addEventListener('keydown',e=>{
-  if(e.code==='ArrowLeft'){keys.l=true;e.preventDefault();}
-  if(e.code==='ArrowRight'){keys.r=true;e.preventDefault();}
-  if(e.code==='Space'){e.preventDefault();if(over)reset();else keys.f=true;}
-});
-document.addEventListener('keyup',e=>{
-  if(e.code==='ArrowLeft')keys.l=false;
-  if(e.code==='ArrowRight')keys.r=false;
-  if(e.code==='Space')keys.f=false;
-});
-document.getElementById('btn').onclick=reset;
-function speedUp(){return 1+score/400;}
-function update(){
-  if(over)return;
-  frame++;
-  if(keys.l)ship.x-=6;
-  if(keys.r)ship.x+=6;
-  ship.x=Math.max(ship.w/2,Math.min(W-ship.w/2,ship.x));
-  if(keys.f&&frame-lastShot>12){bullets.push({x:ship.x,y:ship.y-12,r:3});lastShot=frame;}
-  for(const b of bullets)b.y-=9;
-  bullets=bullets.filter(b=>b.y>-10);
-  if(frame%Math.max(18,Math.floor(55/speedUp()))===0)
-    rocks.push({x:Math.random()*(W-30)+15,y:-20,r:12+Math.random()*12,vy:(1.5+Math.random()*1.5)*speedUp()});
-  if(frame%Math.max(120,Math.floor(300/speedUp()))===0)
-    enemies.push({x:Math.random()*(W-40)+20,y:-20,vx:(Math.random()<0.5?-1:1)*1.5,vy:1*speedUp(),shot:0});
-  for(const r of rocks)r.y+=r.vy;
-  for(const e of enemies){
-    e.x+=e.vx;e.y+=e.vy;
-    if(e.x<20||e.x>W-20)e.vx=-e.vx;
-    e.shot++;
-    if(e.shot>90){e.shot=0;rocks.push({x:e.x,y:e.y+10,r:5,vy:4*speedUp(),bad:true});}
-  }
-  for(const b of bullets){
-    for(const r of rocks){
-      if(!r.bad&&Math.hypot(b.x-r.x,b.y-r.y)<r.r+b.r){
-        r.dead=true;b.dead=true;score+=5;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>2048 Merge</title>
+  <style>
+    :root {
+      --bg-1: #050b18;
+      --bg-2: #0e1b2d;
+      --panel: rgba(14, 20, 31, 0.8);
+      --panel-strong: rgba(18, 27, 39, 0.96);
+      --line: rgba(148, 163, 184, 0.12);
+      --text: #edf5ff;
+      --muted: #b1bfd9;
+      --box: rgba(34, 43, 59, 0.9);
+      --accent-1: #87d6ff;
+      --accent-2: #c4b5fd;
+      --gold: #f8d98d;
+      --shadow: rgba(2, 6, 23, 0.58);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 28px 20px 40px;
+      background:
+        radial-gradient(circle at 15% 15%, rgba(34, 211, 238, 0.14), transparent 18%),
+        radial-gradient(circle at 85% 10%, rgba(167, 139, 250, 0.14), transparent 22%),
+        linear-gradient(180deg, var(--bg-1) 0%, var(--bg-2) 100%);
+      color: var(--text);
+      font-family: Arial, sans-serif;
+    }
+
+    .game {
+      width: min(100%, 480px);
+      background: rgba(12, 18, 30, 0.78);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      box-shadow: 0 18px 38px var(--shadow);
+      padding: 20px 18px 18px;
+      backdrop-filter: blur(10px);
+    }
+
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2.1rem, 4vw, 3.2rem);
+      letter-spacing: -0.06em;
+      line-height: 1;
+    }
+
+    .score-box {
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-radius: 14px;
+      padding: 9px 12px;
+      text-align: center;
+      min-width: 100px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+    }
+
+    .score-box .label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+    }
+
+    .score-box .value {
+      margin-top: 4px;
+      font-size: 1.8rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      color: var(--gold);
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      background: rgba(31, 41, 59, 0.72);
+      padding: 12px;
+      border-radius: 18px;
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+
+    .tile {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 14px;
+      font-weight: 800;
+      font-size: clamp(1.2rem, 4vw, 2.1rem);
+      background: rgba(80, 94, 113, 0.9);
+      color: #e6edf8;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+    }
+
+    .empty { opacity: 0.52; }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .menu-btn,
+    button {
+      flex: 1;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 800;
+      font-size: 1rem;
+      color: #0f172a;
+      background: linear-gradient(135deg, #8ec5ff, #d7e8ff);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 13px 10px;
+      box-shadow: 0 12px 18px rgba(142, 197, 255, 0.2);
+      transition: transform 0.15s ease, filter 0.15s ease;
+    }
+
+    .menu-btn:hover,
+    button:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.04);
+    }
+  </style>
+</head>
+<body>
+  <div class="game">
+    <div class="top">
+      <h1>2048 Merge</h1>
+      <div class="score-box">
+        <div class="label">Score</div>
+        <div class="value" id="score">0</div>
+      </div>
+    </div>
+    <div class="board" id="board"></div>
+    <div class="controls">
+      <button id="newgame">New Game</button>
+      <a class="menu-btn" href="index.html">Menu</a>
+    </div>
+  </div>
+
+  <script>
+    const size = 4;
+    let board = [];
+    let score = 0;
+
+    function emptyBoard() {
+      return Array.from({ length: size }, () => Array(size).fill(0));
+    }
+
+    function getEmptyCells() {
+      const cells = [];
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+          if (board[r][c] === 0) cells.push({ r, c });
+        }
+      }
+      return cells;
+    }
+
+    function addRandomTile() {
+      const empty = getEmptyCells();
+      if (!empty.length) return;
+      const cell = empty[Math.floor(Math.random() * empty.length)];
+      board[cell.r][cell.c] = Math.random() < 0.9 ? 2 : 4;
+    }
+
+    function resetGame() {
+      board = emptyBoard();
+      score = 0;
+      addRandomTile();
+      addRandomTile();
+      render();
+      updateScore();
+    }
+
+    function updateScore() {
+      document.getElementById('score').textContent = score;
+    }
+
+    function render() {
+      const boardEl = document.getElementById('board');
+      boardEl.innerHTML = '';
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+          const tile = document.createElement('div');
+          const value = board[r][c];
+          tile.className = 'tile' + (value ? '' : ' empty');
+          tile.textContent = value || '';
+          if (value) {
+            const colors = {
+              2: '#a5f3fc', 4: '#67e8f9', 8: '#7dd3fc', 16: '#93c5fd', 32: '#c4b5fd',
+              64: '#ddd6fe', 128: '#f9a8d4', 256: '#fca5a5', 512: '#fcd34d', 1024: '#fbbf24', 2048: '#fef08a'
+            };
+            tile.style.background = colors[value] || '#fef3c7';
+            tile.style.color = value <= 4 ? '#0f172a' : '#fff';
+          }
+          boardEl.appendChild(tile);
+        }
       }
     }
-    for(const e of enemies){
-      if(Math.abs(b.x-e.x)<16&&Math.abs(b.y-e.y)<12){
-        e.dead=true;b.dead=true;score+=20;
+
+    function slideLine(line) {
+      const filtered = line.filter(v => v !== 0);
+      const merged = [];
+      for (let i = 0; i < filtered.length; i++) {
+        if (filtered[i] === filtered[i + 1]) {
+          const mergedValue = filtered[i] * 2;
+          merged.push(mergedValue);
+          score += mergedValue;
+          i++;
+        } else {
+          merged.push(filtered[i]);
+        }
+      }
+      while (merged.length < size) merged.push(0);
+      return merged;
+    }
+
+    function move(dir) {
+      const oldBoard = JSON.stringify(board);
+      const newBoard = emptyBoard();
+
+      if (dir === 'left' || dir === 'right') {
+        for (let r = 0; r < size; r++) {
+          const row = [...board[r]];
+          const line = dir === 'left' ? row : row.slice().reverse();
+          const shifted = slideLine(line);
+          newBoard[r] = dir === 'left' ? shifted : shifted.slice().reverse();
+        }
+      } else {
+        for (let c = 0; c < size; c++) {
+          const column = [];
+          for (let r = 0; r < size; r++) column.push(board[r][c]);
+          const line = dir === 'up' ? column : column.slice().reverse();
+          const shifted = slideLine(line);
+          const finalLine = dir === 'up' ? shifted : shifted.slice().reverse();
+          for (let r = 0; r < size; r++) newBoard[r][c] = finalLine[r];
+        }
+      }
+
+      board = newBoard;
+      if (JSON.stringify(board) !== oldBoard) {
+        addRandomTile();
+        render();
+        updateScore();
       }
     }
-  }
-  bullets=bullets.filter(b=>!b.dead);
-  rocks=rocks.filter(r=>!r.dead&&r.y<H+30);
-  enemies=enemies.filter(e=>!e.dead&&e.y<H+30);
-  for(const r of rocks){
-    if(Math.hypot(r.x-ship.x,r.y-ship.y)<r.r+ship.w/2.5){
-      r.dead=true;lives--;
-    }
-  }
-  for(const e of enemies){
-    if(Math.abs(e.x-ship.x)<22&&Math.abs(e.y-ship.y)<18){e.dead=true;lives--;}
-  }
-  rocks=rocks.filter(r=>!r.dead);
-  enemies=enemies.filter(e=>!e.dead);
-  if(lives<=0){lives=0;over=true;}
-}
-function drawShip(){
-  x.fillStyle='#89b4fa';
-  x.beginPath();x.moveTo(ship.x,ship.y-14);x.lineTo(ship.x+18,ship.y+10);x.lineTo
+
+    document.addEventListener('keydown', event => {
+      const arrowMap = {
+        ArrowLeft: 'left',
+        ArrowRight: 'right',
+        ArrowUp: 'up',
+        ArrowDown: 'down'
+      };
+      const dir = arrowMap[event.key];
+      if (dir) {
+        event.preventDefault();
+        move(dir);
+      }
+    });
+
+    document.getElementById('newgame').addEventListener('click', resetGame);
+    resetGame();
+  </script>
+</body>
+</html>
