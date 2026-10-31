@@ -5,157 +5,292 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tic-Tac-Toe vs Computer</title>
   <style>
-    body { background:#1e1e2e; color:#fff; font-family:Arial, sans-serif; text-align:center; margin:0; padding:20px; }
-    a { color:#89b4fa; display:inline-block; margin-top:14px; }
-    h1 { margin-bottom:8px; }
-    #status { font-size:22px; min-height:32px; margin:12px 0; color:#f9e2af; }
-    #board { display:grid; grid-template-columns:repeat(3, 110px); gap:10px; justify-content:center; margin:0 auto; }
+    :root {
+      --bg-1: #060b1a;
+      --bg-2: #0d1324;
+      --panel: rgba(17, 24, 39, 0.82);
+      --panel-soft: rgba(28, 36, 52, 0.76);
+      --cell: rgba(78, 88, 108, 0.9);
+      --cell-hover: rgba(94, 105, 126, 0.92);
+      --line: rgba(148, 163, 184, 0.18);
+      --text: #edf5ff;
+      --muted: #a7b3d3;
+      --x: #8ec5ff;
+      --o: #ff8fb3;
+      --accent: #7dd3fc;
+      --accent-2: #c4b5fd;
+      --gold: #f8d98d;
+      --shadow: rgba(2, 6, 23, 0.6);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 24px 20px 40px;
+      background:
+        radial-gradient(circle at 15% 15%, rgba(34, 211, 238, 0.14), transparent 20%),
+        radial-gradient(circle at 85% 10%, rgba(167, 139, 250, 0.16), transparent 26%),
+        linear-gradient(180deg, var(--bg-1) 0%, var(--bg-2) 100%);
+      color: var(--text);
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+
+    .game-shell {
+      width: min(100%, 560px);
+      padding-top: 12px;
+    }
+
+    a {
+      display: inline-block;
+      margin: 0 0 18px;
+      color: #8ec5ff;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 1.05rem;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+
+    a:hover {
+      opacity: 0.9;
+      transform: translateX(-2px);
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(2.2rem, 4vw, 4rem);
+      letter-spacing: -0.06em;
+      line-height: 1.05;
+      color: #edf5ff;
+      text-shadow: 0 0 24px rgba(125, 211, 252, 0.22);
+    }
+
+    #status {
+      min-height: 40px;
+      margin: 4px 0 18px;
+      font-size: clamp(1.15rem, 2vw, 2rem);
+      font-weight: 700;
+      color: var(--gold);
+    }
+
+    #board {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(90px, 120px));
+      gap: 12px;
+      justify-content: center;
+      margin: 0 auto 20px;
+      width: fit-content;
+    }
+
     .cell {
-      width:110px; height:110px; border:none; border-radius:10px; background:#313244;
-      color:#fff; font-size:56px; font-weight:bold; cursor:pointer;
+      width: min(22vw, 120px);
+      height: min(22vw, 120px);
+      max-width: 120px;
+      max-height: 120px;
+      border: none;
+      border-radius: 16px;
+      background: var(--cell);
+      color: var(--text);
+      font-size: clamp(2.3rem, 5vw, 4rem);
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 8px 18px rgba(15, 18, 28, 0.22);
+      transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
     }
-    .cell:hover:not(:disabled) { background:#45475a; }
-    .cell:disabled { cursor:default; }
-    .cell.x { color:#89b4fa; }
-    .cell.o { color:#f38ba8; }
-    #scores { margin-top:18px; font-size:18px; color:#a6adc8; }
+
+    .cell:hover:not(:disabled) {
+      background: var(--cell-hover);
+      transform: translateY(-2px);
+    }
+
+    .cell:disabled {
+      cursor: default;
+    }
+
+    .cell.x { color: var(--x); }
+    .cell.o { color: var(--o); }
+
+    #scores {
+      margin: 8px 0 18px;
+      font-size: clamp(1.1rem, 2vw, 1.9rem);
+      color: var(--muted);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
     #restart {
-      margin-top:18px; padding:12px 26px; font-size:18px; border:none; border-radius:8px;
-      background:#89b4fa; color:#11111b; cursor:pointer; font-weight:bold;
+      margin-top: 4px;
+      border: none;
+      border-radius: 12px;
+      padding: 16px 28px;
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #8ec5ff, #b9d9ff);
+      color: #111827;
+      cursor: pointer;
+      box-shadow: 0 10px 18px rgba(120, 160, 255, 0.28);
+      transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
     }
-    #restart:hover { background:#b4befe; }
+
+    #restart:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 22px rgba(120, 160, 255, 0.32);
+      filter: brightness(1.04);
+    }
+
+    @media (max-width: 520px) {
+      body {
+        padding-top: 18px;
+      }
+
+      #board {
+        gap: 10px;
+      }
+
+      .cell {
+        width: 86px;
+        height: 86px;
+      }
+    }
   </style>
 </head>
 <body>
-  <a href="index.html">&larr; Back to menu</a>
-  <h1>Tic-Tac-Toe vs Computer</h1>
-  <div id="status">Your turn. You are X.</div>
-  <div id="board"></div>
-  <div id="scores">You: 0 &nbsp;|&nbsp; Computer: 0 &nbsp;|&nbsp; Draws: 0</div>
-  <button id="restart">New Game</button>
+  <div class="game-shell">
+    <a href="index.html">&larr; Back to menu</a>
+    <h1>Tic-Tac-Toe vs Computer</h1>
+    <div id="status">Your turn. You are X.</div>
+    <div id="board"></div>
+    <div id="scores">You: 0 &nbsp;|&nbsp; Computer: 0 &nbsp;|&nbsp; Draws: 0</div>
+    <button id="restart">New Game</button>
+  </div>
 
-<script>
-const LINES = [
-  [0, 1, 2], [3, 4, 5], [6, 7, 8],
-  [0, 3, 6], [1, 4, 7], [2, 5, 8],
-  [0, 4, 8], [2, 4, 6]
-];
+  <script>
+    const LINES = [
+      [0, 1, 2], [3, 4, 5], [6, 7, 8],
+      [0, 3, 6], [1, 4, 7], [2, 5, 8],
+      [0, 4, 8], [2, 4, 6]
+    ];
 
-const boardEl = document.getElementById('board');
-const statusEl = document.getElementById('status');
-const scoresEl = document.getElementById('scores');
+    const boardEl = document.getElementById('board');
+    const statusEl = document.getElementById('status');
+    const scoresEl = document.getElementById('scores');
 
-let board = [];
-let gameOver = false;
-let stats = { you: 0, computer: 0, draws: 0 };
+    let board = [];
+    let gameOver = false;
+    let stats = { you: 0, computer: 0, draws: 0 };
 
-// Returns 'X', 'O', 'draw', or null if the game is still running
-function getWinner(b) {
-  for (const [a, c, d] of LINES) {
-    if (b[a] && b[a] === b[c] && b[a] === b[d]) return b[a];
-  }
-  return b.every(Boolean) ? 'draw' : null;
-}
-
-// Scores a board from the computer's point of view (O)
-function minimax(b, depth, isComputer) {
-  const w = getWinner(b);
-  if (w === 'O') return 10 - depth;
-  if (w === 'X') return depth - 10;
-  if (w === 'draw') return 0;
-
-  let best = isComputer ? -Infinity : Infinity;
-  for (let i = 0; i < 9; i++) {
-    if (!b[i]) {
-      b[i] = isComputer ? 'O' : 'X';
-      const score = minimax(b, depth + 1, !isComputer);
-      b[i] = '';
-      best = isComputer ? Math.max(best, score) : Math.min(best, score);
-    }
-  }
-  return best;
-}
-
-function computerMove() {
-  let bestScore = -Infinity;
-  let bestMove = -1;
-  for (let i = 0; i < 9; i++) {
-    if (!board[i]) {
-      board[i] = 'O';
-      const score = minimax(board, 0, false);
-      board[i] = '';
-      if (score > bestScore) {
-        bestScore = score;
-        bestMove = i;
+    // Returns 'X', 'O', 'draw', or null if the game is still running
+    function getWinner(b) {
+      for (const [a, c, d] of LINES) {
+        if (b[a] && b[a] === b[c] && b[a] === b[d]) return b[a];
       }
+      return b.every(Boolean) ? 'draw' : null;
     }
-  }
-  if (bestMove !== -1) board[bestMove] = 'O';
-}
 
-function render() {
-  const cells = boardEl.querySelectorAll('.cell');
-  cells.forEach((cell, i) => {
-    cell.textContent = board[i];
-    cell.className = 'cell' + (board[i] ? ' ' + board[i].toLowerCase() : '');
-    cell.disabled = gameOver || board[i] !== '';
-  });
-  scoresEl.innerHTML =
-    'You: ' + stats.you + ' &nbsp;|&nbsp; Computer: ' + stats.computer +
-    ' &nbsp;|&nbsp; Draws: ' + stats.draws;
-}
+    // Scores a board from the computer's point of view (O)
+    function minimax(b, depth, isComputer) {
+      const w = getWinner(b);
+      if (w === 'O') return 10 - depth;
+      if (w === 'X') return depth - 10;
+      if (w === 'draw') return 0;
 
-function finish(result) {
-  gameOver = true;
-  if (result === 'X') {
-    stats.you++;
-    statusEl.textContent = 'You win! Nice play.';
-  } else if (result === 'O') {
-    stats.computer++;
-    statusEl.textContent = 'The computer wins this round.';
-  } else {
-    stats.draws++;
-    statusEl.textContent = 'It is a draw.';
-  }
-  render();
-}
+      let best = isComputer ? -Infinity : Infinity;
+      for (let i = 0; i < 9; i++) {
+        if (!b[i]) {
+          b[i] = isComputer ? 'O' : 'X';
+          const score = minimax(b, depth + 1, !isComputer);
+          b[i] = '';
+          best = isComputer ? Math.max(best, score) : Math.min(best, score);
+        }
+      }
+      return best;
+    }
 
-function playerClick(i) {
-  if (gameOver || board[i]) return;
-  board[i] = 'X';
+    function computerMove() {
+      let bestScore = -Infinity;
+      let bestMove = -1;
+      for (let i = 0; i < 9; i++) {
+        if (!board[i]) {
+          board[i] = 'O';
+          const score = minimax(board, 0, false);
+          board[i] = '';
+          if (score > bestScore) {
+            bestScore = score;
+            bestMove = i;
+          }
+        }
+      }
+      if (bestMove !== -1) board[bestMove] = 'O';
+    }
 
-  let result = getWinner(board);
-  if (result) return finish(result);
+    function render() {
+      const cells = boardEl.querySelectorAll('.cell');
+      cells.forEach((cell, i) => {
+        cell.textContent = board[i];
+        cell.className = 'cell' + (board[i] ? ' ' + board[i].toLowerCase() : '');
+        cell.disabled = gameOver || board[i] !== '';
+      });
+      scoresEl.innerHTML =
+        'You: ' + stats.you + ' &nbsp;|&nbsp; Computer: ' + stats.computer +
+        ' &nbsp;|&nbsp; Draws: ' + stats.draws;
+    }
 
-  statusEl.textContent = 'Computer is thinking...';
-  render();
+    function finish(result) {
+      gameOver = true;
+      if (result === 'X') {
+        stats.you++;
+        statusEl.textContent = 'You win! Nice play.';
+      } else if (result === 'O') {
+        stats.computer++;
+        statusEl.textContent = 'The computer wins this round.';
+      } else {
+        stats.draws++;
+        statusEl.textContent = 'It is a draw.';
+      }
+      render();
+    }
 
-  setTimeout(() => {
-    computerMove();
-    result = getWinner(board);
-    if (result) return finish(result);
-    statusEl.textContent = 'Your turn. You are X.';
-    render();
-  }, 400);
-}
+    function playerClick(i) {
+      if (gameOver || board[i]) return;
+      board[i] = 'X';
 
-function newGame() {
-  board = ['', '', '', '', '', '', '', '', ''];
-  gameOver = false;
-  statusEl.textContent = 'Your turn. You are X.';
-  render();
-}
+      let result = getWinner(board);
+      if (result) return finish(result);
 
-// Build the 9 cells once
-for (let i = 0; i < 9; i++) {
-  const btn = document.createElement('button');
-  btn.className = 'cell';
-  btn.addEventListener('click', () => playerClick(i));
-  boardEl.appendChild(btn);
-}
+      statusEl.textContent = 'Computer is thinking...';
+      render();
 
-document.getElementById('restart').addEventListener('click', newGame);
-newGame();
-</script>
+      setTimeout(() => {
+        computerMove();
+        result = getWinner(board);
+        if (result) return finish(result);
+        statusEl.textContent = 'Your turn. You are X.';
+        render();
+      }, 400);
+    }
+
+    function newGame() {
+      board = ['', '', '', '', '', '', '', '', ''];
+      gameOver = false;
+      statusEl.textContent = 'Your turn. You are X.';
+      render();
+    }
+
+    for (let i = 0; i < 9; i++) {
+      const btn = document.createElement('button');
+      btn.className = 'cell';
+      btn.addEventListener('click', () => playerClick(i));
+      boardEl.appendChild(btn);
+    }
+
+    document.getElementById('restart').addEventListener('click', newGame);
+    newGame();
+  </script>
 </body>
 </html>
