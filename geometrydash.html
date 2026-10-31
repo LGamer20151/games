@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Geometry Dash</title>
+  <style>
+    body { background:#0d0e12; color:#fff; font-family:Arial, sans-serif; text-align:center; margin:0; padding:20px; }
+    a { color:#89b4fa; }
+    #info { font-size:20px; margin:14px 0; min-height:28px; }
+    canvas { background:#1c1d24; border-radius:12px; max-width:100%; cursor:pointer; touch-action:manipulation; }
+    #reset { margin-top:16px; padding:12px 26px; font-size:18px; border:none; border-radius:8px; background:#89b4fa; color:#0d0e12; font-weight:bold; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <a href="index.html">&larr; Back to menu</a>
+  <h1>Geometry Dash</h1>
+  <div id="info">Press Space, Up, or click to jump</div>
+  <canvas id="game" width="800" height="400"></canvas>
+  <br>
+  <button id="reset">Restart</button>
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const info = document.getElementById('info');
+const W = 800, H = 400, GROUND = 330, SIZE = 36, PX = 120;
+const GRAVITY = 0.8, JUMP = -13;
+
+let py, vy, onGround, angle, obs, speed, dist, spawnIn, alive, started, frame = 0;
+
+function reset() {
+  py = GROUND - SIZE;
+  vy = 0;
+  onGround = true;
+  angle = 0;
+  obs = [];
+  speed = 6;
+  dist = 0;
+  spawnIn = 300;
+  alive = true;
+  started = false;
+  info.textContent = 'Press Space, Up, or click to jump';
+}
+
+function spawn() {
+  const type = Math.random() < 0.5 ? 'spike' : 'block';
+  if (type === 'spike') {
+    obs.push({ x: W, type, w: 36, h: 36 });
+  } else {
+    const h = 36 + Math.floor(Math.random() * 2) * 36;
+    obs.push({ x: W, type, w: 48, h });
+  }
+  // Gap grows slightly with speed so the game stays fair
+  spawnIn = 260 + Math.random() * 220 + speed * 10;
+}
+
+function jump() {
+  if (!alive) return;
+  if (!started) started = true;
+  if (onGround) {
+    vy = JUMP;
+    onGround = false;
+  }
+}
+
+function update() {
+  if (!started || !alive) return;
+  frame++;
+  speed += 0.0008;
+  dist += speed;
+
+  spawnIn -= speed;
+  if (spawnIn <= 0) spawn();
+
+  vy += GRAVITY;
+  py += vy;
+  if (py >= GROUND - SIZE) {
+    py = GROUND - SIZE;
+    vy = 0;
+    onGround = true;
+  }
+
+  // Spin in the air, then snap to the nearest quarter turn on landing
+  if (!onGround) angle += 0.12;
+  else angle = Math.round(angle / (Math.PI / 2)) * (Math.PI / 2);
+
+  for (const o of obs) o.x -= speed;
+  obs = obs.filter(o => o.x + o.w > -10);
+
+  // Collision check with a slightly smaller hitbox for fairness
+  const pl = PX + 8, pr = PX + SIZE - 8, pt = py + 8, pb = py + SIZE;
+  for (const o of obs) {
+    const top = GROUND - o.h;
+    const l = o.x + 6, r = o.x + o.w - 6, t = top + 6, b = GROUND;
+    if (pr > l && pl < r && pb > t && pt < b) {
+      alive = false;
+      const score = Math.floor(dist / 10);
+      info.textContent = 'Crash! Distance: ' + score + '. Press Restart or click to try again.';
+      break;
+    }
+  }
+}
+
+function drawPlayer() {
+  ctx.save();
+  ctx.translate(PX + SIZE / 2, py + SIZE / 2);
+  ctx.rotate(angle);
+  ctx.fillStyle = '#f9e2af';
+  ctx.fillRect(-SIZE / 2, -SIZE / 2, SIZE, SIZE);
+  ctx.strokeStyle = '#0d0e12';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(-SIZE / 2 + 4, -SIZE / 2 + 4, SIZE - 8, SIZE - 8);
+  ctx.restore();
+}
+
+function drawObstacle(o) {
+  const top = GROUND - o.h;
+  if (o.type === 'spike') {
+    ctx.fillStyle = '#f38ba8';
+    ctx.beginPath();
+    ctx.moveTo(o.x, GROUND);
+    ctx.lineTo(o.x + o.w / 2, top);
+    ctx.lineTo(o.x + o.w, GROUND);
+    ctx.closePath();
+    ctx.fill();
+  } else {
+    ctx.fillStyle = '#a6e3a1';
+    ctx.fillRect(o.x, top, o.w, o.h);
+    ctx.strokeStyle = '#0d0e12';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(o.x + 3, top + 3, o.w - 6, o.h - 6);
+  }
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  // Background stripes that scroll with the speed
+  ctx.fillStyle = '#1c1d24';
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#23242d';
+  const offset = (dist * 0.5) % 80;
+  for (let x = -offset; x < W; x += 80) ctx.fillRect(x, 0, 40, GROUND);
+
+  // Ground
+  ctx.fillStyle = '#89b4fa';
+  ctx.fillRect(0, GROUND, W, H - GROUND);
+
+  for (const o of obs) drawObstacle(o);
+  drawPlayer();
+
+  ctx.fillStyle = '#fff';
+  ctx.font = '20px Arial';
+  ctx.textAlign = 'left';
+  ctx.fillText('Score: ' + Math.floor(dist / 10), 16, 30);
+
+  if (!started && alive) {
+    ctx.textAlign = 'center';
+    ctx.font = '22px Arial';
+    ctx.fillText('Press Space or click to start', W / 2, 120);
+  }
+  if (!alive) {
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 32px Arial';
+    ctx.fillText('Game Over', W / 2, 150);
+    ctx.font = '20px Arial';
+    ctx.fillText('Score: ' + Math.floor(dist / 10), W / 2, 185);
+  }
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space' || e.code === 'ArrowUp') {
+    e.preventDefault();
+    if (!alive) reset();
+    else jump();
+  }
+  if (e.code === 'KeyR') reset();
+});
+canvas.addEventListener('mousedown', () => { if (!alive) reset(); else jump(); });
+canvas.addEventListener('touchstart', e => { e.preventDefault(); if (!alive) reset(); else jump(); }, { passive: false });
+document.getElementById('reset').addEventListener('click', reset);
+
+reset();
+loop();
+</script>
+</body>
+</html>
