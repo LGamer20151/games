@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gravity Sandbox</title>
+  <style>
+    body {
+      margin: 0;
+      background: #0b1020;
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+    a { color: #a5d8ff; }
+    .wrap { display: inline-block; margin-top: 12px; }
+    canvas {
+      display: block;
+      width: min(94vw, 960px);
+      height: auto;
+      background: radial-gradient(circle at top, #1d2c46, #090d17 60%);
+      border-radius: 12px;
+      border: 2px solid rgba(255,255,255,0.12);
+      cursor: crosshair;
+    }
+    .hud {
+      display: flex;
+      justify-content: center;
+      gap: 18px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+      font-size: 18px;
+      color: #dfeaf9;
+    }
+    button {
+      margin-top: 12px;
+      padding: 10px 18px;
+      font-size: 18px;
+      border: none;
+      border-radius: 10px;
+      background: #8ec5ff;
+      color: #0b1020;
+      cursor: pointer;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <a href="index.html">&larr; Back to menu</a>
+  <h1>Gravity Sandbox</h1>
+  <div class="hud">
+    <div id="count">Particles: 0</div>
+    <div id="gravity">Gravity: 0.22</div>
+  </div>
+  <div class="wrap">
+    <canvas id="game" width="960" height="520"></canvas>
+  </div>
+  <br>
+  <button id="resetBtn">Reset</button>
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const countEl = document.getElementById('count');
+    const gravityEl = document.getElementById('gravity');
+    const resetBtn = document.getElementById('resetBtn');
+
+    let particles = [];
+    let gravity = 0.22;
+    let lastTime = 0;
+    let spawnMode = true;
+    let dragging = false;
+    let pointer = null;
+
+    function rand(min, max) {
+      return Math.random() * (max - min) + min;
+    }
+
+    function createParticle(x, y, vx = rand(-1.5, 1.5), vy = rand(-1.5, 1.5), radius = rand(6, 16), color = `hsl(${Math.random() * 360}, 80%, 65%)`) {
+      return { x, y, vx, vy, radius, color };
+    }
+
+    function seedScene() {
+      particles = [];
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      for (let i = 0; i < 22; i++) {
+        const angle = (Math.PI * 2 * i) / 22;
+        const r = 120 + Math.random() * 140;
+        particles.push(createParticle(
+          centerX + Math.cos(angle) * r,
+          centerY + Math.sin(angle) * r,
+          rand(-1.1, 1.1),
+          rand(-1.1, 1.1),
+          rand(6, 14),
+          `hsl(${(i * 19) % 360}, 80%, 68%)`
+        ));
+      }
+      gravityEl.textContent = `Gravity: ${gravity.toFixed(2)}`;
+    }
+
+    function addParticleAt(x, y) {
+      const p = createParticle(x, y, rand(-1.8, 1.8), rand(-1.8, 1.8), rand(6, 18));
+      particles.push(p);
+    }
+
+    function update(dt) {
+      const G = gravity;
+      const friction = 0.998;
+
+      for (let i = 0; i < particles.length; i++) {
+        const a = particles[i];
+        a.vy += G * dt * 60;
+
+        for (let j = i + 1; j < particles.length; j++) {
+          const b = particles[j];
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const distSq = dx * dx + dy * dy;
+          const minDist = a.radius + b.radius + 4;
+
+          if (distSq > 0 && distSq < (minDist * minDist) * 18) {
+            const dist = Math.sqrt(distSq) || 0.001;
+            const nx = dx / dist;
+            const ny = dy / dist;
+            const force = 0.045 / Math.max(dist, 26);
+            const ax = force * nx;
+            const ay = force * ny;
+            a.vx += ax * dt * 60;
+            a.vy += ay * dt * 60;
+            b.vx -= ax * dt * 60;
+            b.vy -= ay * dt * 60;
+          }
+        }
+
+        a.x += a.vx * dt * 60;
+        a.y += a.vy * dt * 60;
+
+        if (a.x - a.radius < 0) {
+          a.x = a.radius;
+          a.vx *= -0.82;
+        }
+        if (a.x + a.radius > canvas.width) {
+          a.x = canvas.width - a.radius;
+          a.vx *= -0.82;
+        }
+        if (a.y - a.radius < 0) {
+          a.y = a.radius;
+          a.vy *= -0.82;
+        }
+        if (a.y + a.radius > canvas.height) {
+          a.y = canvas.height - a.radius;
+          a.vy *= -0.82;
+          a.vx *= friction;
+        }
+      }
+
+      countEl.textContent = `Particles: ${particles.length}`;
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (const p of particles) {
+        ctx.beginPath();
+        ctx.fillStyle = p.color;
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      if (pointer) {
+        ctx.beginPath();
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.arc(pointer.x, pointer.y, 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function loop(ts) {
+      const dt = Math.min((ts - lastTime) / 1000 || 0.016, 0.03);
+      lastTime = ts;
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    canvas.addEventListener('pointerdown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+      if (spawnMode) {
+        addParticleAt(x, y);
+      } else {
+        dragging = true;
+        pointer = { x, y };
+      }
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+      pointer = { x, y };
+      if (dragging) {
+        for (const p of particles) {
+          const dist = Math.hypot(p.x - x, p.y - y);
+          if (dist < p.radius + 10) {
+            p.x = x;
+            p.y = y;
+            p.vx = 0;
+            p.vy = 0;
+          }
+        }
+      }
+    });
+
+    canvas.addEventListener('pointerup', () => {
+      dragging = false;
+      pointer = null;
+    });
+
+    canvas.addEventListener('dblclick', () => {
+      spawnMode = !spawnMode;
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'g' || e.key === 'G') {
+        gravity = gravity > 0.18 ? 0.1 : 0.22;
+        gravityEl.textContent = `Gravity: ${gravity.toFixed(2)}`;
+      }
+      if (e.key === 'r' || e.key === 'R') {
+        seedScene();
+      }
+      if (e.key === ' ') {
+        gravity = 0;
+        gravityEl.textContent = `Gravity: ${gravity.toFixed(2)}`;
+      }
+    });
+
+    resetBtn.addEventListener('click', () => {
+      seedScene();
+    });
+
+    seedScene();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
