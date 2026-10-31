@@ -1,0 +1,62 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Memory Match</title>
+<style>body{background:#0d0e12;color:#fff;font-family:Arial,sans-serif;text-align:center;margin:0;padding:20px}a{color:#89b4fa}#info{font-size:20px;margin:12px 0;min-height:28px}
+#board{display:grid;grid-template-columns:repeat(4,80px);gap:10px;justify-content:center;margin:0 auto}
+.card{width:80px;height:80px;border-radius:10px;background:#2a2b35;font-size:32px;font-weight:bold;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;transition:background 0.2s}
+.card.open{background:#f7f7f7;color:#0d0e12}.card.done{background:#2ecc71;color:#0d0e12;cursor:default}
+button{margin-top:16px;padding:10px 22px;font-size:16px;border:none;border-radius:8px;background:#89b4fa;color:#0d0e12;font-weight:bold;cursor:pointer}</style></head><body>
+<a href="index.html">&larr; Back to menu</a><h1>Memory Match</h1><div id="info"></div>
+<div id="board"></div><br><button id="btn">New Game</button>
+<script>
+const symbols=['A','B','C','D','E','F','G','H'];
+const board=document.getElementById('board'),info=document.getElementById('info');
+let cards,open,lock,moves,matches,timeLeft,timer,over;
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function start(){
+  clearInterval(timer);
+  const deck=shuffle([...symbols,...symbols]);
+  cards=deck.map((s,i)=>({s,id:i,el:null,state:'hidden'}));
+  board.innerHTML='';
+  cards.forEach(card=>{
+    const d=document.createElement('div');
+    d.className='card';
+    d.addEventListener('click',()=>flip(card));
+    card.el=d;board.appendChild(d);
+  });
+  open=[];lock=false;moves=0;matches=0;timeLeft=60;over=false;
+  timer=setInterval(()=>{
+    if(over)return;
+    timeLeft--;
+    if(timeLeft<=0){timeLeft=0;over=true;clearInterval(timer);render();}
+    render();
+  },1000);
+  render();
+}
+function flip(card){
+  if(over||lock||card.state!=='hidden')return;
+  card.state='open';open.push(card);
+  if(open.length===2){
+    moves++;lock=true;
+    const [a,b]=open;
+    if(a.s===b.s){
+      a.state=b.state='done';matches++;open=[];lock=false;
+      if(matches===8){over=true;clearInterval(timer);}
+    }else{
+      setTimeout(()=>{
+        a.state=b.state='hidden';open=[];lock=false;render();
+      },700);
+    }
+  }
+  render();
+}
+function render(){
+  for(const card of cards){
+    card.el.className='card'+(card.state==='open'?' open':card.state==='done'?' done':'');
+    card.el.textContent=card.state==='hidden'?'?':card.s;
+  }
+  if(matches===8)info.textContent='You won in '+moves+' moves with '+timeLeft+' seconds left!';
+  else if(timeLeft===0)info.textContent='Time is up! Matches: '+matches+' of 8';
+  else info.textContent='Time: '+timeLeft+'s | Moves: '+moves+' | Pairs: '+matches+'/8';
+}
+document.getElementById('btn').onclick=start;
+start();
+</script></body></html>
