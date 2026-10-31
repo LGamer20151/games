@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sliding Puzzle - Quick Play Arcade</title>
+  <title>Quick Play Arcade</title>
   <style>
     * { box-sizing:border-box; }
     html { scroll-behavior:smooth; }
@@ -15,29 +15,30 @@
     .sidebar a.home { color:#a1a1aa; }
     .dot { width:14px; height:14px; border-radius:50%; background:#fff; flex-shrink:0; }
     .divider { height:1px; background:#1f2027; margin:10px 0; }
-    .content { flex:1; min-width:0; display:flex; flex-direction:column; }
+    .content { flex:1; min-width:0; }
     header { padding:40px 30px 24px; border-bottom:1px solid #1f2027; }
-    header h1 { font-size:36px; margin:0 0 8px; }
-    header p { color:#a1a1aa; font-size:16px; max-width:640px; margin:0; }
-    main { padding:30px; max-width:900px; flex-grow:1; display:flex; flex-direction:column; align-items:flex-start; }
-    .game-container { background:#1c1d24; padding:24px; border-radius:16px; display:flex; flex-direction:column; align-items:center; gap:20px; box-shadow:0 10px 30px rgba(0,0,0,0.5); }
-    .board { display:grid; grid-template-columns:repeat(4, 80px); grid-template-rows:repeat(4, 80px); gap:8px; background:#0d0e12; padding:12px; border-radius:12px; }
-    .tile { background:#2a2b35; color:#fff; font-size:24px; font-weight:bold; display:flex; align-items:center; justify-content:center; border-radius:8px; cursor:pointer; user-select:none; transition:background 0.15s ease, transform 0.15s ease; }
-    .tile:hover { background:#3a3b45; }
-    .tile.empty { background:transparent; cursor:default; }
-    .controls { display:flex; gap:16px; align-items:center; width:100%; justify-content:space-between; }
-    .btn { background:#f9e2af; color:#0d0e12; border:none; padding:10px 20px; font-size:15px; font-weight:bold; border-radius:8px; cursor:pointer; transition:opacity 0.15s ease; }
-    .btn:hover { opacity:0.9; }
-    .stats-panel { font-size:15px; color:#a1a1aa; }
-    footer { text-align:center; padding:22px; color:#6e6e78; font-size:14px; border-top:1px solid #1f2027; margin-top:auto; }
+    header h1 { font-size:40px; margin:0 0 8px; }
+    header p { color:#a1a1aa; font-size:17px; max-width:640px; margin:0; }
+    .stats { margin-top:16px; font-size:13px; color:#a1a1aa; letter-spacing:1px; text-transform:uppercase; }
+    main { padding:30px; max-width:1100px; }
+    .section { margin-bottom:46px; scroll-margin-top:20px; }
+    .section h2 { font-size:26px; margin:0 0 6px; }
+    .section .intro { color:#a1a1aa; font-size:15px; margin:0 0 18px; }
+    .menu { display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:18px; }
+    .card { display:flex; flex-direction:column; background:#1c1d24; border-radius:12px; padding:20px; text-decoration:none; color:#fff; min-height:170px; transition:transform 0.15s ease, background 0.15s ease; }
+    .card:hover { background:#2a2b35; transform:translateY(-3px); }
+    .card .title { font-size:21px; font-weight:bold; margin-bottom:8px; }
+    .card .desc { font-size:15px; color:#c7c7cc; flex-grow:1; }
+    .card .tag { align-self:flex-start; margin-top:12px; font-size:11px; text-transform:uppercase; letter-spacing:1px; padding:4px 10px; border-radius:20px; background:#0d0e12; color:#f9e2af; }
+    footer { text-align:center; padding:22px; color:#6e6e78; font-size:14px; border-top:1px solid #1f2027; }
     @media (max-width:760px) {
       .layout { flex-direction:column; }
       .sidebar { width:100%; height:auto; position:static; border-right:none; border-bottom:1px solid #1f2027; }
       .sidebar nav { display:flex; flex-wrap:wrap; }
       .sidebar a { padding:10px 14px; font-size:15px; }
       .divider { display:none; }
-      header h1 { font-size:28px; }
-      main { padding:20px; align-items:center; }
+      header h1 { font-size:30px; }
+      main { padding:20px; }
     }
   </style>
 </head>
@@ -45,30 +46,148 @@
   <div class="layout">
     <aside class="sidebar">
       <nav>
-        <a class="home" href="index.html"><span class="dot"></span>Home</a>
+        <a class="home" href="#top"><span class="dot"></span>Home</a>
         <div class="divider"></div>
-        <a href="index.html#arcade"><span class="dot"></span>Arcade</a>
-        <a href="index.html#driving"><span class="dot"></span>Driving</a>
-        <a href="index.html#classic"><span class="dot"></span>Classic</a>
-        <a href="index.html#physics"><span class="dot"></span>Physics</a>
-        <a href="index.html#puzzle"><span class="dot"></span>Puzzle and Strategy</a>
+        <a href="#arcade"><span class="dot"></span>Arcade</a>
+        <a href="#driving"><span class="dot"></span>Driving</a>
+        <a href="#classic"><span class="dot"></span>Classic</a>
+        <a href="#physics"><span class="dot"></span>Physics</a>
+        <a href="#puzzle"><span class="dot"></span>Puzzle and Strategy</a>
       </nav>
     </aside>
 
-    <div class="content">
+    <div class="content" id="top">
       <header>
-        <h1>Sliding Puzzle</h1>
-        <p>Order the numbered tiles from 1 to 15 by sliding them into the empty space. Think ahead to solve it in the fewest moves.</p>
+        <h1>Quick Play Arcade</h1>
+        <p>Pick a game, play for a few minutes, and come back for more. Arcade action, puzzles, and a little strategy, all in one place.</p>
+        <div class="stats">22 games in 5 categories</div>
       </header>
 
       <main>
-        <div class="game-container">
-          <div class="controls">
-            <button class="btn" id="shuffleBtn">Shuffle Game</button>
-            <div class="stats-panel">Moves: <span id="moveCount">0</span></div>
+        <section class="section" id="arcade">
+          <h2>Arcade</h2>
+          <p class="intro">Fast rounds with simple controls and high scores to beat.</p>
+          <div class="menu">
+            <a class="card" href="plinko.html">
+              <div class="title">Plinko</div>
+              <div class="desc">Drop discs through the pegs and watch where they land to win points.</div>
+              <span class="tag">Arcade</span>
+            </a>
+            <a class="card" href="flappy-duck.html">
+              <div class="title">Flappy Duck</div>
+              <div class="desc">Flap through the pipe gaps. One tap at a time, see how far you get.</div>
+              <span class="tag">Arcade</span>
+            </a>
+            <a class="card" href="whackamole.html">
+              <div class="title">Whack-a-Mole</div>
+              <div class="desc">Whack the moles as they pop up before the 30 seconds run out.</div>
+              <span class="tag">Arcade</span>
+            </a>
+            <a class="card" href="geometrydash.html">
+              <div class="title">Geometry Dash</div>
+              <div class="desc">Jump over spikes and blocks as the speed keeps climbing. How far can you get?</div>
+              <span class="tag">Arcade</span>
+            </a>
+            <a class="card" href="brickbreaker.html">
+              <div class="title">Brick Breaker</div>
+              <div class="desc">Bounce a ball off your paddle and smash rows of bricks before you run out of lives.</div>
+              <span class="tag">Arcade</span>
+            </a>
+            <a class="card" href="spaceshooter.html">
+              <div class="title">Space Shooter</div>
+              <div class="desc">Pilot your ship, dodge asteroids, and blast enemies as they get faster.</div>
+              <span class="tag">Arcade</span>
+            </a>
           </div>
-          <div class="board" id="puzzleBoard"></div>
-        </div>
+        </section>
+
+        <section class="section" id="driving">
+          <h2>Driving</h2>
+          <p class="intro">Speed, drifts, and sharp corners.</p>
+          <div class="menu">
+            <a class="card" href="drift-boss.html">
+              <div class="title">Drift Boss</div>
+              <div class="desc">Slide around corners at speed and rack up points with every drift.</div>
+              <span class="tag">Driving</span>
+            </a>
+            <a class="card" href="hillclimb.html">
+              <div class="title">Hill Climb</div>
+              <div class="desc">Drive over bumpy hills, manage your fuel, and land on your wheels to go farther.</div>
+              <span class="tag">Driving</span>
+            </a>
+            <a class="card" href="parking.html">
+              <div class="title">Parking Challenge</div>
+              <div class="desc">Squeeze into the tight spot before time runs out. Park straight for a bonus.</div>
+              <span class="tag">Driving</span>
+            </a>
+            <a class="card" href="motorcyclerave.html">
+              <div class="title">Motorcycle Rave</div>
+              <div class="desc">Ride a neon motorcycle, collect glowing orbs, and outpace the computer rider.</div>
+              <span class="tag">Driving</span>
+            </a>
+          </div>
+        </section>
+
+        <section class="section" id="classic">
+          <h2>Classic and Platform</h2>
+          <p class="intro">Timeless favorites and jumping challenges.</p>
+          <div class="menu">
+            <a class="card" href="snake.html">
+              <div class="title">Snake</div>
+              <div class="desc">Eat food, avoid walls and your own tail, and grow as long as you can.</div>
+              <span class="tag">Classic</span>
+            </a>
+            <a class="card" href="simonsays.html">
+              <div class="title">Simon Says</div>
+              <div class="desc">Watch the colors light up, then repeat the sequence. Each round adds one more step.</div>
+              <span class="tag">Classic</span>
+            </a>
+            <a class="card" href="obby.html">
+              <div class="title">Obby</div>
+              <div class="desc">Jump across platforms, dodge the gaps, and reach the flag at the top.</div>
+              <span class="tag">Platformer</span>
+            </a>
+            <a class="card" href="pacman.html">
+              <div class="title">Pac-Man Style Maze</div>
+              <div class="desc">Chomp pellets, dodge glowing ghosts, and grab power pellets to turn the tables.</div>
+              <span class="tag">Classic</span>
+            </a>
+          </div>
+        </section>
+
+        <section class="section" id="physics">
+          <h2>Physics</h2>
+          <p class="intro">Gravity, momentum, and balance.</p>
+          <div class="menu">
+            <a class="card" href="tower-stack.html">
+              <div class="title">Tower Stack</div>
+              <div class="desc">Drop moving blocks precisely on top of each other to build the highest tower.</div>
+              <span class="tag">Physics</span>
+            </a>
+            <a class="card" href="ragdoll.html">
+              <div class="title">Ragdoll Swing</div>
+              <div class="desc">Swing from anchor point to anchor point using momentum and timing.</div>
+              <span class="tag">Physics</span>
+            </a>
+          </div>
+        </section>
+
+        <section class="section" id="puzzle">
+          <h2>Puzzle and Strategy</h2>
+          <p class="intro">Think ahead and solve the board.</p>
+          <div class="menu">
+            <a class="card" href="tictactoe.html">
+              <div class="title">Tic Tac Toe</div>
+              <div class="desc">Classic X and O strategy against a smart computer or a friend.</div>
+              <span class="tag">Puzzle</span>
+            </a>
+            <a class="card" href="memory.html">
+              <div class="title">Card Match</div>
+              <div class="desc">Flip cards over and find matching pairs in the fewest moves possible.</div>
+              <span class="tag">Puzzle</span>
+            </a>
+          </div>
+        </section>
       </main>
 
       <footer>
@@ -76,95 +195,5 @@
       </footer>
     </div>
   </div>
-
-  <script>
-    const board = document.getElementById('puzzleBoard');
-    const shuffleBtn = document.getElementById('shuffleBtn');
-    const moveCountElem = document.getElementById('moveCount');
-
-    let tiles = [];
-    let emptyIndex = 15;
-    let moves = 0;
-
-    function initGame() {
-      tiles = Array.from({length: 15}, (_, i) => i + 1);
-      tiles.push(""); // Empty slot
-      moves = 0;
-      moveCountElem.textContent = moves;
-      shuffleTiles();
-      renderBoard();
-    }
-
-    function shuffleTiles() {
-      // Simple valid shuffle by making random moves
-      for (let i = 0; i < 100; i++) {
-        const validMoves = getValidMoves(emptyIndex);
-        const randomMove = validMoves[Math.floor(Math.random() * validMoves.length)];
-        swap(emptyIndex, randomMove);
-        emptyIndex = randomMove;
-      }
-      moves = 0;
-      moveCountElem.textContent = moves;
-    }
-
-    function getValidMoves(idx) {
-      const row = Math.floor(idx / 4);
-      const col = idx % 4;
-      const valid = [];
-      if (row > 0) valid.push(idx - 4);
-      if (row < 3) valid.push(idx + 4);
-      if (col > 0) valid.push(idx - 1);
-      if (col < 3) valid.push(idx + 1);
-      return valid;
-    }
-
-    function swap(i, j) {
-      const temp = tiles[i];
-      tiles[i] = tiles[j];
-      tiles[j] = temp;
-    }
-
-    function renderBoard() {
-      board.innerHTML = "";
-      tiles.forEach((tile, index) => {
-        const tileDiv = document.createElement('div');
-        tileDiv.classList.add('tile');
-        if (tile === "") {
-          tileDiv.classList.add('empty');
-        } else {
-          tileDiv.textContent = tile;
-          tileDiv.addEventListener('click', () => handleTileClick(index));
-        }
-        board.appendChild(tileDiv);
-      });
-    }
-
-    function handleTileClick(index) {
-      const validMoves = getValidMoves(emptyIndex);
-      if (validMoves.includes(index)) {
-        swap(index, emptyIndex);
-        emptyIndex = index;
-        moves++;
-        moveCountElem.textContent = moves;
-        renderBoard();
-        checkWin();
-      }
-    }
-
-    function checkWin() {
-      const winningOrder = Array.from({length: 15}, (_, i) => i + 1);
-      winningOrder.push("");
-      const hasWon = tiles.every((val, i) => val === winningOrder[i]);
-      if (hasWon && moves > 0) {
-        setTimeout(() => {
-          alert('Congratulations! You solved the puzzle in ' + moves + ' moves.');
-        }, 100);
-      }
-    }
-
-    shuffleBtn.addEventListener('click', initGame);
-
-    initGame();
-  </script>
 </body>
 </html>
