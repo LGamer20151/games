@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Drift</title>
+  <style>
+    body { margin:0; background:#080c1a; color:#fff; font-family:Arial,sans-serif; text-align:center; }
+    a { color:#90d1ff; }
+    canvas { background:radial-gradient(circle at center, #0f1731, #050816 52%); border-radius:12px; width:min(92vw,900px); height:auto; display:block; margin:16px auto 0; }
+    #hud { margin-top:14px; font-size:20px; }
+    button { margin-top:16px; padding:12px 22px; font-size:18px; background:#7ef2d6; border:none; border-radius:10px; cursor:pointer; font-weight:bold; }
+  </style>
+</head>
+<body>
+  <a href="index.html">&larr; Back to menu</a>
+  <h1>3D Drift</h1>
+  <div id="hud">Best: 0</div>
+  <canvas id="game" width="900" height="520"></canvas>
+  <button onclick="resetGame()">Restart</button>
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const hud = document.getElementById('hud');
+    let score = 0;
+    let best = Number(localStorage.getItem('maze3dBest') || 0);
+    let playerX = 0;
+    let gates = [];
+    let gameOver = false;
+
+    function resetGame() {
+      score = 0;
+      playerX = 0;
+      gates = [];
+      gameOver = false;
+      for (let i = 0; i < 12; i++) {
+        gates.push({ z: 1.5 + i * 0.8, x: (Math.random() - 0.5) * 3, w: 0.8 + Math.random() * 0.9 });
+      }
+    }
+
+    function update(dt) {
+      if (gameOver) return;
+      score += dt * 25;
+      for (const gate of gates) gate.z -= dt * 0.9;
+      if (Math.random() < 0.06) {
+        gates.push({ z: 2.0, x: (Math.random() - 0.5) * 3.2, w: 0.8 + Math.random() * 1.1 });
+      }
+      gates = gates.filter(g => g.z > -0.3);
+      const nearGate = gates.find(g => Math.abs(g.z) < 0.3 && Math.abs(playerX - g.x) < g.w * 0.9);
+      if (nearGate) {
+        gameOver = true;
+        best = Math.max(best, Math.floor(score));
+        localStorage.setItem('maze3dBest', best);
+      }
+      hud.textContent = 'Best: ' + Math.floor(best) + ' | Score: ' + Math.floor(score);
+    }
+
+    function project(x, z) {
+      const scale = 220 / (z + 6);
+      return { x: canvas.width / 2 + x * scale, y: 260 + (1 - (z + 6) / 10) * 200, size: scale };
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#050816';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      for (const gate of gates) {
+        const p = project(gate.x, gate.z);
+        ctx.strokeStyle = '#7ef2d6';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(p.x - gate.w * p.size, p.y);
+        ctx.lineTo(p.x - gate.w * p.size, p.y + 52);
+        ctx.lineTo(p.x + gate.w * p.size, p.y + 52);
+        ctx.lineTo(p.x + gate.w * p.size, p.y);
+        ctx.stroke();
+      }
+      const p = project(playerX, 0.3);
+      ctx.fillStyle = '#8ec5ff';
+      ctx.fillRect(p.x - 18, p.y - 42, 36, 64);
+      if (gameOver) {
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 32px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Crash!', canvas.width / 2, canvas.height / 2);
+      }
+    }
+
+    function loop(ts) {
+      if (!loop.last) loop.last = ts;
+      const dt = Math.min((ts - loop.last) / 1000, 0.03);
+      loop.last = ts;
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') playerX -= 0.5;
+      if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') playerX += 0.5;
+    });
+
+    resetGame();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

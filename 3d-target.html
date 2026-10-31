@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Target</title>
+  <style>
+    body { margin:0; background:#0d1322; color:#fff; font-family:Arial,sans-serif; text-align:center; }
+    a { color:#fbbf24; }
+    canvas { background:radial-gradient(circle at center, #1a2338, #090c12 58%); border-radius:12px; width:min(92vw,900px); height:auto; display:block; margin:16px auto 0; }
+    #hud { margin-top:14px; font-size:20px; }
+    button { margin-top:16px; padding:12px 22px; font-size:18px; background:#fbbf24; border:none; border-radius:10px; cursor:pointer; font-weight:bold; }
+  </style>
+</head>
+<body>
+  <a href="index.html">&larr; Back to menu</a>
+  <h1>3D Target</h1>
+  <div id="hud">Score: 0</div>
+  <canvas id="game" width="900" height="520"></canvas>
+  <button onclick="resetGame()">Restart</button>
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const hud = document.getElementById('hud');
+    let targets = [];
+    let score = 0;
+    let time = 0;
+
+    function resetGame() {
+      score = 0;
+      time = 0;
+      targets = [];
+      for (let i = 0; i < 8; i++) {
+        targets.push({ x: (Math.random() - 0.5) * 4, y: (Math.random() - 0.5) * 2.5, z: 0.8 + Math.random() * 2.5, r: 18 + Math.random() * 16 });
+      }
+    }
+
+    function project(x, y, z) {
+      const scale = 220 / (z + 5);
+      return { x: canvas.width / 2 + x * scale, y: 260 + y * scale, s: scale };
+    }
+
+    function draw() {
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle = '#0d1322';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      for (const t of targets) {
+        const p = project(t.x, t.y, t.z);
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, t.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 18px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('Click targets to score', canvas.width / 2, 40);
+    }
+
+    canvas.addEventListener('click', (event) => {
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = ((event.clientX - rect.left) / rect.width) * canvas.width;
+      const mouseY = ((event.clientY - rect.top) / rect.height) * canvas.height;
+      for (let i = targets.length - 1; i >= 0; i--) {
+        const t = targets[i];
+        const p = project(t.x, t.y, t.z);
+        if (Math.hypot(mouseX - p.x, mouseY - p.y) < t.r) {
+          score += 10;
+          hud.textContent = 'Score: ' + score;
+          targets.splice(i, 1);
+          targets.push({ x: (Math.random() - 0.5) * 4, y: (Math.random() - 0.5) * 2.5, z: 0.8 + Math.random() * 2.5, r: 18 + Math.random() * 16 });
+        }
+      }
+    });
+
+    setInterval(() => {
+      time += 1;
+      for (const t of targets) {
+        t.z -= 0.08;
+        if (t.z < 0.3) t.z = 3.2;
+      }
+    }, 100);
+
+    resetGame();
+    draw();
+  </script>
+</body>
+</html>

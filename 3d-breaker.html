@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Breaker</title>
+  <style>
+    body { margin:0; background:#090d17; color:#fff; font-family:Arial,sans-serif; text-align:center; }
+    a { color:#c4b5fd; }
+    canvas { background:linear-gradient(#0d172a,#0a0d16); border-radius:12px; width:min(92vw,900px); height:auto; display:block; margin:16px auto 0; }
+    #hud { margin-top:14px; font-size:20px; }
+    button { margin-top:16px; padding:12px 22px; font-size:18px; background:#c4b5fd; border:none; border-radius:10px; cursor:pointer; font-weight:bold; }
+  </style>
+</head>
+<body>
+  <a href="index.html">&larr; Back to menu</a>
+  <h1>3D Breaker</h1>
+  <div id="hud">Score: 0</div>
+  <canvas id="game" width="900" height="520"></canvas>
+  <button onclick="resetGame()">Restart</button>
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const hud = document.getElementById('hud');
+    let paddle = { x: 0 };
+    let balls = [{ x: 0, y: 0, vx: 0.35, vy: -0.4, z: 0.8 }];
+    let blocks = [];
+    let score = 0;
+
+    function resetGame() {
+      paddle = { x: 0 };
+      balls = [{ x: 0, y: 0, vx: 0.35, vy: -0.4, z: 0.8 }];
+      blocks = [];
+      score = 0;
+      for (let i = 0; i < 6; i++) {
+        for (let j = 0; j < 4; j++) blocks.push({ x: -2 + i * 0.75, y: 1.3 - j * 0.7, z: 1.2 + (i % 2) * 0.3, w: 0.55, h: 0.35 });
+      }
+    }
+
+    function update(dt) {
+      for (const ball of balls) {
+        ball.x += ball.vx * dt * 60;
+        ball.y += ball.vy * dt * 60;
+        if (ball.x < -2.5 || ball.x > 2.5) ball.vx *= -1;
+        if (ball.y < -1.7) ball.vy *= -1;
+        if (Math.abs(ball.x - paddle.x) < 0.9 && ball.y > 1.1 && ball.y < 1.4) {
+          ball.vy = -Math.abs(ball.vy);
+        }
+        for (const block of blocks) {
+          if (Math.abs(ball.x - block.x) < 0.4 && Math.abs(ball.y - block.y) < 0.3) {
+            ball.vy *= -1;
+            block.hit = true;
+            score += 5;
+          }
+        }
+        blocks = blocks.filter(block => !block.hit);
+      }
+      if (balls[0].y > 2.3) {
+        resetGame();
+      }
+      hud.textContent = 'Score: ' + score;
+    }
+
+    function project(x, y, z) {
+      const scale = 220 / (z + 5);
+      return { x: canvas.width / 2 + x * scale, y: 260 + y * scale, s: scale };
+    }
+
+    function draw() {
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle = '#070c15';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      for (const block of blocks) {
+        const p = project(block.x, block.y, block.z);
+        ctx.fillStyle = '#c4b5fd';
+        ctx.fillRect(p.x - 28, p.y - 16, 56, 32);
+      }
+      for (const ball of balls) {
+        const p = project(ball.x, ball.y, ball.z);
+        ctx.fillStyle = '#fef08a';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 10, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      const paddleP = project(paddle.x, 1.35, 0.7);
+      ctx.fillStyle = '#7dd3fc';
+      ctx.fillRect(paddleP.x - 52, paddleP.y - 12, 104, 24);
+    }
+
+    function loop(ts) {
+      if (!loop.last) loop.last = ts;
+      const dt = Math.min((ts - loop.last) / 1000, 0.03);
+      loop.last = ts;
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') paddle.x -= 0.35;
+      if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') paddle.x += 0.35;
+    });
+
+    resetGame();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

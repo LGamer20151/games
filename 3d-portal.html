@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Portal</title>
+  <style>
+    body { margin:0; background:#09121a; color:#fff; font-family:Arial,sans-serif; text-align:center; }
+    a { color:#67e8f9; }
+    canvas { background:radial-gradient(circle at center, #102133, #080d12 60%); border-radius:12px; width:min(92vw,900px); height:auto; display:block; margin:16px auto 0; }
+    #hud { margin-top:14px; font-size:20px; }
+    button { margin-top:16px; padding:12px 22px; font-size:18px; background:#67e8f9; border:none; border-radius:10px; cursor:pointer; font-weight:bold; }
+  </style>
+</head>
+<body>
+  <a href="index.html">&larr; Back to menu</a>
+  <h1>3D Portal</h1>
+  <div id="hud">Score: 0</div>
+  <canvas id="game" width="900" height="520"></canvas>
+  <button onclick="resetGame()">Restart</button>
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const hud = document.getElementById('hud');
+    let player = { x: 0 };
+    let portals = [];
+    let score = 0;
+    let gameOver = false;
+
+    function resetGame() {
+      player = { x: 0 };
+      portals = [];
+      score = 0;
+      gameOver = false;
+      for (let i = 0; i < 9; i++) portals.push({ z: 1 + i * 0.8, x: (Math.random() - 0.5) * 3.2, r: 22 + Math.random() * 14 });
+    }
+
+    function update(dt) {
+      if (gameOver) return;
+      score += dt * 22;
+      hud.textContent = 'Score: ' + Math.floor(score);
+      for (const p of portals) p.z -= dt * 0.9;
+      portals = portals.filter(p => p.z > -0.4);
+      while (portals.length < 9) portals.push({ z: 2.2 + Math.random() * 1.6, x: (Math.random() - 0.5) * 3.2, r: 18 + Math.random() * 16 });
+      for (const p of portals) {
+        if (Math.abs(p.z) < 0.2 && Math.abs(player.x - p.x) < 0.7) {
+          score += 30;
+          p.z = 6;
+        }
+      }
+    }
+
+    function project(x, z) {
+      const scale = 260 / (z + 6);
+      return { x: canvas.width / 2 + x * scale, y: 280, s: scale };
+    }
+
+    function draw() {
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle = '#081218';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      for (const p of portals) {
+        const proj = project(p.x, p.z);
+        ctx.strokeStyle = '#67e8f9';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(proj.x, proj.y, p.r * proj.s / 10, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      const playerP = project(player.x, 0.2);
+      ctx.fillStyle = '#f9a8d4';
+      ctx.fillRect(playerP.x - 18, playerP.y - 18, 36, 36);
+      if (gameOver) {
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 34px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Portal Pass!', canvas.width/2, canvas.height/2);
+      }
+    }
+
+    function loop(ts) {
+      if (!loop.last) loop.last = ts;
+      const dt = Math.min((ts - loop.last) / 1000, 0.03);
+      loop.last = ts;
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') player.x -= 0.4;
+      if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') player.x += 0.4;
+    });
+
+    resetGame();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

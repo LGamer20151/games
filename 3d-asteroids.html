@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Asteroids</title>
+  <style>
+    body { margin:0; background:#0b0d1c; color:#fff; font-family:Arial,sans-serif; text-align:center; }
+    a { color:#ffb4a2; }
+    canvas { background:radial-gradient(circle at center, #131b34, #080a14 55%); border-radius:12px; width:min(92vw,900px); height:auto; display:block; margin:16px auto 0; }
+    #hud { margin-top:14px; font-size:20px; }
+    button { margin-top:16px; padding:12px 22px; font-size:18px; background:#ff9f7b; border:none; border-radius:10px; cursor:pointer; font-weight:bold; }
+  </style>
+</head>
+<body>
+  <a href="index.html">&larr; Back to menu</a>
+  <h1>3D Asteroids</h1>
+  <div id="hud">Score: 0</div>
+  <canvas id="game" width="900" height="520"></canvas>
+  <button onclick="resetGame()">Restart</button>
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const hud = document.getElementById('hud');
+    let player = { x: 0, y: 0 };
+    let rocks = [];
+    let score = 0;
+    let gameOver = false;
+
+    function resetGame() {
+      player = { x: 0, y: 0 };
+      rocks = [];
+      score = 0;
+      gameOver = false;
+      for (let i = 0; i < 12; i++) rocks.push({ x: (Math.random() - 0.5) * 5, y: -Math.random() * 2 - 0.2, z: 1 + i * 0.6, r: 20 + Math.random() * 28 });
+    }
+
+    function update(dt) {
+      if (gameOver) return;
+      score += dt * 18;
+      hud.textContent = 'Score: ' + Math.floor(score);
+      for (const rock of rocks) {
+        rock.z -= dt * 0.9;
+        rock.x += Math.sin((score + rock.z) * 0.6) * 0.02;
+      }
+      rocks = rocks.filter(r => r.z > -0.7);
+      while (rocks.length < 12) {
+        rocks.push({ x: (Math.random() - 0.5) * 5, y: -Math.random() * 2 - 0.2, z: 1.8 + Math.random() * 2.2, r: 18 + Math.random() * 26 });
+      }
+      for (const rock of rocks) {
+        if (Math.abs(rock.z) < 0.18 && Math.abs(player.x - rock.x) < 0.6 && Math.abs(player.y - rock.y) < 0.6) {
+          gameOver = true;
+        }
+      }
+    }
+
+    function project(x, y, z) {
+      const scale = 280 / (z + 6);
+      return { x: canvas.width/2 + x * scale, y: 260 + y * scale, s: scale };
+    }
+
+    function draw() {
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle = '#070b16';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      for (const rock of rocks) {
+        const p = project(rock.x, rock.y, rock.z);
+        ctx.fillStyle = '#a1b4d6';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, rock.r * p.s / 16, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      const p = project(player.x, player.y, 0.2);
+      ctx.fillStyle = '#ffb4a2';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 18, 0, Math.PI * 2);
+      ctx.fill();
+      if (gameOver) {
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 34px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Asteroid Hit!', canvas.width/2, canvas.height/2);
+      }
+    }
+
+    function loop(ts) {
+      if (!loop.last) loop.last = ts;
+      const dt = Math.min((ts - loop.last) / 1000, 0.03);
+      loop.last = ts;
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') player.x -= 0.4;
+      if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') player.x += 0.4;
+      if (e.key === 'ArrowUp' || e.key.toLowerCase() === 'w') player.y -= 0.4;
+      if (e.key === 'ArrowDown' || e.key.toLowerCase() === 's') player.y += 0.4;
+    });
+
+    resetGame();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

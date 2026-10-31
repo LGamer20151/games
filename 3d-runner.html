@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Runner</title>
+  <style>
+    body { margin:0; background:#090d17; color:#fff; font-family:Arial,sans-serif; text-align:center; }
+    a { color:#8ec5ff; }
+    canvas { background:linear-gradient(#050816,#0d1b2a); border-radius:12px; width:min(92vw,900px); height:auto; display:block; margin:16px auto 0; }
+    #hud { margin-top:14px; font-size:20px; }
+    button { margin-top:16px; padding:12px 22px; font-size:18px; background:#7aa2ff; border:none; border-radius:10px; cursor:pointer; font-weight:bold; }
+  </style>
+</head>
+<body>
+  <a href="index.html">&larr; Back to menu</a>
+  <h1>3D Runner</h1>
+  <div id="hud">Score: 0</div>
+  <canvas id="game" width="900" height="520"></canvas>
+  <button onclick="resetGame()">Restart</button>
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const hud = document.getElementById('hud');
+    let player = { lane: 1, x: 0 };
+    let obstacles = [];
+    let score = 0;
+    let gameOver = false;
+
+    function resetGame() {
+      player = { lane: 1, x: 0 };
+      obstacles = [];
+      score = 0;
+      gameOver = false;
+      for (let i = 0; i < 12; i++) {
+        obstacles.push({ z: 1 + i * 0.8, lane: Math.floor(Math.random() * 3) });
+      }
+    }
+
+    function update(dt) {
+      if (gameOver) return;
+      score += dt * 18;
+      hud.textContent = 'Score: ' + Math.floor(score);
+      for (const obs of obstacles) {
+        obs.z -= dt * 0.9;
+      }
+      obstacles = obstacles.filter(obs => obs.z > -0.5);
+      while (obstacles.length < 12) {
+        obstacles.push({ z: 2.2 + Math.random() * 1.5, lane: Math.floor(Math.random() * 3) });
+      }
+      for (const obs of obstacles) {
+        if (Math.abs(obs.z) < 0.18 && obs.lane === player.lane) {
+          gameOver = true;
+        }
+      }
+    }
+
+    function project(x, z) {
+      const scale = 240 / (z + 6);
+      return { x: canvas.width / 2 + x * scale, y: 350 + (1 - (z + 6) / 10) * 160, size: scale };
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#050816';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#121b2d';
+      ctx.fillRect(180, 380, 540, 120);
+      for (let i = 0; i < 20; i++) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+        ctx.beginPath();
+        ctx.moveTo(150 + i * 30, 380);
+        ctx.lineTo(240 + i * 30, 520);
+        ctx.stroke();
+      }
+      const lanesX = [-2, 0, 2];
+      for (const obs of obstacles) {
+        const p = project(lanesX[obs.lane], obs.z);
+        ctx.fillStyle = '#f472b6';
+        ctx.fillRect(p.x - 24, p.y - 24, 48, 48);
+      }
+      const p = project(lanesX[player.lane], 0.4);
+      ctx.fillStyle = '#7dd3fc';
+      ctx.fillRect(p.x - 18, p.y - 28, 36, 56);
+      if (gameOver) {
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 40px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Crash!', canvas.width / 2, canvas.height / 2);
+      }
+    }
+
+    function loop(ts) {
+      if (!loop.last) loop.last = ts;
+      const dt = Math.min((ts - loop.last) / 1000, 0.03);
+      loop.last = ts;
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') player.lane = Math.max(0, player.lane - 1);
+      if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') player.lane = Math.min(2, player.lane + 1);
+    });
+
+    resetGame();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
