@@ -6,234 +6,351 @@
   <title>Quick Play Arcade</title>
   <style>
     :root {
-      --bg: #070910;
-      --bg-2: #0f172a;
-      --panel: rgba(21, 24, 35, 0.9);
-      --panel-strong: rgba(34, 39, 52, 0.96);
+      --bg: #050816;
+      --bg-2: #111827;
+      --panel: rgba(17, 24, 39, 0.82);
+      --panel-strong: rgba(15, 23, 42, 0.92);
       --line: rgba(148, 163, 184, 0.18);
-      --text: #eef2ff;
-      --muted: #a5b4cf;
+      --text: #edf4ff;
+      --muted: #a8b4cf;
       --accent: #8b5cf6;
       --accent-2: #22d3ee;
       --accent-3: #fbbf24;
-      --glow: rgba(139, 92, 246, 0.35);
+      --accent-4: #34d399;
+      --glow: rgba(139, 92, 246, 0.45);
+      --shadow: rgba(15, 23, 42, 0.65);
     }
 
-    * { box-sizing:border-box; }
-    html { scroll-behavior:smooth; }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
     body {
-      margin:0;
-      color:var(--text);
-      font-family:Arial, sans-serif;
-      line-height:1.5;
+      margin: 0;
+      color: var(--text);
+      font-family: Arial, sans-serif;
+      line-height: 1.5;
       background:
-        radial-gradient(circle at top left, rgba(34, 211, 238, 0.15), transparent 28%),
-        radial-gradient(circle at bottom right, rgba(139, 92, 246, 0.18), transparent 30%),
-        linear-gradient(180deg, #090b11 0%, #111827 100%);
+        radial-gradient(circle at 15% 20%, rgba(34, 211, 238, 0.18), transparent 18%),
+        radial-gradient(circle at 82% 10%, rgba(139, 92, 246, 0.2), transparent 22%),
+        radial-gradient(circle at 50% 85%, rgba(52, 211, 153, 0.14), transparent 25%),
+        linear-gradient(180deg, #050816 0%, #0d1324 100%);
+      min-height: 100vh;
     }
 
-    .layout { display:flex; min-height:100vh; }
+    .layout {
+      display: flex;
+      min-height: 100vh;
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: 24px;
+      gap: 18px;
+    }
 
     .sidebar {
-      width:260px;
-      flex-shrink:0;
-      border-right:1px solid var(--line);
-      padding:18px 0;
-      position:sticky;
-      top:0;
-      height:100vh;
-      overflow-y:auto;
-      background:rgba(8, 11, 20, 0.75);
-      backdrop-filter:blur(12px);
+      width: 270px;
+      flex-shrink: 0;
+      padding: 18px 0;
+      position: sticky;
+      top: 20px;
+      height: calc(100vh - 40px);
+      overflow-y: auto;
+      background: rgba(11, 17, 29, 0.78);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: 0 25px 60px rgba(2, 6, 23, 0.5);
+      backdrop-filter: blur(16px);
     }
 
-    .sidebar nav { display:flex; flex-direction:column; gap:4px; }
+    .sidebar nav {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 8px 0;
+    }
 
     .sidebar a {
-      display:flex;
-      align-items:center;
-      gap:14px;
-      padding:12px 18px 12px 22px;
-      color:#edf3ff;
-      text-decoration:none;
-      font-size:16px;
-      border-left:2px solid transparent;
-      transition:background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 18px 12px 22px;
+      color: #edf3ff;
+      text-decoration: none;
+      font-size: 16px;
+      border-left: 3px solid transparent;
+      transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+      position: relative;
+      margin: 0 10px;
+      border-radius: 14px;
     }
 
     .sidebar a:hover {
-      background:rgba(148, 163, 184, 0.08);
-      border-left-color:rgba(34, 211, 238, 0.8);
-      transform:translateX(2px);
+      background: linear-gradient(90deg, rgba(34, 211, 238, 0.12), rgba(139, 92, 246, 0.06));
+      border-left-color: rgba(34, 211, 238, 0.9);
+      transform: translateX(2px);
+      box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.08);
     }
 
-    .sidebar a.home { color:#d9e3ff; }
+    .sidebar a.home {
+      color: #e9efff;
+      font-weight: 700;
+    }
+
     .sidebar a:focus-visible,
-    .card:focus-visible { outline:2px solid #f9e2af; outline-offset:2px; border-radius:10px; }
+    .card:focus-visible {
+      outline: 2px solid #f9e2af;
+      outline-offset: 2px;
+      border-radius: 12px;
+    }
 
     .dot {
-      width:12px;
-      height:12px;
-      border-radius:50%;
-      background:linear-gradient(135deg, var(--accent-2), var(--accent));
-      box-shadow:0 0 16px rgba(34, 211, 238, 0.75);
-      flex-shrink:0;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-2), var(--accent));
+      box-shadow: 0 0 18px rgba(34, 211, 238, 0.8);
+      flex-shrink: 0;
     }
 
     .divider {
-      height:1px;
-      background:var(--line);
-      margin:12px 18px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--line), transparent);
+      margin: 12px 18px;
     }
 
-    .content { flex:1; min-width:0; }
+    .content {
+      flex: 1;
+      min-width: 0;
+      border-radius: 30px;
+      overflow: hidden;
+      background: rgba(7, 10, 18, 0.4);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.02), 0 30px 60px rgba(2, 6, 23, 0.45);
+    }
 
     header {
-      padding:42px 30px 22px;
-      border-bottom:1px solid var(--line);
-      background:linear-gradient(180deg, rgba(17, 24, 39, 0.2), rgba(17, 24, 39, 0));
+      padding: 42px 30px 18px;
+      border-bottom: 1px solid var(--line);
+      background:
+        linear-gradient(135deg, rgba(34, 211, 238, 0.08), transparent 30%),
+        linear-gradient(180deg, rgba(15, 23, 42, 0.88), rgba(15, 23, 42, 0.36));
+      position: relative;
+      overflow: hidden;
+    }
+
+    header::after {
+      content: "";
+      position: absolute;
+      inset: auto -18% -50% auto;
+      width: 420px;
+      height: 420px;
+      background: radial-gradient(circle, rgba(139, 92, 246, 0.24), transparent 60%);
+      pointer-events: none;
     }
 
     header h1 {
-      font-size:42px;
-      margin:0 0 10px;
-      letter-spacing:-0.04em;
-      text-shadow:0 0 24px rgba(34, 211, 238, 0.35);
+      position: relative;
+      font-size: clamp(2.2rem, 4vw, 3.25rem);
+      margin: 0 0 12px;
+      letter-spacing: -0.06em;
+      line-height: 1.05;
+      text-shadow: 0 0 24px rgba(34, 211, 238, 0.35);
+      background: linear-gradient(135deg, #f8fbff 0%, #b3ddff 22%, #cdb4ff 58%, #7dd3fc 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
     }
 
     header p {
-      color:var(--muted);
-      font-size:17px;
-      max-width:700px;
-      margin:0;
+      position: relative;
+      color: var(--muted);
+      font-size: 17px;
+      max-width: 760px;
+      margin: 0;
     }
 
     .stats {
-      display:flex;
-      flex-wrap:wrap;
-      gap:8px;
-      margin-top:18px;
+      position: relative;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 22px;
     }
 
     .stat-pill {
-      font-size:11px;
-      letter-spacing:1.3px;
-      text-transform:uppercase;
-      padding:7px 11px;
-      border:1px solid rgba(148, 163, 184, 0.2);
-      border-radius:999px;
-      background:rgba(15, 23, 42, 0.7);
-      color:#dfeafe;
-      box-shadow:inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 8px 12px;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.78);
+      color: #ebf4ff;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02);
     }
 
-    main { padding:30px; max-width:1180px; }
+    main {
+      padding: 28px 30px 36px;
+      max-width: 1280px;
+    }
 
     .section {
-      margin-bottom:42px;
-      scroll-margin-top:20px;
+      margin-bottom: 34px;
+      scroll-margin-top: 20px;
     }
 
     .section h2 {
-      font-size:27px;
-      margin:0 0 7px;
+      font-size: clamp(1.5rem, 2vw, 2.2rem);
+      margin: 0 0 8px;
+      letter-spacing: -0.04em;
+      color: #f1f7ff;
     }
 
     .section .intro {
-      color:var(--muted);
-      font-size:15px;
-      margin:0 0 18px;
+      color: var(--muted);
+      font-size: 15px;
+      margin: 0 0 18px;
     }
 
     .menu {
-      display:grid;
-      grid-template-columns:repeat(auto-fill, minmax(230px, 1fr));
-      gap:18px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 18px;
     }
 
     .card {
-      display:flex;
-      flex-direction:column;
-      background:linear-gradient(180deg, rgba(28, 32, 44, 0.95), rgba(18, 20, 28, 0.93));
-      border-radius:14px;
-      padding:18px 18px 14px;
-      text-decoration:none;
-      color:#fff;
-      min-height:170px;
-      border:1px solid rgba(148, 163, 184, 0.15);
-      box-shadow:0 10px 26px rgba(2,6,23,0.24);
-      transition:transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
-      overflow:hidden;
-      position:relative;
+      display: flex;
+      flex-direction: column;
+      background:
+        linear-gradient(180deg, rgba(25, 31, 46, 0.96), rgba(15, 20, 29, 0.96)),
+        radial-gradient(circle at top left, rgba(34, 211, 238, 0.24), transparent 30%),
+        linear-gradient(160deg, rgba(139, 92, 246, 0.08), rgba(34, 211, 238, 0.04));
+      border-radius: 18px;
+      padding: 18px 18px 14px;
+      text-decoration: none;
+      color: #fff;
+      min-height: 178px;
+      border: 1px solid rgba(148, 163, 184, 0.15);
+      box-shadow: 0 10px 28px rgba(2, 6, 23, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, filter 0.18s ease;
+      overflow: hidden;
+      position: relative;
+      isolation: isolate;
     }
 
     .card::before {
-      content:"";
-      position:absolute;
-      inset:0;
-      background:linear-gradient(135deg, rgba(34,211,238,0.10), transparent 38%, rgba(139,92,246,0.10));
-      opacity:0;
-      transition:opacity 0.2s ease;
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(34,211,238,0.12), transparent 38%, rgba(139,92,246,0.14));
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      z-index: 0;
+    }
+
+    .card::after {
+      content: "";
+      position: absolute;
+      width: 160px;
+      height: 160px;
+      right: -40px;
+      top: -36px;
+      background: radial-gradient(circle, rgba(34,211,238,0.15), rgba(34,211,238,0) 60%);
+      z-index: 0;
+      pointer-events: none;
     }
 
     .card:hover {
-      transform:translateY(-4px);
-      box-shadow:0 18px 32px rgba(2,6,23,0.38), 0 0 0 1px rgba(34,211,238,0.1);
-      border-color:rgba(34,211,238,0.25);
+      transform: translateY(-5px) scale(1.01);
+      box-shadow: 0 20px 36px rgba(2, 6, 23, 0.38), 0 0 0 1px rgba(34, 211, 238, 0.12);
+      border-color: rgba(34, 211, 238, 0.25);
+      filter: brightness(1.04);
     }
 
-    .card:hover::before { opacity:1; }
+    .card:hover::before { opacity: 1; }
 
-    .card > * { position:relative; z-index:1; }
+    .card > * { position: relative; z-index: 1; }
 
     .card .title {
-      font-size:20px;
-      font-weight:bold;
-      margin-bottom:8px;
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      margin-bottom: 8px;
+      color: #f9fbff;
     }
 
     .card .desc {
-      font-size:15px;
-      color:#d1d7eb;
-      flex-grow:1;
+      font-size: 0.95rem;
+      color: #d7def2;
+      flex-grow: 1;
+      line-height: 1.5;
     }
 
     .card .tag {
-      align-self:flex-start;
-      margin-top:12px;
-      font-size:10px;
-      text-transform:uppercase;
-      letter-spacing:1.2px;
-      padding:5px 9px;
-      border-radius:999px;
-      background:linear-gradient(135deg, rgba(34,211,238,0.12), rgba(139,92,246,0.12));
-      border:1px solid rgba(148, 163, 184, 0.18);
-      color:#f7e4a1;
+      align-self: flex-start;
+      margin-top: 12px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.55px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, rgba(34,211,238,0.14), rgba(139,92,246,0.18));
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      color: #f9e7a8;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03);
     }
 
     footer {
-      text-align:center;
-      padding:22px;
-      color:#8ea0bf;
-      font-size:14px;
-      border-top:1px solid var(--line);
-      background:rgba(8, 11, 20, 0.5);
+      text-align: center;
+      padding: 22px;
+      color: #9eb4d5;
+      font-size: 14px;
+      border-top: 1px solid var(--line);
+      background: rgba(8, 11, 20, 0.72);
     }
 
-    @media (max-width:760px) {
-      .layout { flex-direction:column; }
-      .sidebar {
-        width:100%;
-        height:auto;
-        position:static;
-        border-right:none;
-        border-bottom:1px solid var(--line);
+    @media (max-width: 760px) {
+      .layout {
+        flex-direction: column;
+        padding: 14px;
+        gap: 14px;
       }
-      .sidebar nav { display:flex; flex-wrap:wrap; }
-      .sidebar a { padding:10px 14px; font-size:15px; }
-      .divider { display:none; }
-      header h1 { font-size:30px; }
-      main { padding:20px; }
+
+      .sidebar {
+        width: 100%;
+        height: auto;
+        position: static;
+        border-radius: 18px;
+      }
+
+      .sidebar nav {
+        display: flex;
+        flex-wrap: wrap;
+        flex-direction: row;
+        padding: 10px;
+      }
+
+      .sidebar a {
+        padding: 10px 12px;
+        font-size: 14px;
+        margin: 0;
+      }
+
+      .divider {
+        display: none;
+      }
+
+      header {
+        padding: 28px 20px 18px;
+      }
+
+      main {
+        padding: 20px 20px 26px;
+      }
+
+      .menu {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
@@ -320,7 +437,7 @@
             <a class="card" href="memorymatch.html"><div class="title">Card match</div><div class="desc">Flip cards over and find matching pairs in the fewest moves possible.</div><span class="tag">Puzzle</span></a>
             <a class="card" href="chess.html"><div class="title">Chess</div><div class="desc">Plan ahead, trap your opponent, and win the board with smart tactics.</div><span class="tag">Strategy</span></a>
             <a class="card" href="lights-out.html"><div class="title">Lights Out</div><div class="desc">Toggle the board, solve the pattern, and clear every light with as few taps as possible.</div><span class="tag">Puzzle</span></a>
-            <a class="card" href="2048-merge.html"><div class="title">2048 Merge</div><div class="desc">Slide tiles together, build bigger numbers, and chase a high score without filling the board.</div><span class="tag">Strategy</span></a>
+            <a class="card" href="2048-merge.html"><div class="title">2048 Merge</div><div class="desc">Slide tiles together, build bigger numbers, and chase a high score without filling the board.</div><span class="tag">Puzzle</span></a>
           </div>
         </section>
 
@@ -331,10 +448,10 @@
             <a class="card" href="arua.html"><div class="title">Arua</div><div class="desc">A quick arcade challenge with a playful spin on classic action.</div><span class="tag">Bonus</span></a>
             <a class="card" href="chromechicken.html"><div class="title">Chrome Chicken</div><div class="desc">A quirky little browser game with surprising movement and timing.</div><span class="tag">Bonus</span></a>
             <a class="card" href="escape.html"><div class="title">Escape</div><div class="desc">Solve the room, plan the route, and find your way out.</div><span class="tag">Adventure</span></a>
-            <a class="card" href="minesweeper.html"><div class="title">Minesweeper</div><div class="desc">Search for safe tiles and flag the hidden mines before it blows up.</div><span class="tag">Strategy</span></a>
+            <a class="card" href="minesweeper.html"><div class="title">Minesweeper</div><div class="desc">Search for safe tiles and flag the hidden mines before it blows up.</div><span class="tag">Logic</span></a>
             <a class="card" href="slidingpuzzle.html"><div class="title">Sliding Puzzle</div><div class="desc">Slide the tiles into place and finish the picture in as few moves as possible.</div><span class="tag">Puzzle</span></a>
-            <a class="card" href="spotthedifference.html"><div class="title">Spot the Difference</div><div class="desc">Compare both scenes carefully and find every mismatch.</div><span class="tag">Puzzle</span></a>
-            <a class="card" href="wordleinfinite.html"><div class="title">Wordle Infinite</div><div class="desc">Guess the hidden word, test your vocabulary, and chase a new streak.</div><span class="tag">Puzzle</span></a>
+            <a class="card" href="spotthedifference.html"><div class="title">Spot the Difference</div><div class="desc">Compare both scenes carefully and find every mismatch.</div><span class="tag">Visual</span></a>
+            <a class="card" href="wordleinfinite.html"><div class="title">Wordle Infinite</div><div class="desc">Guess the hidden word, test your vocabulary, and chase a new streak.</div><span class="tag">Word</span></a>
           </div>
         </section>
 
