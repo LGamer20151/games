@@ -5,37 +5,230 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Quick Play Arcade</title>
   <style>
+    :root {
+      --bg: #070910;
+      --bg-2: #0f172a;
+      --panel: rgba(21, 24, 35, 0.9);
+      --panel-strong: rgba(34, 39, 52, 0.96);
+      --line: rgba(148, 163, 184, 0.18);
+      --text: #eef2ff;
+      --muted: #a5b4cf;
+      --accent: #8b5cf6;
+      --accent-2: #22d3ee;
+      --accent-3: #fbbf24;
+      --glow: rgba(139, 92, 246, 0.35);
+    }
+
     * { box-sizing:border-box; }
     html { scroll-behavior:smooth; }
-    body { background:#0d0e12; color:#fff; font-family:Arial, sans-serif; margin:0; line-height:1.5; }
+    body {
+      margin:0;
+      color:var(--text);
+      font-family:Arial, sans-serif;
+      line-height:1.5;
+      background:
+        radial-gradient(circle at top left, rgba(34, 211, 238, 0.15), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(139, 92, 246, 0.18), transparent 30%),
+        linear-gradient(180deg, #090b11 0%, #111827 100%);
+    }
+
     .layout { display:flex; min-height:100vh; }
-    .sidebar { width:250px; flex-shrink:0; border-right:1px solid #1f2027; padding:14px 0; position:sticky; top:0; height:100vh; overflow-y:auto; }
-    .sidebar a { display:flex; align-items:center; gap:16px; padding:13px 22px; color:#e5e5ea; text-decoration:none; font-size:17px; }
-    .sidebar a:hover { background:#1c1d24; }
-    .sidebar a.home { color:#a1a1aa; }
+
+    .sidebar {
+      width:260px;
+      flex-shrink:0;
+      border-right:1px solid var(--line);
+      padding:18px 0;
+      position:sticky;
+      top:0;
+      height:100vh;
+      overflow-y:auto;
+      background:rgba(8, 11, 20, 0.75);
+      backdrop-filter:blur(12px);
+    }
+
+    .sidebar nav { display:flex; flex-direction:column; gap:4px; }
+
+    .sidebar a {
+      display:flex;
+      align-items:center;
+      gap:14px;
+      padding:12px 18px 12px 22px;
+      color:#edf3ff;
+      text-decoration:none;
+      font-size:16px;
+      border-left:2px solid transparent;
+      transition:background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+    }
+
+    .sidebar a:hover {
+      background:rgba(148, 163, 184, 0.08);
+      border-left-color:rgba(34, 211, 238, 0.8);
+      transform:translateX(2px);
+    }
+
+    .sidebar a.home { color:#d9e3ff; }
     .sidebar a:focus-visible,
-    .card:focus-visible { outline:2px solid #f9e2af; outline-offset:2px; border-radius:8px; }
-    .dot { width:14px; height:14px; border-radius:50%; background:#fff; flex-shrink:0; }
-    .divider { height:1px; background:#1f2027; margin:10px 0; }
+    .card:focus-visible { outline:2px solid #f9e2af; outline-offset:2px; border-radius:10px; }
+
+    .dot {
+      width:12px;
+      height:12px;
+      border-radius:50%;
+      background:linear-gradient(135deg, var(--accent-2), var(--accent));
+      box-shadow:0 0 16px rgba(34, 211, 238, 0.75);
+      flex-shrink:0;
+    }
+
+    .divider {
+      height:1px;
+      background:var(--line);
+      margin:12px 18px;
+    }
+
     .content { flex:1; min-width:0; }
-    header { padding:40px 30px 24px; border-bottom:1px solid #1f2027; }
-    header h1 { font-size:40px; margin:0 0 8px; }
-    header p { color:#a1a1aa; font-size:17px; max-width:640px; margin:0; }
-    .stats { margin-top:16px; font-size:13px; color:#a1a1aa; letter-spacing:1px; text-transform:uppercase; }
-    main { padding:30px; max-width:1100px; }
-    .section { margin-bottom:46px; scroll-margin-top:20px; }
-    .section h2 { font-size:26px; margin:0 0 6px; }
-    .section .intro { color:#a1a1aa; font-size:15px; margin:0 0 18px; }
-    .menu { display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:18px; }
-    .card { display:flex; flex-direction:column; background:#1c1d24; border-radius:12px; padding:20px; text-decoration:none; color:#fff; min-height:170px; transition:transform 0.15s ease, background 0.15s ease; }
-    .card:hover { background:#2a2b35; transform:translateY(-3px); }
-    .card .title { font-size:21px; font-weight:bold; margin-bottom:8px; }
-    .card .desc { font-size:15px; color:#c7c7cc; flex-grow:1; }
-    .card .tag { align-self:flex-start; margin-top:12px; font-size:11px; text-transform:uppercase; letter-spacing:1px; padding:4px 10px; border-radius:20px; background:#0d0e12; color:#f9e2af; }
-    footer { text-align:center; padding:22px; color:#6e6e78; font-size:14px; border-top:1px solid #1f2027; }
+
+    header {
+      padding:42px 30px 22px;
+      border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg, rgba(17, 24, 39, 0.2), rgba(17, 24, 39, 0));
+    }
+
+    header h1 {
+      font-size:42px;
+      margin:0 0 10px;
+      letter-spacing:-0.04em;
+      text-shadow:0 0 24px rgba(34, 211, 238, 0.35);
+    }
+
+    header p {
+      color:var(--muted);
+      font-size:17px;
+      max-width:700px;
+      margin:0;
+    }
+
+    .stats {
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:18px;
+    }
+
+    .stat-pill {
+      font-size:11px;
+      letter-spacing:1.3px;
+      text-transform:uppercase;
+      padding:7px 11px;
+      border:1px solid rgba(148, 163, 184, 0.2);
+      border-radius:999px;
+      background:rgba(15, 23, 42, 0.7);
+      color:#dfeafe;
+      box-shadow:inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+    }
+
+    main { padding:30px; max-width:1180px; }
+
+    .section {
+      margin-bottom:42px;
+      scroll-margin-top:20px;
+    }
+
+    .section h2 {
+      font-size:27px;
+      margin:0 0 7px;
+    }
+
+    .section .intro {
+      color:var(--muted);
+      font-size:15px;
+      margin:0 0 18px;
+    }
+
+    .menu {
+      display:grid;
+      grid-template-columns:repeat(auto-fill, minmax(230px, 1fr));
+      gap:18px;
+    }
+
+    .card {
+      display:flex;
+      flex-direction:column;
+      background:linear-gradient(180deg, rgba(28, 32, 44, 0.95), rgba(18, 20, 28, 0.93));
+      border-radius:14px;
+      padding:18px 18px 14px;
+      text-decoration:none;
+      color:#fff;
+      min-height:170px;
+      border:1px solid rgba(148, 163, 184, 0.15);
+      box-shadow:0 10px 26px rgba(2,6,23,0.24);
+      transition:transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+      overflow:hidden;
+      position:relative;
+    }
+
+    .card::before {
+      content:"";
+      position:absolute;
+      inset:0;
+      background:linear-gradient(135deg, rgba(34,211,238,0.10), transparent 38%, rgba(139,92,246,0.10));
+      opacity:0;
+      transition:opacity 0.2s ease;
+    }
+
+    .card:hover {
+      transform:translateY(-4px);
+      box-shadow:0 18px 32px rgba(2,6,23,0.38), 0 0 0 1px rgba(34,211,238,0.1);
+      border-color:rgba(34,211,238,0.25);
+    }
+
+    .card:hover::before { opacity:1; }
+
+    .card > * { position:relative; z-index:1; }
+
+    .card .title {
+      font-size:20px;
+      font-weight:bold;
+      margin-bottom:8px;
+    }
+
+    .card .desc {
+      font-size:15px;
+      color:#d1d7eb;
+      flex-grow:1;
+    }
+
+    .card .tag {
+      align-self:flex-start;
+      margin-top:12px;
+      font-size:10px;
+      text-transform:uppercase;
+      letter-spacing:1.2px;
+      padding:5px 9px;
+      border-radius:999px;
+      background:linear-gradient(135deg, rgba(34,211,238,0.12), rgba(139,92,246,0.12));
+      border:1px solid rgba(148, 163, 184, 0.18);
+      color:#f7e4a1;
+    }
+
+    footer {
+      text-align:center;
+      padding:22px;
+      color:#8ea0bf;
+      font-size:14px;
+      border-top:1px solid var(--line);
+      background:rgba(8, 11, 20, 0.5);
+    }
+
     @media (max-width:760px) {
       .layout { flex-direction:column; }
-      .sidebar { width:100%; height:auto; position:static; border-right:none; border-bottom:1px solid #1f2027; }
+      .sidebar {
+        width:100%;
+        height:auto;
+        position:static;
+        border-right:none;
+        border-bottom:1px solid var(--line);
+      }
       .sidebar nav { display:flex; flex-wrap:wrap; }
       .sidebar a { padding:10px 14px; font-size:15px; }
       .divider { display:none; }
@@ -64,7 +257,11 @@
       <header>
         <h1>Quick Play Arcade</h1>
         <p>Pick a game, play for a few minutes, and come back for more. Arcade action, puzzles, and a little strategy, all in one place.</p>
-        <div class="stats">36 games in 7 categories</div>
+        <div class="stats">
+          <span class="stat-pill">36 games</span>
+          <span class="stat-pill">7 categories</span>
+          <span class="stat-pill">No install</span>
+        </div>
       </header>
 
       <main>
@@ -130,10 +327,10 @@
             <a class="card" href="arua.html"><div class="title">Arua</div><div class="desc">A quick arcade challenge with a playful spin on classic action.</div><span class="tag">Bonus</span></a>
             <a class="card" href="chromechicken.html"><div class="title">Chrome Chicken</div><div class="desc">A quirky little browser game with surprising movement and timing.</div><span class="tag">Bonus</span></a>
             <a class="card" href="escape.html"><div class="title">Escape</div><div class="desc">Solve the room, plan the route, and find your way out.</div><span class="tag">Adventure</span></a>
-            <a class="card" href="minesweeper.html"><div class="title">Minesweeper</div><div class="desc">Search for safe tiles and flag the hidden mines before it blows up.</div><span class="tag">Puzzle</span></a>
+            <a class="card" href="minesweeper.html"><div class="title">Minesweeper</div><div class="desc">Search for safe tiles and flag the hidden mines before it blows up.</div><span class="tag">Strategy</span></a>
             <a class="card" href="slidingpuzzle.html"><div class="title">Sliding Puzzle</div><div class="desc">Slide the tiles into place and finish the picture in as few moves as possible.</div><span class="tag">Puzzle</span></a>
             <a class="card" href="spotthedifference.html"><div class="title">Spot the Difference</div><div class="desc">Compare both scenes carefully and find every mismatch.</div><span class="tag">Puzzle</span></a>
-            <a class="card" href="wordleinfinite.html"><div class="title">Wordle Infinite</div><div class="desc">Guess the hidden word, test your vocabulary, and chase a new streak.</div><span class="tag">Word Game</span></a>
+            <a class="card" href="wordleinfinite.html"><div class="title">Wordle Infinite</div><div class="desc">Guess the hidden word, test your vocabulary, and chase a new streak.</div><span class="tag">Puzzle</span></a>
           </div>
         </section>
 
