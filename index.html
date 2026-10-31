@@ -13,6 +13,8 @@
     .sidebar a { display:flex; align-items:center; gap:16px; padding:13px 22px; color:#e5e5ea; text-decoration:none; font-size:17px; }
     .sidebar a:hover { background:#1c1d24; }
     .sidebar a.home { color:#a1a1aa; }
+    .sidebar a:focus-visible,
+    .card:focus-visible { outline:2px solid #f9e2af; outline-offset:2px; border-radius:8px; }
     .dot { width:14px; height:14px; border-radius:50%; background:#fff; flex-shrink:0; }
     .divider { height:1px; background:#1f2027; margin:10px 0; }
     .content { flex:1; min-width:0; }
@@ -45,7 +47,7 @@
 <body>
   <div class="layout">
     <aside class="sidebar">
-      <nav>
+      <nav aria-label="Game categories">
         <a class="home" href="#top"><span class="dot"></span>Home</a>
         <div class="divider"></div>
         <a href="#arcade"><span class="dot"></span>Arcade</a>
@@ -60,7 +62,7 @@
       <header>
         <h1>Quick Play Arcade</h1>
         <p>Pick a game, play for a few minutes, and come back for more. Arcade action, puzzles, and a little strategy, all in one place.</p>
-        <div class="stats">22 games in 5 categories</div>
+        <div class="stats">18 games in 5 categories</div>
       </header>
 
       <main>
@@ -182,8 +184,8 @@
               <span class="tag">Puzzle</span>
             </a>
             <a class="card" href="chess.html">
-              <div class="title">Card match</div>
-              <div class="desc">Flip cards over and find matching pairs in the fewest moves possible.</div>
+              <div class="title">Chess</div>
+              <div class="desc">Plan ahead, trap your opponent, and win the board with smart tactics.</div>
               <span class="tag">Strategy</span>
             </a>
           </div>
