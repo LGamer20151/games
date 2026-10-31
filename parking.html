@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Parking Challenge</title>
+  <style>
+    body { background:#0d0e12; color:#fff; font-family:Arial, sans-serif; text-align:center; margin:0; padding:20px; }
+    a { color:#89b4fa; }
+    #info { font-size:20px; margin:14px 0; min-height:28px; }
+    canvas { background:#3a3c48; border-radius:8px; max-width:100%; }
+    #reset { margin-top:16px; padding:12px 26px; font-size:18px; border:none; border-radius:8px; background:#89b4fa; color:#0d0e12; font-weight:bold; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <a href="index.html">&larr; Back to menu</a>
+  <h1>Parking Challenge</h1>
+  <div id="info"></div>
+  <canvas id="game" width="800" height="500"></canvas>
+  <br>
+  <button id="reset">New Level</button>
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const info = document.getElementById('info');
+const W = 800, H = 500;
+const keys = {};
+
+let car, spot, obstacles, timeLeft, score, over, won, level, lastTime;
+
+// Builds a level with a target spot and parked cars around it
+function newLevel() {
+  level = (level || 0) + 1;
+  car = { x: 120, y: 420, ang: 0, speed: 0, w: 60, h: 30 };
+  spot = { x: 600, y: 250, w: 80, h: 50, ang: 0 };
+  obstacles = [
+    { x: 520, y: 80, w: 60, h: 30, ang: 0 },
+    { x: 520, y: 140, w: 60, h: 30, ang: 0 },
+    { x: 690, y: 80, w: 60, h: 30, ang: 0 },
+    { x: 690, y: 140, w: 60, h: 30, ang: 0 }
+  ];
+  timeLeft = 60 - Math.min(level - 1, 3) * 5;
+  score = 0;
+  over = false;
+  won = false;
+  lastTime = performance.now();
+}
+
+function reset() { level = 0; newLevel(); }
+
+// Rectangle corners after rotation, used for collision checks
+function corners(o) {
+  const cs = Math.cos(o.ang), sn = Math.sin(o.ang);
+  const hw = o.w / 2, hh = o.h / 2;
+  return [[-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh]].map(([px, py]) => ({
+    x: o.x + px * cs - py * sn,
+    y: o.y + px * sn + py * cs
+  }));
+}
+
+// Separating axis test for two rotated rectangles
+function overlaps(a, b) {
+  const axes = [];
+  for (const o of [a, b]) {
+    const cs = Math.cos(o.ang), sn = Math.sin(o.ang);
+    axes.push([cs, sn], [-sn, cs]);
+  }
+  const ca = corners(a), cb = corners(b);
+  for (const [ax, ay] of axes) {
+    const pa = ca.map(p => p.x * ax + p.y * ay);
+    const pb = cb.map(p => p.x * ax + p.y * ay);
+    if (Math.max(...pa) < Math.min(...pb) || Math.max(...pb) < Math.min(...pa)) return false;
+  }
+  return true;
+}
+
+function hitsObstacle() {
+  return obstacles.some(o => overlaps(car, o));
+}
+
+function update(dt) {
+  if (over) return;
+  timeLeft -= dt;
+  const accel = 0.18, maxSpeed = 3, turnRate = 0.035;
+  const forward = keys.ArrowUp || keys.KeyW;
+  const back = keys.ArrowDown || keys.KeyS;
+  const brake = keys.Space;
+
+  if (forward) car.speed = Math.min(maxSpeed, car.speed + accel);
+  else if (back) car.speed = Math.max(-maxSpeed / 2, car.speed - accel);
+  else car.speed *= 0.92;
+  if (brake) car.speed *= 0.8;
+
+  if (Math.abs(car.speed) > 0.1) {
+    const dir = car.speed > 0 ? 1 : -1;
+    if (keys.ArrowLeft || keys.KeyA) car.ang -= turnRate * dir;
+    if (keys.ArrowRight || keys.KeyD) car.ang += turnRate * dir;
+  }
+
+  const prev = { x: car.x, y: car.y };
+  car.x += Math.cos(car.ang) * car.speed;
+  car.y += Math.sin(car.ang) * car.speed;
+
+  // Keep car inside the lot and stop on walls or other cars
+  const margin = car.w / 2;
+  if (car.x < margin || car.x > W - margin || car.y < margin || car.y > H - margin || hitsObstacle()) {
+    car.x = prev.x; car.y = prev.y;
+    car.speed = 0;
+  }
+
+  if (timeLeft <= 0) {
+    timeLeft = 0;
+    over = true;
+    won = false;
+    return;
+  }
+
+  // Parked when the whole car sits inside the spot and is roughly straight
+  const inside = corners(car).every(p =>
+    Math.abs(p.x - spot.x) <= spot.w / 2 && Math.abs(p.y - spot.y) <= spot.h / 2
+  );
+  const straight = Math.abs(Math.sin(car.ang)) < 0.2 || Math.abs(Math.cos(car.ang)) < 0.2;
+  if (inside && Math.abs(car.speed) < 0.05) {
+    won = true;
+    over = true;
+    score = Math.round(timeLeft * 10) + (straight ? 100 : 0);
+  }
+}
+
+function drawCar() {
+  ctx.save();
+  ctx.translate(car.x, car.y);
+  ctx.rotate(car.ang);
+  ctx.fillStyle = '#f38ba8';
+  ctx.fillRect(-car.w / 2, -car.h / 2, car.w, car.h);
+  ctx.fillStyle = '#eba0ac';
+  ctx.fillRect(-car.w / 4, -car.h / 2 + 4, car.w / 2, car.h - 8);
+  ctx.restore();
+}
+
+function drawObstacle(o) {
+  ctx.save();
+  ctx.translate(o.x, o.y);
+  ctx.rotate(o.ang);
+  ctx.fillStyle = '#89b4fa';
+  ctx.fillRect(-o.w / 2, -o.h / 2, o.w, o.h);
+  ctx.restore();
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#3a3c48';
+  ctx.fillRect(0, 0, W, H);
+
+  // Painted lines for the lot
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(spot.x - spot.w / 2, spot.y - spot.h / 2, spot.w, spot.h);
+  ctx.fillStyle = 'rgba(166,227,161,0.25)';
+  ctx.fillRect(spot.x - spot.w / 2, spot.y - spot.h / 2, spot.w, spot.h);
+
+  obstacles.forEach(drawObstacle);
+  drawCar();
+
+  if (over) {
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 30px Arial';
+    ctx.fillText(won ? 'Parked! +' + score + ' points' : 'Time is up!', W / 2, H / 2 - 10);
+    ctx.font = '20px Arial';
+    ctx.fillText('Press New Level to play again', W / 2, H / 2 + 26);
+  }
+  info.textContent = 'Level ' + level + ' | Time: ' + Math.ceil(timeLeft) + 's | Park inside the green box';
+}
+
+function loop(now) {
+  const dt = (now - lastTime) / 1000;
+  lastTime = now;
+  update(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+
+const controls = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space'];
+document.addEventListener('keydown', e => {
+  if (controls.includes(e.code)) { e.preventDefault(); keys[e.code] = true; }
+});
+document.addEventListener('keyup', e => { keys[e.code] = false; });
+document.getElementById('reset').addEventListener('click', reset);
+
+reset();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
