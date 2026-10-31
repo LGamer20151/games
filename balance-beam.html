@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Balance Beam</title>
+  <style>
+    body {
+      margin:0; min-height:100vh; display:grid; place-items:center; font-family:Arial,sans-serif;
+      background:linear-gradient(180deg,#09131d,#101827); color:#effcff;
+    }
+    .panel {
+      width:min(90vw,520px); padding:18px; border-radius:18px; background:rgba(15,23,42,0.92);
+      border:1px solid rgba(148,163,184,0.2); box-shadow:0 20px 38px rgba(0,0,0,0.35);
+    }
+    .top { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+    h1 { margin:0; }
+    .score { font-weight:bold; font-size:18px; }
+    canvas { width:100%; height:auto; display:block; border-radius:14px; background:linear-gradient(180deg,#0a1120,#14283d); border:1px solid rgba(148,163,184,0.18); }
+    .controls { display:flex; gap:10px; margin-top:12px; }
+    button { flex:1; border:none; border-radius:10px; background:linear-gradient(135deg,#22d3ee,#8b5cf6); color:#fff; font-weight:bold; font-size:16px; padding:12px; cursor:pointer; }
+    a { color:#baecff; text-decoration:none; }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <div class="top">
+      <h1>Balance Beam</h1>
+      <div class="score" id="score">Score: 0</div>
+    </div>
+    <canvas id="game" width="500" height="420"></canvas>
+    <div class="controls">
+      <button id="restart">Restart</button>
+      <button><a href="index.html">Menu</a></button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+
+    let angle = 0;
+    let score = 0;
+    let gameOver = false;
+    let lastTime = 0;
+
+    function resetGame() {
+      score = 0;
+      gameOver = false;
+      angle = 0;
+      scoreEl.textContent = 'Score: 0';
+    }
+
+    function update(dt) {
+      if (gameOver) return;
+      const move = (keys.ArrowLeft || keys.a ? -1 : 0) + (keys.ArrowRight || keys.d ? 1 : 0);
+      angle += move * dt * 1.8;
+      angle = Math.max(-1.2, Math.min(1.2, angle));
+
+      const beamX = canvas.width / 2;
+      const beamY = 300;
+      const ballX = beamX + Math.sin(angle) * 80;
+      const ballY = beamY - Math.cos(angle) * 80;
+      const centerDistance = Math.abs(Math.sin(angle) * 80);
+
+      if (centerDistance < 35) {
+        score += dt * 25;
+      } else {
+        gameOver = true;
+      }
+
+      scoreEl.textContent = 'Score: ' + Math.floor(score);
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#09131d';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const beamX = canvas.width / 2;
+      const beamY = 300;
+      const beamLen = 170;
+      const x1 = beamX + Math.sin(angle) * beamLen;
+      const y1 = beamY - Math.cos(angle) * beamLen;
+
+      ctx.strokeStyle = '#a5f3fc';
+      ctx.lineWidth = 14;
+      ctx.beginPath();
+      ctx.moveTo(beamX, beamY);
+      ctx.lineTo(x1, y1);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#c4b5fd';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(beamX - 80, beamY + 30);
+      ctx.lineTo(beamX + 80, beamY + 30);
+      ctx.stroke();
+
+      const ballX = beamX + Math.sin(angle) * 80;
+      const ballY = beamY - Math.cos(angle) * 80;
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath();
+      ctx.arc(ballX, ballY, 18, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (gameOver) {
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 32px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Balance lost!', canvas.width / 2, canvas.height / 2);
+      }
+    }
+
+    const keys = {};
+    window.addEventListener('keydown', (e) => {
+      const key = e.key.toLowerCase();
+      if (key === 'arrowleft' || key === 'a') keys.ArrowLeft = true;
+      if (key === 'arrowright' || key === 'd') keys.ArrowRight = true;
+    });
+    window.addEventListener('keyup', (e) => {
+      const key = e.key.toLowerCase();
+      if (key === 'arrowleft' || key === 'a') keys.ArrowLeft = false;
+      if (key === 'arrowright' || key === 'd') keys.ArrowRight = false;
+    });
+
+    function loop(ts) {
+      if (!lastTime) lastTime = ts;
+      const dt = Math.min((ts - lastTime) / 1000, 0.03);
+      lastTime = ts;
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    document.getElementById('restart').addEventListener('click', resetGame);
+    resetGame();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
