@@ -1,0 +1,84 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Motorcycle Rave</title>
+<style>body{background:#0d0e12;color:#fff;font-family:Arial,sans-serif;text-align:center;margin:0;padding:20px}a{color:#89b4fa}canvas{background:#111;border-radius:8px;max-width:100%}#info{color:#a1a1aa;font-size:16px;margin:10px 0;min-height:24px}button{margin-top:12px;padding:10px 22px;font-size:16px;border:none;border-radius:8px;background:#89b4fa;color:#0d0e12;font-weight:bold;cursor:pointer}</style></head><body>
+<a href="index.html">&larr; Back to menu</a><h1>Motorcycle Rave</h1><div id="info"></div>
+<canvas id="c" width="480" height="420"></canvas><br><button id="btn">Restart</button>
+<script>
+const c=document.getElementById('c'),x=c.getContext('2d'),info=document.getElementById('info');
+const W=480,H=420,LANES=3,LW=120,ROAD_L=80;
+const COLORS=['#ff3ea5','#00e5ff','#b6ff3e','#ffd23e','#9b5cff'];
+let me,ai,items,dist,aiDist,score,over,frame,speed,keys={u:false,d:false,g:false};
+function laneX(l){return ROAD_L+l*LW+LW/2-14;}
+function reset(){
+  me={lane:1,y:H-90,x:laneX(1),targetX:laneX(1)};
+  ai={lane:1,y:H-150,x:laneX(1)};
+  items=[];dist=0;aiDist=0;score=0;over=false;frame=0;speed=4;
+}
+function spawn(){
+  const lane=Math.floor(Math.random()*LANES);
+  const kind=Math.random()<0.35?'orb':'car';
+  items.push({lane,y:-40,kind,color:kind==='orb'?COLORS[Math.floor(Math.random()*COLORS.length)]:(Math.random()<0.5?'#e74c3c':'#7f8c8d'),taken:false});
+}
+function changeLane(d){
+  const n=me.lane+d;
+  if(n<0||n>=LANES)return;
+  me.lane=n;me.targetX=laneX(n);
+}
+document.addEventListener('keydown',e=>{
+  if(e.code==='ArrowUp'||e.code==='KeyW'){changeLane(-1);e.preventDefault();}
+  if(e.code==='ArrowDown'||e.code==='KeyS'){changeLane(1);e.preventDefault();}
+  if(e.code==='Space'||e.code==='ArrowRight'){keys.g=true;e.preventDefault();}
+});
+document.addEventListener('keyup',e=>{if(e.code==='Space'||e.code==='ArrowRight')keys.g=false;});
+document.getElementById('btn').onclick=reset;
+function update(){
+  if(over)return;
+  frame++;
+  const target=keys.g?9:4;
+  speed+=(target-speed)*0.05;
+  dist+=speed;
+  aiDist+=speed*0.92+(Math.sin(frame/60)*0.4);
+  me.x+=(me.targetX-me.x)*0.2;
+  if(frame%Math.max(12,Math.floor(45-speed*2))===0)spawn();
+  for(const it of items)it.y+=speed;
+  for(const it of items){
+    if(it.taken)continue;
+    const ix=laneX(it.lane);
+    if(Math.abs(it.y-(me.y))<26&&Math.abs(ix-me.x)<22){
+      if(it.kind==='orb'){it.taken=true;score+=10;}
+      else{over=true;info.textContent='Crashed! Score '+score+'. You went '+Math.floor(dist/10)+'m, the computer went '+Math.floor(aiDist/10)+'m.';return;}
+    }
+  }
+  items=items.filter(it=>it.y<H+40&&!it.taken);
+  score+=0.05*speed;
+  const aiTarget=laneX(Math.floor((frame/180)%LANES));
+  ai.x+=(aiTarget-ai.x)*0.08;
+  info.textContent='You: '+Math.floor(dist/10)+'m | Computer: '+Math.floor(aiDist/10)+'m | Score: '+Math.floor(score);
+}
+function drawBike(bx,by,color,label){
+  x.fillStyle=color;x.fillRect(bx-10,by-22,20,44);
+  x.fillStyle='#fff';x.fillRect(bx-6,by-14,12,8);
+  x.fillStyle='#222';x.fillRect(bx-12,by-22,4,10);x.fillRect(bx+8,by-22,4,10);
+  x.fillStyle='#fff';x.font='11px Arial';x.textAlign='center';x.fillText(label,bx,by-30);
+}
+function draw(){
+  x.fillStyle='#111';x.fillRect(0,0,W,H);
+  x.fillStyle='#1c1d24';x.fillRect(ROAD_L,0,LANES*LW,H);
+  x.strokeStyle='#3a3b45';x.setLineDash([20,20]);x.lineWidth=2;
+  for(let l=1;l<LANES;l++){x.beginPath();x.moveTo(ROAD_L+l*LW,(frame*speed)%40-40);x.lineTo(ROAD_L+l*LW,H);x.stroke();}
+  x.setLineDash([]);
+  for(const it of items){
+    const ix=laneX(it.lane);
+    if(it.kind==='orb'){
+      x.fillStyle=it.color;x.shadowColor=it.color;x.shadowBlur=14;
+      x.beginPath();x.arc(ix+14,it.y,8,0,Math.PI*2);x.fill();x.shadowBlur=0;
+    }else{
+      x.fillStyle=it.color;x.fillRect(ix-4,it.y-18,36,36);
+      x.fillStyle='#222';x.fillRect(ix,it.y-12,28,8);
+    }
+  }
+  drawBike(ai.x+14,ai.y,'#9b5cff','CPU');
+  drawBike(me.x+14,me.y,'#ff3ea5','YOU');
+}
+function loop(){update();draw();requestAnimationFrame(loop);}
+reset();loop();
+</script></body></html>
