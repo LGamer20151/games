@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Catapult</title>
+  <style>
+    body { background:#0d0e12; color:#fff; font-family:Arial, sans-serif; text-align:center; margin:0; padding:20px; }
+    a { color:#89b4fa; }
+    #info { font-size:20px; margin:14px 0; min-height:28px; }
+    canvas { background:#87ceeb; border-radius:8px; max-width:100%; }
+    #reset { margin-top:16px; padding:12px 26px; font-size:18px; border:none; border-radius:8px; background:#89b4fa; color:#0d0e12; font-weight:bold; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <a href="index.html">&larr; Back to menu</a>
+  <h1>Catapult</h1>
+  <div id="info"></div>
+  <canvas id="game" width="800" height="450"></canvas>
+  <br>
+  <button id="reset">New Game</button>
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const info = document.getElementById('info');
+const W = 800, H = 450, PX = 90, ARM = 60, GRAV = 0.35, CHARGE_MS = 1500;
+const keys = {};
+
+let aim, power, charging, chargeStart, gnome, shotsLeft, score, lastResult, over, kick, best;
+
+// Rolling hills built from two sine waves
+function groundY(x) {
+  return 330 - 25 * Math.sin(x * 0.01) - 12 * Math.sin(x * 0.043);
+}
+
+function pivot() {
+  return { x: PX, y: groundY(PX) - 18 };
+}
+
+// Convert pixel distance from the catapult into meters
+function metersFrom(x) {
+  return Math.max(0, (x - PX) / 5);
+}
+
+function reset() {
+  aim = 45;
+  power = 0;
+  charging = false;
+  gnome = null;
+  shotsLeft = 5;
+  score = 0;
+  lastResult = 'Hold Space to charge, release to fire!';
+  over = false;
+  kick = 0;
+  best = Number(localStorage.getItem('catapultBest') || 0);
+}
+
+function launch() {
+  if (!charging) return;
+  charging = false;
+  if (gnome || shotsLeft <= 0 || over) return;
+  power = Math.min(1, (performance.now() - chargeStart) / CHARGE_MS);
+  const a = aim * Math.PI / 180;
+  const speed = 6 + power * 14;
+  const pv = pivot();
+  const tipX = pv.x + Math.cos(a) * ARM;
+  const tipY = pv.y - Math.sin(a) * ARM;
+  gnome = {
+    x: tipX, y: tipY,
+    vx: Math.cos(a) * speed,
+    vy: -Math.sin(a) * speed,
+    state: 'air', spin: 0
+  };
+  shotsLeft--;
+  kick = 1;
+}
+
+function finish() {
+  const meters = Math.round(metersFrom(gnome.x));
+  let points = meters * 10;
+  if (meters >= 100) points += 500;
+  score += points;
+  lastResult = 'Gnome flew ' + meters + ' m for ' + points + ' points!';
+  gnome = null;
+  if (shotsLeft <= 0) {
+    over = true;
+    if (score > best) {
+      best = score;
+      localStorage.setItem('catapultBest', best);
+    }
+  }
+}
+
+function updateGnome() {
+  if (!gnome) return;
+  const g = gnome;
+  if (g.state === 'air') {
+    g.vy += GRAV;
+    g.x += g.vx;
+    g.y += g.vy;
+    g.spin += 0.3;
+    const gy = groundY(g.x) - 7;
+    if (g.y >= gy && g.vy > 0) {
+      g.y = gy;
+      g.vy = -g.vy * 0.35;
+      g.vx *= 0.6;
+      if (Math.abs(g.vy) < 1.2) { g.vy = 0; g.state = 'roll'; }
+    }
+  } else if (g.state === 'roll') {
+    g.vx *= 0.94;
+    g.x += g.vx;
+    g.y = groundY(g.x) - 7;
+    if (Math.abs(g.vx) < 0.4) { g.state = 'done'; finish(); }
+  }
+  if (g.x < PX) { g.state = 'done'; finish(); }
+}
+
+function update() {
+  if (charging) power = Math.min(1, (performance.now() - chargeStart) / CHARGE_MS);
+  updateGnome();
+  kick *= 0.9;
+}
+
+function drawBackground() {
+  ctx.fillStyle = '#87ceeb';
+  ctx.fillRect(0, 0, W, H);
+
+  // Ground
+  ctx.fillStyle = '#5b8c3a';
+  ctx.beginPath();
+  ctx.moveTo(0, H);
+  for (let x = 0; x <= W; x += 4) ctx.lineTo(x, groundY(x));
+  ctx.lineTo(W, H);
+  ctx.closePath();
+  ctx.fill();
+
+  // Distance markers every 50 m
+  ctx.fillStyle = '#fff';
+  ctx.font = '14px Arial';
+  ctx.textAlign = 'center';
+  for (let m = 50; m <= 200; m += 50) {
+    const x = PX + m * 5;
+    if (x > W) break;
+    ctx.fillRect(x, groundY(x) - 2, 2, 14);
+    ctx.fillText(m + ' m', x, groundY(x) + 28);
+  }
+  ctx.textAlign = 'left';
+}
+
+function drawCatapult() {
+  const pv = pivot();
+  const a = (aim + kick * -15) * Math.PI / 180;
+  // Base
+  ctx.fillStyle = '#8b5a2b';
+  ctx.fillRect(PX - 30, pv.y + 10, 60, 14);
+  ctx.fillRect(PX - 20, pv.y - 2, 40, 12);
+  // Arm
+  ctx.strokeStyle = '#c08a4f';
+  ctx.lineWidth = 7;
+  ctx.beginPath();
+  ctx.moveTo(pv.x, pv.y);
+  ctx.lineTo(pv.x + Math.cos(a) * ARM, pv.y - Math.sin(a) * ARM);
+  ctx.stroke();
+  // Cup at tip
+  ctx.fillStyle = '#6b4423';
+  ctx.beginPath();
+  ctx.arc(pv.x + Math.cos(a) * ARM, pv.y - Math.sin(a) * ARM, 7, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.lineWidth = 1;
+}
+
+function drawGnome() {
+  if (!gnome) return;
+  ctx.save();
+  ctx.translate(gnome.x, gnome.y);
+  ctx.rotate(gnome.spin);
+  // Body
+  ctx.fillStyle = '#2f7d32';
+  ctx.beginPath();
+  ctx.arc(0, 2, 8, 0, Math.PI * 2);
+  ctx.fill();
+  // Face
+  ctx.fillStyle = '#f5cba7';
+  ctx.beginPath();
+  ctx.arc(0, -4, 5, 0, Math.PI * 2);
+  ctx.fill();
+  // Hat
+  ctx.fillStyle = '#d32f2f';
+  ctx.beginPath();
+  ctx.moveTo(-6, -7);
+  ctx.lineTo(6, -7);
+  ctx.lineTo(0, -20);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawPowerBar() {
+  if (!charging) return;
+  ctx.fillStyle = '#1c1d24';
+  ctx.fillRect(W / 2 - 110, 20, 220, 18);
+  ctx.fillStyle = power > 0.8 ? '#f38ba8' : '#a6e3a1';
+  ctx.fillRect(W / 2 - 110, 20, 220 * power, 18);
+}
+
+function draw() {
+  drawBackground();
+  drawCatapult();
+  drawGnome();
+  drawPowerBar();
+
+  ctx.fillStyle = '#1c1d24';
+  ctx.font = 'bold 18px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText(lastResult, W / 2, H - 14);
+  ctx.textAlign = 'left';
+
+  if (over) {
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 30px Arial';
+    ctx.fillText('Game Over! Score: ' + score, W / 2, H / 2 - 10);
+    ctx.font = '20px Arial';
+    ctx.fillText('Best: ' + best + '. Press New Game to play again.', W / 2, H / 2 + 26);
+    ctx.textAlign = 'left';
+  }
+
+  info.textContent = 'Aim: ' + aim + ' deg | Gnomes left: ' + shotsLeft + ' | Score: ' + score + ' | Best: ' + best;
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+document.addEventListener('keydown', e => {
+  const controls = ['ArrowUp', 'ArrowDown', 'KeyW', 'KeyS', 'Space'];
+  if (!controls.includes(e.code)) return;
+  e.preventDefault();
+  if (e.repeat) return;
+  if (e.code === 'ArrowUp' || e.code === 'KeyW') aim = Math.min(85, aim + 2);
+  if (e.code === 'ArrowDown' || e.code === 'KeyS') aim = Math.max(5, aim - 2);
+  if (e.code === 'Space' && !charging && !gnome && shotsLeft > 0 && !over) {
+    charging = true;
+    chargeStart = performance.now();
+  }
+});
+document.addEventListener('keyup', e => {
+  if (e.code === 'Space') { e.preventDefault(); launch(); }
+});
+document.getElementById('reset').addEventListener('click', () => { reset(); });
+
+reset();
+loop();
+</script>
+</body>
+</html>
