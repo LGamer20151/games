@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chess vs Computer</title>
+  <style>
+    body { background:#0d0e12; color:#fff; font-family:Arial, sans-serif; text-align:center; margin:0; padding:20px; }
+    a { color:#89b4fa; }
+    #info { font-size:20px; margin:14px 0; min-height:28px; }
+    #board { display:grid; grid-template-columns:repeat(8, 58px); grid-template-rows:repeat(8, 58px); width:464px; margin:0 auto; border:3px solid #1f2027; }
+    .sq { width:58px; height:58px; display:flex; align-items:center; justify-content:center; font-size:40px; cursor:pointer; user-select:none; }
+    .light { background:#e8dcc4; color:#111; }
+    .dark { background:#8b6f47; color:#111; }
+    .sel { background:#f9e2af !important; }
+    .move { box-shadow:inset 0 0 0 5px rgba(137,180,250,0.8); }
+    .last { background:#a6e3a1 !important; }
+    #reset { margin-top:18px; padding:12px 26px; font-size:18px; border:none; border-radius:8px; background:#89b4fa; color:#0d0e12; font-weight:bold; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <a href="index.html">&larr; Back to menu</a>
+  <h1>Chess vs Computer</h1>
+  <div id="info">Your turn (White)</div>
+  <div id="board"></div>
+  <button id="reset">New Game</button>
+<script>
+const PIECES = {
+  K:'\u2654', Q:'\u2655', R:'\u2656', B:'\u2657', N:'\u2658', P:'\u2659',
+  k:'\u265A', q:'\u265B', r:'\u265C', b:'\u265D', n:'\u265E', p:'\u265F'
+};
+const VALUE = { p:1, n:3, b:3, r:5, q:9, k:0 };
+const boardEl = document.getElementById('board');
+const info = document.getElementById('info');
+
+let board, turn, selected, legal, lastMove, gameOver;
+
+function startPosition() {
+  const back = ['r','n','b','q','k','b','n','r'];
+  const b = Array.from({length:8}, () => Array(8).fill(null));
+  for (let c = 0; c < 8; c++) {
+    b[0][c] = back[c];
+    b[1][c] = 'p';
+    b[6][c] = 'P';
+    b[7][c] = back[c].toUpperCase();
+  }
+  return b;
+}
+
+function isWhite(p) { return p && p === p.toUpperCase(); }
+
+// Generate pseudo-legal moves for a piece, then filter out moves that leave the king in check
+function rawMoves(b, r, c) {
+  const p = b[r][c];
+  const white = isWhite(p);
+  const type = p.toLowerCase();
+  const moves = [];
+  const add = (nr, nc) => {
+    if (nr < 0 || nr > 7 || nc < 0 || nc > 7) return false;
+    const t = b[nr][nc];
+    if (t && isWhite(t) === white) return false;
+    moves.push([nr, nc]);
+    return !t;
+  };
+  const slide = (dirs) => {
+    for (const [dr, dc] of dirs) {
+      let nr = r + dr, nc = c + dc;
+      while (add(nr, nc)) { nr += dr; nc += dc; }
+    }
+  };
+  if (type === 'p') {
+    const dir = white ? -1 : 1;
+    const start = white ? 6 : 1;
+    if (!b[r+dir]?.[c] && r+dir >= 0 && r+dir <= 7) {
+      moves.push([r+dir, c]);
+      if (r === start && !b[r+2*dir][c]) moves.push([r+2*dir, c]);
+    }
+    for (const dc of [-1, 1]) {
+      const nr = r + dir, nc = c + dc;
+      if (nr < 0 || nr > 7 || nc < 0 || nc > 7) continue;
+      const t = b[nr][nc];
+      if (t && isWhite(t) !== white) moves.push([nr, nc]);
+    }
+  } else if (type === 'n') {
+    for (const [dr, dc] of [[1,2],[2,1],[-1,2],[-2,1],[1,-2],[2,-1],[-1,-2],[-2,-1]]) add(r+dr, c+dc);
+  } else if (type === 'k') {
+    for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) if (dr || dc) add(r+dr, c+dc);
+  } else if (type === 'b') {
+    slide([[1,1],[1,-1],[-1,1],[-1,-1]]);
+  } else if (type === 'r') {
+    slide([[1,0],[-1,0],[0,1],[0,-1]]);
+  } else if (type === 'q') {
+    slide([[1,1],[1,-1],[-1,1],[-1,-1],[1,0],[-1,0],[0,1],[0,-1]]);
+  }
+  return moves;
+}
+
+function findKing(b, white) {
+  for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+    if (b[r][c] && b[r][c].toLowerCase() === 'k' && isWhite(b[r][c]) === white) return [r, c];
+  }
+  return null;
+}
+
+function isAttacked(b, r, c, byWhite) {
+  for (let i = 0; i < 8; i++) for (let j = 0; j < 8; j++) {
+    const p = b[i][j];
+    if (p && isWhite(p) === byWhite) {
+      if (rawMoves(b, i, j).some(([mr, mc]) => mr === r && mc === c)) return true;
+    }
+  }
+  return false;
+}
+
+function legalMoves(b, r, c) {
+  const p = b[r][c];
+  const white = isWhite(p);
+  return rawMoves(b, r, c).filter(([nr, nc]) => {
+    const copy = b.map(row => row.slice());
+    copy[nr][nc] = p;
+    copy[r][c] = null;
+    const k = findKing(copy, white);
+    return !k || !isAttacked(copy, k[0], k[1], !white);
+  });
+}
+
+function allLegal(b, white) {
+  const out = [];
+  for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+    if (b[r][c] && isWhite(b[r][c]) === white) {
+      for (const [nr, nc] of legalMoves(b, r, c)) out.push({ from:[r,c], to:[nr,nc] });
+    }
+  }
+  return out;
+}
+
+function applyMove(b, m) {
+  const copy = b.map(row => row.slice());
+  const p = copy[m.from[0]][m.from[1]];
+  copy[m.to[0]][m.to[1]] = p;
+  copy[m.from[0]][m.from[1]] = null;
+  // Promote pawns to queens automatically
+  if (p === 'P' && m.to[0] === 0) copy[m.to[0]][m.to[1]] = 'Q';
+  if (p === 'p' && m.to[0] === 7) copy[m.to[0]][m.to[1]] = 'q';
+  return copy;
+}
+
+// Computer picks the move with the best material gain, with a little randomness
+function computerMove() {
+  const moves = allLegal(board, false);
+  if (moves.length === 0) return null;
+  let best = [], bestScore = -Infinity;
+  for (const m of moves) {
+    const target = board[m.to[0]][m.to[1]];
+    let score = target ? VALUE[target.toLowerCase()] : 0;
+    const after = applyMove(board, m);
+    if (isAttacked(after, ...findKing(after, true), false)) score += 0.5;
+    score += Math.random() * 0.6;
+    if (score > bestScore) { bestScore = score; best = [m]; }
+    else if (Math.abs(score - bestScore) < 0.01) best.push(m);
+  }
+  return best[Math.floor(Math.random() * best.length)];
+}
+
+function render() {
+  boardEl.innerHTML = '';
+  const legalTargets = selected ? legal.map(m => m.to) : [];
+  for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+    const sq = document.createElement('div');
+    sq.className = 'sq ' + ((r + c) % 2 === 0 ? 'light' : 'dark');
+    const p = board[r][c];
+    if (p) sq.textContent = PIECES[p];
+    if (selected && selected[0] === r && selected[1] === c) sq.classList.add('sel');
+    if (legalTargets.some(([tr, tc]) => tr === r && tc === c)) sq.classList.add('move');
+    if (lastMove && lastMove.some(([lr, lc]) => lr === r && lc === c)) sq.classList.add('last');
+    sq.addEventListener('click', () => onSquare(r, c));
+    boardEl.appendChild(sq);
+  }
+}
+
+function checkEnd(whiteToMove) {
+  const moves = allLegal(board, whiteToMove);
+  const k = findKing(board, whiteToMove);
+  if (moves.length === 0) {
+    gameOver = true;
+    if (k && isAttacked(board, k[0], k[1], !whiteToMove)) {
+      info.textContent = whiteToMove ? 'Checkmate. The computer wins.' : 'Checkmate. You win!';
+    } else {
+      info.textContent = 'Stalemate. It is a draw.';
+    }
+    return true;
+  }
+  return false;
+}
+
+function onSquare(r, c) {
+  if (gameOver || turn !== 'white') return;
+  const p = board[r][c];
+  if (selected) {
+    const move = legal.find(m => m.to[0] === r && m.to[1] === c);
+    if (move) {
+      makeMove(move);
+      return;
+    }
+  }
+  if (p && isWhite(p)) {
+    selected = [r, c];
+    legal = legalMoves(board, r, c).map(to => ({ from:[r,c], to }));
+  } else {
+    selected = null;
+    legal = [];
+  }
+  render();
+}
+
+function makeMove(m) {
+  board = applyMove(board, m);
+  lastMove = [m.from, m.to];
+  selected = null;
+  legal = [];
+  render();
+  if (checkEnd(false)) return;
+  turn = 'black';
+  info.textContent = 'Computer is thinking...';
+  setTimeout(() => {
+    const cm = computerMove();
+    if (cm) {
+      board = applyMove(board, cm);
+      lastMove = [cm.from, cm.to];
+    }
+    turn = 'white';
+    render();
+    if (checkEnd(true)) return;
+    const k = findKing(board, true);
+    info.textContent = isAttacked(board, k[0], k[1], false)
+      ? 'Your king is in check. Your turn (White)'
+      : 'Your turn (White)';
+  }, 500);
+}
+
+function newGame() {
+  board = startPosition();
+  turn = 'white';
+  selected = null;
+  legal = [];
+  lastMove = null;
+  gameOver = false;
+  info.textContent = 'Your turn (White)';
+  render();
+}
+
+document.getElementById('reset').addEventListener('click', newGame);
+newGame();
+</script>
+</body>
+</html>
