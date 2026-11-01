@@ -3,573 +3,609 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Quick Play Arcade</title>
+  <title>Galatrix</title>
   <style>
     :root {
-      --bg: #050816;
-      --bg-2: #0d1324;
-      --panel: rgba(15, 23, 42, 0.76);
-      --panel-strong: rgba(9, 13, 24, 0.92);
-      --line: rgba(148, 163, 184, 0.18);
-      --text: #edf4ff;
-      --muted: #a8b4cf;
-      --accent: #8b5cf6;
-      --accent-2: #22d3ee;
-      --accent-3: #fbbf24;
-      --accent-4: #34d399;
-      --pink: #ff53c4;
-      --glow: rgba(139, 92, 246, 0.32);
-      --shadow: rgba(15, 23, 42, 0.7);
+      --bg0: #030814;
+      --bg1: #081426;
+      --panel: rgba(9, 18, 32, 0.84);
+      --line: rgba(127, 210, 255, 0.42);
+      --cyan: #77ecff;
+      --blue: #6ab0ff;
+      --green: #7ef7b1;
+      --orange: #ffb45f;
+      --red: #ff5c77;
+      --text: #eafaff;
     }
 
     * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
 
-    body {
+    html, body {
       margin: 0;
+      height: 100%;
+      overflow: hidden;
+      font-family: Arial, Helvetica, sans-serif;
+      background: radial-gradient(circle at top, #0f1d38, #050b18 40%, #020610 100%);
       color: var(--text);
-      font-family: Arial, sans-serif;
-      line-height: 1.5;
-      background:
-        radial-gradient(circle at 15% 20%, rgba(34, 211, 238, 0.22), transparent 17%),
-        radial-gradient(circle at 80% 10%, rgba(139, 92, 246, 0.28), transparent 22%),
-        radial-gradient(circle at 45% 82%, rgba(255, 83, 196, 0.18), transparent 18%),
-        linear-gradient(180deg, #040914 0%, #0d1324 38%, #070d1a 100%);
-      min-height: 100vh;
-      overflow-x: hidden;
     }
 
-    body::before,
-    body::after {
-      content: "";
-      position: fixed;
-      width: 420px;
-      height: 420px;
-      border-radius: 50%;
-      filter: blur(90px);
-      pointer-events: none;
-      opacity: 0.7;
-      z-index: 0;
-    }
-
-    body::before {
-      background: rgba(34, 211, 238, 0.18);
-      top: -80px;
-      left: -60px;
-    }
-
-    body::after {
-      background: rgba(139, 92, 246, 0.2);
-      right: -60px;
-      bottom: -40px;
-    }
-
-    .page {
+    #gameWrap {
       position: relative;
-      z-index: 1;
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 40px 20px 60px;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at center, rgba(36, 74, 136, 0.22), transparent 52%);
     }
 
-    .hero {
-      margin-bottom: 28px;
-      padding: 28px 32px;
-      background: rgba(15, 23, 42, 0.7);
-      border: 1px solid var(--line);
-      border-radius: 26px;
-      backdrop-filter: blur(12px);
-      box-shadow: 0 22px 40px var(--shadow);
+    canvas {
+      width: min(92vw, 1000px);
+      height: min(86vh, 700px);
+      display: block;
+      background: linear-gradient(to bottom, rgba(6, 10, 18, 0.98), rgba(4, 8, 15, 1));
+      border: 2px solid var(--line);
+      border-radius: 12px;
+      box-shadow:
+        0 0 0 2px rgba(123, 210, 255, 0.12),
+        0 0 34px rgba(94, 167, 255, 0.25),
+        inset 0 0 30px rgba(113, 177, 255, 0.08);
     }
 
-    .eyebrow {
-      display: inline-block;
-      padding: 6px 12px;
+    #hud {
+      position: absolute;
+      top: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(92vw, 1000px);
+      display: flex;
+      justify-content: space-between;
+      pointer-events: none;
+      z-index: 2;
+      padding: 0 14px;
+    }
+
+    .tag {
+      background: rgba(7, 12, 26, 0.7);
+      border: 1px solid rgba(123, 210, 255, 0.4);
+      color: var(--cyan);
+      padding: 8px 12px;
       border-radius: 999px;
-      background: rgba(139, 92, 246, 0.12);
-      border: 1px solid rgba(139, 92, 246, 0.32);
-      color: #d9c7ff;
-      font-size: 0.75rem;
-      letter-spacing: 0.12em;
+      font-size: 12px;
+      letter-spacing: 1.5px;
       text-transform: uppercase;
-      font-weight: 700;
-      margin-bottom: 14px;
+      box-shadow: 0 0 16px rgba(118, 218, 255, 0.12);
+    }
+
+    #startOverlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(2, 8, 16, 0.34);
+      backdrop-filter: blur(2px);
+      z-index: 3;
+    }
+
+    .panel {
+      width: min(84vw, 420px);
+      text-align: center;
+      padding: 28px 24px 22px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(9, 18, 31, 0.85);
+      box-shadow:
+        0 0 20px rgba(111, 170, 255, 0.18),
+        inset 0 0 18px rgba(125, 194, 255, 0.05);
     }
 
     h1 {
-      margin: 0;
-      font-size: clamp(2.2rem, 5vw, 4rem);
-      letter-spacing: -0.06em;
-      line-height: 1.05;
+      margin: 0 0 8px;
+      font-size: clamp(28px, 4.2vw, 42px);
+      letter-spacing: 4px;
+      color: var(--cyan);
+      text-transform: uppercase;
     }
 
     .subtitle {
-      margin-top: 14px;
-      font-size: clamp(1rem, 2vw, 1.2rem);
-      color: var(--muted);
-      max-width: 760px;
-    }
-
-    .stats {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 18px;
-      margin-top: 22px;
-    }
-
-    .stat {
-      min-width: 120px;
-      padding: 12px 14px;
-      background: rgba(15, 23, 42, 0.64);
-      border: 1px solid var(--line);
-      border-radius: 16px;
-    }
-
-    .label {
-      display: block;
-      color: var(--muted);
-      font-size: 0.78rem;
+      margin: 0 0 20px;
+      color: rgba(234, 250, 255, 0.8);
+      letter-spacing: 2px;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-bottom: 6px;
+      font-size: 12px;
     }
 
-    .value {
-      font-size: 1.4rem;
-      font-weight: 800;
-    }
-
-    .toolbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 16px;
-      margin: 26px 0 18px;
-      flex-wrap: wrap;
-    }
-
-    .toolbar h2 {
-      margin: 0;
-      font-size: clamp(1.4rem, 3vw, 2rem);
-      letter-spacing: -0.04em;
-    }
-
-    .search-wrap {
-      position: relative;
-      width: min(100%, 370px);
-    }
-
-    .search-wrap input {
-      width: 100%;
-      padding: 12px 16px 12px 42px;
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      background: rgba(15, 23, 42, 0.7);
-      color: var(--text);
-      font-size: 1rem;
-      outline: none;
-    }
-
-    .search-wrap input::placeholder {
-      color: var(--muted);
-    }
-
-    .search-wrap::before {
-      content: "⌕";
-      position: absolute;
-      left: 14px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--muted);
-      font-size: 1.2rem;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-      gap: 18px;
-    }
-
-    .card {
-      position: relative;
-      overflow: hidden;
-      padding: 18px 16px 14px;
-      min-height: 142px;
-      border-radius: 22px;
-      border: 1px solid var(--line);
-      background: linear-gradient(180deg, rgba(15, 23, 42, 0.82), rgba(9, 13, 24, 0.92));
-      box-shadow: 0 18px 32px rgba(2, 6, 23, 0.3);
-      transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
-    }
-
-    .card:hover {
-      transform: translateY(-3px);
-      border-color: rgba(139, 92, 246, 0.45);
-      box-shadow: 0 22px 38px rgba(2, 6, 23, 0.42);
-    }
-
-    .card::before {
-      content: "";
-      position: absolute;
-      inset: 0 auto auto 0;
-      width: 120px;
-      height: 120px;
-      background: radial-gradient(circle, rgba(34, 211, 238, 0.18), transparent 62%);
-      pointer-events: none;
-    }
-
-    .game-tag {
-      display: inline-block;
-      margin-bottom: 10px;
-      padding: 5px 8px;
-      border-radius: 10px;
-      font-size: 0.68rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: #d6f4ff;
-      background: rgba(34, 211, 238, 0.1);
-      border: 1px solid rgba(34, 211, 238, 0.2);
-    }
-
-    .card h3 {
-      position: relative;
-      margin: 0 0 10px;
-      font-size: 1.2rem;
-      letter-spacing: -0.03em;
-    }
-
-    .card p {
-      position: relative;
-      margin: 0 0 16px;
-      color: var(--muted);
-      font-size: 0.92rem;
-    }
-
-    .play-btn {
-      position: relative;
-      display: inline-block;
-      padding: 9px 14px;
-      border-radius: 12px;
-      text-decoration: none;
+    button {
+      border: 1px solid rgba(127, 244, 255, 0.6);
+      background: linear-gradient(180deg, rgba(104, 169, 255, 0.24), rgba(70, 109, 204, 0.18));
       color: white;
-      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      padding: 14px 24px;
+      border-radius: 12px;
+      cursor: pointer;
       font-weight: 700;
-      box-shadow: 0 12px 20px rgba(34, 211, 238, 0.22);
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      box-shadow: 0 0 18px rgba(118, 192, 255, 0.22);
+      transition: transform 0.12s ease, box-shadow 0.12s ease;
     }
 
-    .hidden {
-      display: none !important;
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 20px rgba(118, 192, 255, 0.32);
     }
 
-    @media (max-width: 640px) {
-      .hero {
-        padding: 22px 18px;
-      }
-
-      .toolbar {
-        display: block;
-      }
-
-      .search-wrap {
-        margin-top: 14px;
-      }
+    .controls {
+      margin-top: 16px;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      font-size: 11px;
+      letter-spacing: 1.1px;
+      text-transform: uppercase;
+      color: rgba(234, 250, 255, 0.78);
     }
   </style>
 </head>
 <body>
-  <div class="page">
-    <header class="hero">
-      <span class="eyebrow">Game Portal</span>
-      <h1>Quick Play Arcade</h1>
-      <div class="subtitle">
-        A collection of fast, browser-based mini games built for pure fun. Pick a title and jump in.
-      </div>
-      <div class="stats">
-        <div class="stat">
-          <span class="label">Games</span>
-          <span class="value">40+</span>
-        </div>
-        <div class="stat">
-          <span class="label">Style</span>
-          <span class="value">Arcade</span>
-        </div>
-        <div class="stat">
-          <span class="label">Mode</span>
-          <span class="value">Instant</span>
-        </div>
-      </div>
-    </header>
-
-    <div class="toolbar">
-      <h2>Featured Games</h2>
-      <div class="search-wrap">
-        <input id="search" type="text" placeholder="Search games..." />
-      </div>
+  <div id="gameWrap">
+    <div id="hud">
+      <div id="scoreTag" class="tag">Score: 0</div>
+      <div id="livesTag" class="tag">Lives: 3</div>
     </div>
 
-    <main class="grid" id="gameGrid">
-      <article class="card" data-name="2048 merge">
-        <span class="game-tag">Puzzle</span>
-        <h3>2048 Merge</h3>
-        <p>Slide numbers together and chase the highest tile.</p>
-        <a class="play-btn" href="2048-merge.html">Play</a>
-      </article>
-      <article class="card" data-name="3d asteroids">
-        <span class="game-tag">Action</span>
-        <h3>3D Asteroids</h3>
-        <p>Blast through space debris and survive the asteroid storm.</p>
-        <a class="play-btn" href="3d-asteroids.html">Play</a>
-      </article>
-      <article class="card" data-name="3d bounce">
-        <span class="game-tag">Arcade</span>
-        <h3>3D Bounce</h3>
-        <p>Keep the ball moving through a colorful 3D arena.</p>
-        <a class="play-btn" href="3d-bounce.html">Play</a>
-      </article>
-      <article class="card" data-name="3d breaker">
-        <span class="game-tag">Breakout</span>
-        <h3>3D Breaker</h3>
-        <p>Break the wall and chase a clean, high-score run.</p>
-        <a class="play-btn" href="3d-breaker.html">Play</a>
-      </article>
-      <article class="card" data-name="3d drift">
-        <span class="game-tag">Racing</span>
-        <h3>3D Drift</h3>
-        <p>Slide around corners and hold the perfect drift line.</p>
-        <a class="play-btn" href="3d-drift.html">Play</a>
-      </article>
-      <article class="card" data-name="3d orbit">
-        <span class="game-tag">Space</span>
-        <h3>3D Orbit</h3>
-        <p>Navigate a drifting orbit and keep control in motion.</p>
-        <a class="play-btn" href="3d-orbit.html">Play</a>
-      </article>
-      <article class="card" data-name="3d pillar">
-        <span class="game-tag">Skill</span>
-        <h3>3D Pillar</h3>
-        <p>Balance precision and timing in an obstacle run.</p>
-        <a class="play-btn" href="3d-pillar.html">Play</a>
-      </article>
-      <article class="card" data-name="3d portal">
-        <span class="game-tag">Platform</span>
-        <h3>3D Portal</h3>
-        <p>Find the route through shifting portals and gaps.</p>
-        <a class="play-btn" href="3d-portal.html">Play</a>
-      </article>
-      <article class="card" data-name="3d runner">
-        <span class="game-tag">Runner</span>
-        <h3>3D Runner</h3>
-        <p>Dash forward and keep your rhythm through danger zones.</p>
-        <a class="play-btn" href="3d-runner.html">Play</a>
-      </article>
-      <article class="card" data-name="3d snake">
-        <span class="game-tag">Classic</span>
-        <h3>3D Snake</h3>
-        <p>Grow longer and outmaneuver the walls and yourself.</p>
-        <a class="play-btn" href="3d-snake.html">Play</a>
-      </article>
-      <article class="card" data-name="3d target">
-        <span class="game-tag">Aim</span>
-        <h3>3D Target</h3>
-        <p>Hit the moving targets before time runs out.</p>
-        <a class="play-btn" href="3d-target.html">Play</a>
-      </article>
-      <article class="card" data-name="arua">
-        <span class="game-tag">Balance</span>
-        <h3>Arua</h3>
-        <p>Stay steady and keep your center of mass under control.</p>
-        <a class="play-btn" href="arua.html">Play</a>
-      </article>
-      <article class="card" data-name="balance beam">
-        <span class="game-tag">Skill</span>
-        <h3>Balance Beam</h3>
-        <p>Keep the balance and move carefully across the beam.</p>
-        <a class="play-btn" href="balance-beam.html">Play</a>
-      </article>
-      <article class="card" data-name="brick breaker">
-        <span class="game-tag">Arcade</span>
-        <h3>Brickbreaker</h3>
-        <p>Break every brick and push your score higher.</p>
-        <a class="play-btn" href="brickbreaker.html">Play</a>
-      </article>
-      <article class="card" data-name="catapult">
-        <span class="game-tag">Physics</span>
-        <h3>Catapult</h3>
-        <p>Launch with perfect timing and knock down the target.</p>
-        <a class="play-btn" href="catapult.html">Play</a>
-      </article>
-      <article class="card" data-name="chess">
-        <span class="game-tag">Board</span>
-        <h3>Chess</h3>
-        <p>Think a few moves ahead and stay sharp.</p>
-        <a class="play-btn" href="chess.html">Play</a>
-      </article>
-      <article class="card" data-name="chrome chicken">
-        <span class="game-tag">Arcade</span>
-        <h3>Chrome Chicken</h3>
-        <p>Fast fun and unpredictable movement in every run.</p>
-        <a class="play-btn" href="chromechicken.html">Play</a>
-      </article>
-      <article class="card" data-name="drift boss">
-        <span class="game-tag">Racing</span>
-        <h3>Drift Boss</h3>
-        <p>Chain drifts and build a high-scoring streak.</p>
-        <a class="play-btn" href="drift-boss.html">Play</a>
-      </article>
-      <article class="card" data-name="escape">
-        <span class="game-tag">Puzzle</span>
-        <h3>Escape</h3>
-        <p>Find a path out and beat the trap room.</p>
-        <a class="play-btn" href="escape.html">Play</a>
-      </article>
-      <article class="card" data-name="flappy duck">
-        <span class="game-tag">Arcade</span>
-        <h3>Flappy Duck</h3>
-        <p>Tap to rise and stay above the danger gaps.</p>
-        <a class="play-btn" href="flappy-duck.html">Play</a>
-      </article>
-      <article class="card" data-name="geometry dash">
-        <span class="game-tag">Rhythm</span>
-        <h3>Geometry Dash</h3>
-        <p>Jump, dodge, and keep every timing beat perfect.</p>
-        <a class="play-btn" href="geometrydash.html">Play</a>
-      </article>
-      <article class="card" data-name="gravity drop">
-        <span class="game-tag">Physics</span>
-        <h3>Gravity Drop</h3>
-        <p>Use gravity to your advantage and survive the fall.</p>
-        <a class="play-btn" href="gravity-drop.html">Play</a>
-      </article>
-      <article class="card" data-name="gravity sandbox">
-        <span class="game-tag">Sandbox</span>
-        <h3>Gravity Sandbox</h3>
-        <p>Experiment with motion and simulate playful gravity.</p>
-        <a class="play-btn" href="gravity-sandbox.html">Play</a>
-      </article>
-      <article class="card" data-name="hill climb">
-        <span class="game-tag">Driving</span>
-        <h3>Hill Climb</h3>
-        <p>Push forward across uneven terrain and rough hills.</p>
-        <a class="play-btn" href="hillclimb.html">Play</a>
-      </article>
-      <article class="card" data-name="lights out">
-        <span class="game-tag">Logic</span>
-        <h3>Lights Out</h3>
-        <p>Turn off every light and solve the board.</p>
-        <a class="play-btn" href="lights-out.html">Play</a>
-      </article>
-      <article class="card" data-name="memory match">
-        <span class="game-tag">Memory</span>
-        <h3>Memory Match</h3>
-        <p>Match pairs and train your visual memory.</p>
-        <a class="play-btn" href="memorymatch.html">Play</a>
-      </article>
-      <article class="card" data-name="minesweeper">
-        <span class="game-tag">Logic</span>
-        <h3>Minesweeper</h3>
-        <p>Flag the danger and clear the field with care.</p>
-        <a class="play-btn" href="minesweeper.html">Play</a>
-      </article>
-      <article class="card" data-name="motorcycle rave">
-        <span class="game-tag">Racing</span>
-        <h3>Motorcycle Rave</h3>
-        <p>Race through lanes and keep your ride stable.</p>
-        <a class="play-btn" href="motorcyclerave.html">Play</a>
-      </article>
-      <article class="card" data-name="obby">
-        <span class="game-tag">Physical</span>
-        <h3>Obby</h3>
-        <p>Leap, dodge, and keep moving through each obstacle.</p>
-        <a class="play-btn" href="obby.html">Play</a>
-      </article>
-      <article class="card" data-name="pacman">
-        <span class="game-tag">Classic</span>
-        <h3>Pacman</h3>
-        <p>Eat pellets, avoid ghosts, and chase a new high score.</p>
-        <a class="play-btn" href="pacman.html">Play</a>
-      </article>
-      <article class="card" data-name="parking">
-        <span class="game-tag">Driving</span>
-        <h3>Parking</h3>
-        <p>Line up the car and park with precision.</p>
-        <a class="play-btn" href="parking.html">Play</a>
-      </article>
-      <article class="card" data-name="plinko">
-        <span class="game-tag">Chance</span>
-        <h3>Plinko</h3>
-        <p>Drop the coin and watch it bounce into the prize slots.</p>
-        <a class="play-btn" href="plinko.html">Play</a>
-      </article>
-      <article class="card" data-name="ragdoll sim">
-        <span class="game-tag">Physics</span>
-        <h3>Ragdoll Sim</h3>
-        <p>Watch the physics react and explore chaotic motion.</p>
-        <a class="play-btn" href="ragdollsim.html">Play</a>
-      </article>
-      <article class="card" data-name="simon says">
-        <span class="game-tag">Memory</span>
-        <h3>Simon Says</h3>
-        <p>Repeat the pattern and keep the sequence alive.</p>
-        <a class="play-btn" href="simonsays.html">Play</a>
-      </article>
-      <article class="card" data-name="sliding puzzle">
-        <span class="game-tag">Puzzle</span>
-        <h3>Sliding Puzzle</h3>
-        <p>Arrange the tiles and finish the picture cleanly.</p>
-        <a class="play-btn" href="slidingpuzzle.html">Play</a>
-      </article>
-      <article class="card" data-name="snake">
-        <span class="game-tag">Classic</span>
-        <h3>Snake</h3>
-        <p>Eat, grow, and avoid crashing into your own trail.</p>
-        <a class="play-btn" href="snake.html">Play</a>
-      </article>
-      <article class="card" data-name="space shooter">
-        <span class="game-tag">Shooter</span>
-        <h3>Space Shooter</h3>
-        <p>Defend your ship, dodge enemies, and keep firing.</p>
-        <a class="play-btn" href="spaceshooter.html">Play</a>
-      </article>
-      <article class="card" data-name="spot the difference">
-        <span class="game-tag">Observation</span>
-        <h3>Spot the Difference</h3>
-        <p>Compare both scenes and find every mismatch.</p>
-        <a class="play-btn" href="spotthedifference.html">Play</a>
-      </article>
-      <article class="card" data-name="tic tac toe">
-        <span class="game-tag">Board</span>
-        <h3>Tic-Tac-Toe</h3>
-        <p>Take the center, plan ahead, and line up three.</p>
-        <a class="play-btn" href="tictactoe.html">Play</a>
-      </article>
-      <article class="card" data-name="whack a mole">
-        <span class="game-tag">Reaction</span>
-        <h3>Whack-a-Mole</h3>
-        <p>Hit the popping targets as fast as you can.</p>
-        <a class="play-btn" href="whackamole.html">Play</a>
-      </article>
-      <article class="card" data-name="wordle infinite">
-        <span class="game-tag">Word</span>
-        <h3>Wordle Infinite</h3>
-        <p>Crack the five-letter word and keep the streak alive.</p>
-        <a class="play-btn" href="wordleinfinite.html">Play</a>
-      </article>
-    </main>
+    <canvas id="gameCanvas" width="1000" height="700"></canvas>
+
+    <div id="startOverlay">
+      <div class="panel">
+        <h1>Galatrix</h1>
+        <div class="subtitle">Orbit Defense</div>
+        <button id="startBtn">Start Game</button>
+        <div class="controls">
+          <span>Move: A / D / ← →</span>
+          <span>Fire: Space</span>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
-    const searchInput = document.getElementById('search');
-    const cards = [...document.querySelectorAll('.card')];
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
 
-    searchInput.addEventListener('input', (event) => {
-      const q = event.target.value.trim().toLowerCase();
+    const scoreTag = document.getElementById("scoreTag");
+    const livesTag = document.getElementById("livesTag");
+    const startOverlay = document.getElementById("startOverlay");
+    const startBtn = document.getElementById("startBtn");
 
-      cards.forEach(card => {
-        const name = card.dataset.name.toLowerCase();
-        const visible = !q || name.includes(q);
-        card.classList.toggle('hidden', !visible);
+    const keys = {};
+    let gameRunning = false;
+    let rafId = null;
+    let lastTime = 0;
+
+    const rand = (min, max) => Math.random() * (max - min) + min;
+    const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+
+    const state = {
+      score: 0,
+      lives: 3,
+      gameTime: 0,
+      spawnTimer: 0.8,
+      player: {
+        x: canvas.width / 2,
+        y: canvas.height - 70,
+        w: 30,
+        h: 22,
+        speed: 430,
+        cooldown: 0,
+        vx: 0
+      },
+      bullets: [],
+      enemies: [],
+      particles: [],
+      stars: []
+    };
+
+    function makeStars() {
+      state.stars = [];
+      for (let i = 0; i < 160; i++) {
+        state.stars.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          r: rand(0.8, 2.1),
+          speed: rand(25, 120),
+          alpha: rand(0.35, 1)
+        });
+      }
+    }
+
+    function resetGame() {
+      state.score = 0;
+      state.lives = 3;
+      state.gameTime = 0;
+      state.spawnTimer = 0.8;
+
+      state.player.x = canvas.width / 2;
+      state.player.y = canvas.height - 70;
+      state.player.vx = 0;
+      state.player.cooldown = 0;
+
+      state.bullets = [];
+      state.enemies = [];
+      state.particles = [];
+      scoreTag.textContent = `Score: ${state.score}`;
+      livesTag.textContent = `Lives: ${state.lives}`;
+      makeStars();
+    }
+
+    function showStartPanel(title = "Galatrix", subtitle = "Orbit Defense", buttonText = "Start Game") {
+      const titleEl = document.querySelector("#startOverlay h1");
+      const subtitleEl = document.querySelector("#startOverlay .subtitle");
+      const btn = document.querySelector("#startOverlay button");
+
+      titleEl.textContent = title;
+      subtitleEl.textContent = subtitle;
+      btn.textContent = buttonText;
+      startOverlay.style.display = "flex";
+    }
+
+    function hideStartPanel() {
+      startOverlay.style.display = "none";
+    }
+
+    function startGame() {
+      resetGame();
+      gameRunning = true;
+      hideStartPanel();
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(loop);
+    }
+
+    function endGame() {
+      gameRunning = false;
+      showStartPanel("Game Over", `Final Score: ${state.score}`, "Play Again");
+    }
+
+    function shootBullet(enemyShot = false) {
+      if (enemyShot) {
+        state.bullets.push({
+          x: state.player.x,
+          y: state.player.y + 10,
+          radius: 5,
+          speed: 360,
+          enemy: true
+        });
+        return;
+      }
+
+      const bullet = {
+        x: state.player.x,
+        y: state.player.y - 18,
+        radius: 4,
+        speed: 650,
+        enemy: false
+      };
+      state.bullets.push(bullet);
+    }
+
+    function createEnemy() {
+      const size = rand(18, 34);
+      const heavy = Math.random() < 0.22;
+      state.enemies.push({
+        x: rand(30, canvas.width - 30),
+        y: -30,
+        radius: size,
+        heavy,
+        speed: heavy ? rand(110, 150) : rand(150, 210),
+        drift: rand(-1.5, 1.5),
+        hp: heavy ? 2 : 1,
+        shootCooldown: rand(0.5, 1.7)
       });
+    }
+
+    function spawnParticles(x, y, color, count = 12) {
+      for (let i = 0; i < count; i++) {
+        state.particles.push({
+          x,
+          y,
+          vx: rand(-140, 140),
+          vy: rand(-140, 140),
+          radius: rand(2, 5),
+          life: rand(0.3, 0.9),
+          color
+        });
+      }
+    }
+
+    function update(dt) {
+      state.gameTime += dt;
+      state.player.cooldown = Math.max(0, state.player.cooldown - dt);
+
+      const moveDir = (keys["ArrowLeft"] || keys["a"] || keys["A"] ? -1 : 0) + (keys["ArrowRight"] || keys["d"] || keys["D"] ? 1 : 0);
+      state.player.vx = moveDir * state.player.speed;
+      state.player.x += state.player.vx * dt;
+      state.player.x = clamp(state.player.x, 18, canvas.width - 18);
+
+      if (keys[" "] || keys["Space"] || keys["space"]) {
+        if (state.player.cooldown <= 0) {
+          shootBullet(false);
+          state.player.cooldown = 0.15;
+        }
+      }
+
+      state.spawnTimer -= dt;
+      if (state.spawnTimer <= 0) {
+        createEnemy();
+        state.spawnTimer = Math.max(0.45, 1.15 - state.score * 0.0065);
+      }
+
+      // update bullets
+      for (let i = state.bullets.length - 1; i >= 0; i--) {
+        const b = state.bullets[i];
+        b.y += b.enemy ? 300 * dt : -650 * dt;
+
+        if (b.y < -30 || b.y > canvas.height + 30) {
+          state.bullets.splice(i, 1);
+        }
+      }
+
+      // update enemies
+      for (let i = state.enemies.length - 1; i >= 0; i--) {
+        const e = state.enemies[i];
+        e.y += e.speed * dt;
+        e.x += Math.sin((state.gameTime + e.y) * 1.8) * e.drift * 75 * dt;
+
+        e.shootCooldown -= dt;
+        if (e.shootCooldown <= 0 && e.y > 30) {
+          state.bullets.push({
+            x: e.x,
+            y: e.y + e.radius + 6,
+            radius: 5,
+            speed: 320,
+            enemy: true
+          });
+          e.shootCooldown = e.heavy ? rand(1.2, 2.2) : rand(1.5, 2.7);
+        }
+
+        // player collision
+        const dx = e.x - state.player.x;
+        const dy = e.y - state.player.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist < e.radius + 18) {
+          state.enemies.splice(i, 1);
+          state.lives -= 1;
+          spawnParticles(e.x, e.y, "#ff5c77", 18);
+          livesTag.textContent = `Lives: ${state.lives}`;
+
+          if (state.lives <= 0) {
+            endGame();
+            return;
+          }
+          continue;
+        }
+
+        // enemy bullet collision with player
+        for (let j = state.bullets.length - 1; j >= 0; j--) {
+          const b = state.bullets[j];
+          if (!b.enemy) continue;
+
+          const hitDist = Math.hypot(b.x - state.player.x, b.y - state.player.y);
+          if (hitDist < b.radius + 15) {
+            state.bullets.splice(j, 1);
+            state.lives -= 1;
+            spawnParticles(b.x, b.y, "#ff5c77", 12);
+            livesTag.textContent = `Lives: ${state.lives}`;
+
+            if (state.lives <= 0) {
+              endGame();
+              return;
+            }
+          }
+        }
+
+        // player bullets hitting enemies
+        for (let j = state.bullets.length - 1; j >= 0; j--) {
+          const b = state.bullets[j];
+          if (b.enemy) continue;
+
+          const hit = Math.hypot(b.x - e.x, b.y - e.y) < b.radius + e.radius;
+          if (hit) {
+            state.bullets.splice(j, 1);
+            e.hp -= 1;
+            spawnParticles(b.x, b.y, "#77ecff", 8);
+
+            if (e.hp <= 0) {
+              state.enemies.splice(i, 1);
+              state.score += e.heavy ? 25 : 10;
+              scoreTag.textContent = `Score: ${state.score}`;
+              spawnParticles(e.x, e.y, e.heavy ? "#ffb45f" : "#7ef7b1", e.heavy ? 24 : 18);
+              break;
+            }
+          }
+        }
+      }
+
+      // particles
+      for (let i = state.particles.length - 1; i >= 0; i--) {
+        const p = state.particles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.life -= dt;
+        if (p.life <= 0) state.particles.splice(i, 1);
+      }
+
+      // stars
+      for (const s of state.stars) {
+        s.y += s.speed * dt;
+        if (s.y > canvas.height) {
+          s.y = -8;
+          s.x = Math.random() * canvas.width;
+        }
+      }
+    }
+
+    function drawGrid() {
+      ctx.strokeStyle = "rgba(117, 184, 255, 0.08)";
+      ctx.lineWidth = 1;
+
+      for (let x = 0; x < canvas.width; x += 42) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+      }
+
+      for (let y = 0; y < canvas.height; y += 42) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+    }
+
+    function drawStars() {
+      for (const s of state.stars) {
+        ctx.beginPath();
+        ctx.fillStyle = `rgba(255, 255, 255, ${s.alpha})`;
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function drawPlayer() {
+      const x = state.player.x;
+      const y = state.player.y;
+
+      ctx.save();
+      ctx.translate(x, y);
+
+      // engine glow
+      ctx.fillStyle = "rgba(119, 236, 255, 0.35)";
+      ctx.beginPath();
+      ctx.moveTo(0, 18);
+      ctx.lineTo(-10, 10);
+      ctx.lineTo(0, 12);
+      ctx.lineTo(10, 10);
+      ctx.closePath();
+      ctx.fill();
+
+      // ship body
+      ctx.fillStyle = "#79d6ff";
+      ctx.beginPath();
+      ctx.moveTo(0, -18);
+      ctx.lineTo(16, 18);
+      ctx.lineTo(0, 12);
+      ctx.lineTo(-16, 18);
+      ctx.closePath();
+      ctx.fill();
+
+      // cockpit
+      ctx.fillStyle = "#eafaff";
+      ctx.fillRect(-3, -4, 6, 12);
+
+      ctx.restore();
+    }
+
+    function drawBullets() {
+      for (const b of state.bullets) {
+        ctx.beginPath();
+        ctx.fillStyle = b.enemy ? "#ff7a7a" : "#77ecff";
+        ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function drawEnemies() {
+      for (const e of state.enemies) {
+        ctx.save();
+        ctx.translate(e.x, e.y);
+
+        if (e.heavy) {
+          ctx.fillStyle = "#ffb45f";
+          ctx.beginPath();
+          ctx.moveTo(0, -e.radius);
+          ctx.lineTo(e.radius, 0);
+          ctx.lineTo(0, e.radius);
+          ctx.lineTo(-e.radius, 0);
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.fillStyle = "rgba(60, 20, 0, 0.55)";
+          ctx.fillRect(-7, -9, 14, 8);
+        } else {
+          ctx.fillStyle = "#7ef7b1";
+          ctx.beginPath();
+          ctx.arc(0, 0, e.radius, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = "#113a2c";
+          ctx.fillRect(-5, -2, 10, 4);
+        }
+
+        ctx.restore();
+      }
+    }
+
+    function drawParticles() {
+      for (const p of state.particles) {
+        ctx.save();
+        ctx.globalAlpha = clamp(p.life * 1.7, 0, 1);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawGrid();
+      drawStars();
+      drawBullets();
+      drawEnemies();
+      drawParticles();
+      drawPlayer();
+
+      // scanlines
+      ctx.strokeStyle = "rgba(255,255,255,0.03)";
+      for (let y = 0; y < canvas.height; y += 4) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+    }
+
+    function loop(timestamp) {
+      if (!gameRunning) return;
+
+      const dt = Math.min(0.033, (timestamp - lastTime) / 1000 || 0.016);
+      lastTime = timestamp;
+
+      update(dt);
+      render();
+
+      rafId = requestAnimationFrame(loop);
+    }
+
+    document.addEventListener("keydown", (e) => {
+      keys[e.key] = true;
+
+      if (e.key === " " || e.code === "Space") {
+        e.preventDefault();
+      }
     });
+
+    document.addEventListener("keyup", (e) => {
+      keys[e.key] = false;
+    });
+
+    startBtn.addEventListener("click", startGame);
+
+    makeStars();
+    render();
   </script>
 </body>
 </html>
