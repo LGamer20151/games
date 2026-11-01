@@ -1,1 +1,304 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Wordle Infinite</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:radial-gradient(circle,#0b1120,#050816);color:#fff;font-family:Arial,sans-serif}.game{width:min(92vw,560px);background:rgba(15,23,42,.9);padding:18px;border-radius:20px;border:1px solid rgba(148,163,184,.2)}.top{display:flex;justify-content:space-between;align-items:center}.top a{color:#dfeaff;text-decoration:none}.stats{display:flex;justify-content:space-between;margin:12px 0}.word{display:flex;gap:8px;justify-content:center;margin-top:16px}.letter{width:36px;height:36px;border-radius:8px;background:rgba(255,255,255,.08);display:grid;place-items:center;font-weight:bold}.input{width:100%;margin-top:16px;padding:12px;border-radius:12px;border:1px solid rgba(148,163,184,.2);background:rgba(15,23,42,.9);color:#fff}.button{width:100%;margin-top:14px;padding:12px;border:none;border-radius:12px;background:linear-gradient(90deg,#22d3ee,#8b5cf6);color:#fff;font-weight:bold;cursor:pointer}</style></head><body><div class="game"><div class="top"><h2>Wordle Infinite</h2><a href="index.html">← Home</a></div><div class="stats"><span>Score: <strong id="score">0</strong></span><span>Word: <strong id="word">-</strong></span></div><div class="word" id="wordDisplay"></div><input class="input" id="guess" type="text" maxlength="5" placeholder="Guess the 5-letter word" /><button class="button" id="startBtn">Guess</button></div><script>const words=['PLANE','ROBOT','RAVEN','PIXEL','NOVA','LASER','QUEST','COMET'];const scoreEl=document.getElementById('score');const wordEl=document.getElementById('word');const display=document.getElementById('wordDisplay');const input=document.getElementById('guess');const startBtn=document.getElementById('startBtn');let score=0,answer='';function choose(){answer=words[Math.floor(Math.random()*words.length)];wordEl.textContent='?';display.innerHTML='';for(let i=0;i<5;i++){const box=document.createElement('div');box.className='letter';display.appendChild(box)}}startBtn.addEventListener('click',()=>{const guess=input.value.trim().toUpperCase();if(!guess||guess.length!==5)return;score+=guess===answer?10:0;scoreEl.textContent=score;wordEl.textContent=answer;input.value='';choose();});choose();</script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wordle Infinite</title>
+  <style>
+    :root {
+      --bg-1: #0b1120;
+      --bg-2: #0f172a;
+      --panel: rgba(15, 23, 42, 0.9);
+      --line: rgba(148, 163, 184, 0.22);
+      --text: #f8fafc;
+      --muted: #cbd5e1;
+      --empty: rgba(255,255,255,0.08);
+      --green: #4ade80;
+      --yellow: #facc15;
+      --gray: #475569;
+      --accent: #22d3ee;
+      --accent-2: #8b5cf6;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(circle at top, rgba(34,211,238,0.12), transparent 30%), linear-gradient(180deg, var(--bg-1), var(--bg-2));
+      color: var(--text);
+      font-family: Arial, sans-serif;
+    }
+
+    .game {
+      width: min(92vw, 560px);
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 18px 18px 22px;
+      box-shadow: 0 25px 45px rgba(2,6,23,0.45);
+    }
+
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.8rem, 4vw, 2.7rem);
+      letter-spacing: -0.05em;
+      color: var(--text);
+    }
+
+    a {
+      color: #bfe8ff;
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      margin: 12px 0 16px;
+      color: var(--muted);
+      font-size: 1.05rem;
+      font-weight: 700;
+      flex-wrap: wrap;
+    }
+
+    #board {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+    }
+
+    .tile {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: var(--empty);
+      display: grid;
+      place-items: center;
+      font-size: clamp(1.2rem, 3vw, 1.8rem);
+      font-weight: 800;
+      text-transform: uppercase;
+      transition: transform 0.12s ease, background 0.12s ease;
+    }
+
+    .tile.filled { background: rgba(255,255,255,0.04); }
+    .tile.correct { background: var(--green); color: #052e16; }
+    .tile.present { background: var(--yellow); color: #3f2b00; }
+    .tile.absent { background: var(--gray); color: #fff; }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    input {
+      flex: 1;
+      min-width: 0;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(15, 23, 42, 0.8);
+      color: var(--text);
+      font-size: 1rem;
+      text-transform: uppercase;
+    }
+
+    button {
+      border: none;
+      border-radius: 12px;
+      padding: 12px 18px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: white;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    #message {
+      min-height: 22px;
+      margin-top: 12px;
+      color: #f8fafc;
+      font-weight: 700;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="game">
+    <div class="top">
+      <h1>Wordle Infinite</h1>
+      <a href="index.html">Home</a>
+    </div>
+
+    <div class="status-bar">
+      <span>Score: <strong id="score">0</strong></span>
+      <span>Word: <strong id="word">-</strong></span>
+    </div>
+
+    <div id="board"></div>
+
+    <div class="controls">
+      <input id="guess" type="text" maxlength="5" placeholder="Guess the 5-letter word" />
+      <button id="submitBtn">Guess</button>
+    </div>
+
+    <div id="message"></div>
+  </div>
+
+  <script>
+    const validWords = [
+      'PLANE','ROBOT','RAVEN','PIXEL','NOVA','LASER','QUEST','COMET','STONE','GRAPE','APPLE','CLOUD','MUSIC','PULSE','SHINE','BLOOM','OCEAN','BREAD','LIGHT','BRAVE','SMILE','TRACE','FROST','GHOST','DREAM','EARTH','SOLAR','HONEY','CANDY','MANGO','AGILE','SPARK','FLAME','GLOVE','TIGER','WATER','STONE','CRANE','CROWN','MINTY'
+    ];
+
+    const boardEl = document.getElementById('board');
+    const guessEl = document.getElementById('guess');
+    const scoreEl = document.getElementById('score');
+    const wordEl = document.getElementById('word');
+    const messageEl = document.getElementById('message');
+    const submitBtn = document.getElementById('submitBtn');
+
+    let answer = '';
+    let board = [];
+    let currentRow = 0;
+    let score = 0;
+    let gameOver = false;
+
+    function randomWord() {
+      return validWords[Math.floor(Math.random() * validWords.length)];
+    }
+
+    function buildBoard() {
+      boardEl.innerHTML = '';
+      board = Array.from({ length: 6 }, () => Array(5).fill(''));
+      for (let r = 0; r < 6; r++) {
+        const rowEl = document.createElement('div');
+        rowEl.className = 'row';
+        for (let c = 0; c < 5; c++) {
+          const tile = document.createElement('div');
+          tile.className = 'tile';
+          rowEl.appendChild(tile);
+        }
+        boardEl.appendChild(rowEl);
+      }
+    }
+
+    function applyGuessState(rowIndex, guess) {
+      const rowEls = boardEl.children[rowIndex].children;
+      const result = Array(5).fill('absent');
+      const remaining = {};
+
+      for (let i = 0; i < 5; i++) {
+        const ch = answer[i];
+        if (guess[i] === ch) {
+          result[i] = 'correct';
+        } else {
+          remaining[ch] = (remaining[ch] || 0) + 1;
+        }
+      }
+
+      for (let i = 0; i < 5; i++) {
+        if (result[i] === 'correct') continue;
+        if (answer.includes(guess[i]) && remaining[guess[i]] > 0) {
+          result[i] = 'present';
+          remaining[guess[i]] -= 1;
+        }
+      }
+
+      for (let i = 0; i < 5; i++) {
+        const tile = rowEls[i];
+        tile.textContent = guess[i];
+        tile.classList.add('filled', result[i]);
+      }
+    }
+
+    function startNewGame() {
+      answer = randomWord();
+      board = Array.from({ length: 6 }, () => Array(5).fill(''));
+      currentRow = 0;
+      gameOver = false;
+      score = 0;
+      scoreEl.textContent = String(score);
+      wordEl.textContent = '-';
+      messageEl.textContent = '';
+      guessEl.value = '';
+      guessEl.focus();
+      buildBoard();
+    }
+
+    function endGame(won) {
+      gameOver = true;
+      wordEl.textContent = answer;
+      if (won) {
+        score += 10;
+        scoreEl.textContent = String(score);
+        messageEl.textContent = 'You got it!';
+      } else {
+        messageEl.textContent = 'Out of guesses!';
+      }
+      guessEl.disabled = true;
+      submitBtn.disabled = true;
+    }
+
+    function submitGuess() {
+      if (gameOver) return;
+
+      const guess = guessEl.value.trim().toUpperCase();
+      if (!/^[A-Z]{5}$/.test(guess)) {
+        messageEl.textContent = 'Enter a 5-letter word.';
+        return;
+      }
+
+      if (!validWords.includes(guess)) {
+        messageEl.textContent = 'Not in word list.';
+        return;
+      }
+
+      const rowIndex = currentRow;
+      applyGuessState(rowIndex, guess);
+
+      if (guess === answer) {
+        endGame(true);
+        return;
+      }
+
+      currentRow += 1;
+      guessEl.value = '';
+
+      if (currentRow >= 6) {
+        endGame(false);
+        return;
+      }
+
+      messageEl.textContent = '';
+    }
+
+    submitBtn.addEventListener('click', submitGuess);
+    guessEl.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') submitGuess();
+    });
+
+    startNewGame();
+  </script>
+</body>
+</html>
