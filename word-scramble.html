@@ -5,20 +5,71 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Word Scramble</title>
   <style>
-    :root { --bg: #07111f; --panel: rgba(15, 23, 42, 0.9); --line: rgba(148, 163, 184, 0.22); --text: #edf4ff; --muted: #adc1db; --accent: #22d3ee; --accent-2: #8b5cf6; }
-    * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; display: grid; place-items: center; font-family: Arial, sans-serif; color: var(--text); background: radial-gradient(circle at top, rgba(34,211,238,0.18), transparent 30%), linear-gradient(180deg, #050b16 0%, #0d1324 100%); }
-    .panel { width: min(680px, 90vw); padding: 36px 28px; border-radius: 24px; background: var(--panel); border: 1px solid var(--line); text-align: center; box-shadow: 0 16px 40px rgba(2, 6, 23, 0.45); }
-    h1 { margin: 0 0 12px; font-size: clamp(2rem, 4vw, 3rem); letter-spacing: -0.05em; background: linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-    p { color: var(--muted); font-size: 1.05rem; margin: 0 0 22px; }
-    a { display: inline-block; padding: 12px 20px; border-radius: 999px; color: white; text-decoration: none; background: linear-gradient(135deg, var(--accent), var(--accent-2)); font-weight: 700; }
+    :root { --bg:#07111f; --panel:rgba(15,23,42,0.88); --line:rgba(148,163,184,0.22); --text:#edf4ff; --muted:#adc1db; --accent:#22d3ee; --accent-2:#8b5cf6; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; display:grid; place-items:center; font-family:Arial,sans-serif; color:var(--text); background:radial-gradient(circle at top, rgba(34,211,238,0.18), transparent 30%), linear-gradient(180deg, #050b16 0%, #0d1324 100%); }
+    .panel { width:min(680px,92vw); padding:22px 20px 28px; background:var(--panel); border:1px solid var(--line); border-radius:24px; box-shadow:0 16px 40px rgba(0,0,0,0.3); }
+    a { color:#bfe8ff; text-decoration:none; font-weight:700; display:inline-block; margin-bottom:10px; }
+    h1 { margin:0 0 8px; font-size:clamp(2rem, 5vw, 3rem); letter-spacing:-0.05em; background:linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+    .hud { display:flex; justify-content:space-between; color:var(--muted); margin:10px 0 16px; font-weight:700; }
+    #scramble { font-size:2rem; letter-spacing:0.15em; margin:12px 0; text-align:center; font-weight:900; }
+    input { width:100%; margin:12px 0; padding:14px 16px; border-radius:12px; border:1px solid var(--line); background:rgba(15,23,42,0.7); color:white; font-size:1.1rem; }
+    button { margin-top:8px; border:none; border-radius:12px; padding:12px 18px; font-weight:800; background:linear-gradient(135deg, var(--accent), var(--accent-2)); color:white; cursor:pointer; }
   </style>
 </head>
 <body>
-  <main class="panel">
+  <div class="panel">
+    <a href="index.html">← Back to arcade</a>
     <h1>Word Scramble</h1>
-    <p>This game is currently under construction. It will be live here soon.</p>
-    <a href="index.html">Back to the arcade</a>
-  </main>
+    <div class="hud"><span id="score">Score: 0</span><span id="status">Ready</span></div>
+    <div id="scramble"></div>
+    <input id="guess" type="text" placeholder="Type the word" />
+    <button id="check">Check Answer</button>
+    <button id="next" style="margin-left:10px;">Next</button>
+  </div>
+
+  <script>
+    const words = ['PLANET','GAMER','ROCKET','PUZZLE','BUBBLE','MUSIC','NEON','SPACE'];
+    const scrambleEl = document.getElementById('scramble');
+    const guessEl = document.getElementById('guess');
+    const scoreEl = document.getElementById('score');
+    const statusEl = document.getElementById('status');
+    const checkBtn = document.getElementById('check');
+    const nextBtn = document.getElementById('next');
+    let score = 0, answer = '';
+
+    function shuffle(word) {
+      const chars = word.split('');
+      for (let i = chars.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [chars[i], chars[j]] = [chars[j], chars[i]];
+      }
+      return chars.join('');
+    }
+
+    function setWord() {
+      answer = words[Math.floor(Math.random() * words.length)];
+      let scrambled = shuffle(answer);
+      while (scrambled === answer) scrambled = shuffle(answer);
+      scrambleEl.textContent = scrambled;
+      guessEl.value = '';
+      guessEl.focus();
+    }
+
+    checkBtn.addEventListener('click', () => {
+      const guess = guessEl.value.trim().toUpperCase();
+      if (guess === answer) {
+        score += 10;
+        scoreEl.textContent = 'Score: ' + score;
+        statusEl.textContent = 'Correct!';
+        setWord();
+      } else {
+        statusEl.textContent = 'Try again';
+      }
+    });
+
+    nextBtn.addEventListener('click', setWord);
+    setWord();
+  </script>
 </body>
 </html>

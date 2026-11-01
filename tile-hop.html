@@ -5,20 +5,91 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tile Hop</title>
   <style>
-    :root { --bg: #07111f; --panel: rgba(15, 23, 42, 0.9); --line: rgba(148, 163, 184, 0.22); --text: #edf4ff; --muted: #adc1db; --accent: #22d3ee; --accent-2: #8b5cf6; }
-    * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; display: grid; place-items: center; font-family: Arial, sans-serif; color: var(--text); background: radial-gradient(circle at top, rgba(34,211,238,0.18), transparent 30%), linear-gradient(180deg, #050b16 0%, #0d1324 100%); }
-    .panel { width: min(680px, 90vw); padding: 36px 28px; border-radius: 24px; background: var(--panel); border: 1px solid var(--line); text-align: center; box-shadow: 0 16px 40px rgba(2, 6, 23, 0.45); }
-    h1 { margin: 0 0 12px; font-size: clamp(2rem, 4vw, 3rem); letter-spacing: -0.05em; background: linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-    p { color: var(--muted); font-size: 1.05rem; margin: 0 0 22px; }
-    a { display: inline-block; padding: 12px 20px; border-radius: 999px; color: white; text-decoration: none; background: linear-gradient(135deg, var(--accent), var(--accent-2)); font-weight: 700; }
+    :root { --bg:#07111f; --panel:rgba(15,23,42,0.88); --line:rgba(148,163,184,0.22); --text:#edf4ff; --muted:#adc1db; --accent:#22d3ee; --accent-2:#8b5cf6; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; display:grid; place-items:center; font-family:Arial,sans-serif; color:var(--text); background:radial-gradient(circle at top, rgba(34,211,238,0.18), transparent 30%), linear-gradient(180deg, #050b16 0%, #0d1324 100%); }
+    .panel { width:min(620px,92vw); padding:22px 20px 28px; background:var(--panel); border:1px solid var(--line); border-radius:24px; box-shadow:0 16px 40px rgba(0,0,0,0.3); }
+    a { color:#bfe8ff; text-decoration:none; font-weight:700; display:inline-block; margin-bottom:10px; }
+    h1 { margin:0 0 8px; font-size:clamp(2rem, 5vw, 3rem); letter-spacing:-0.05em; background:linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+    .hud { display:flex; justify-content:space-between; color:var(--muted); margin:10px 0 16px; font-weight:700; }
+    #grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; }
+    .tile { aspect-ratio:1; display:grid; place-items:center; border-radius:16px; background:linear-gradient(180deg, rgba(75,84,101,0.96), rgba(52,62,77,0.96)); border:1px solid rgba(255,255,255,0.1); font-size:1.5rem; font-weight:900; cursor:pointer; }
+    .active { background:linear-gradient(135deg, #a5f3fc, #38bdf8); color:#04131b; }
+    .done { background:linear-gradient(135deg, #86efac, #22c55e); color:#062415; }
+    button { margin-top:16px; border:none; border-radius:12px; padding:12px 18px; font-weight:800; background:linear-gradient(135deg, var(--accent), var(--accent-2)); color:white; cursor:pointer; }
   </style>
 </head>
 <body>
-  <main class="panel">
+  <div class="panel">
+    <a href="index.html">← Back to arcade</a>
     <h1>Tile Hop</h1>
-    <p>This game is currently under construction. It will be live here soon.</p>
-    <a href="index.html">Back to the arcade</a>
-  </main>
+    <div class="hud"><span id="score">Score: 0</span><span id="status">Ready</span></div>
+    <div id="grid"></div>
+    <button id="start">Start</button>
+  </div>
+
+  <script>
+    const grid = document.getElementById('grid');
+    const scoreEl = document.getElementById('score');
+    const statusEl = document.getElementById('status');
+    const startBtn = document.getElementById('start');
+    let tiles = [], sequence = [], currentIndex = 0, score = 0, started = false;
+
+    function renderGrid() {
+      grid.innerHTML = '';
+      tiles.forEach((tile, index) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'tile';
+        btn.textContent = (index + 1);
+        btn.onclick = () => handleTile(index);
+        grid.appendChild(btn);
+      });
+    }
+
+    function pickSequence() {
+      sequence = Array.from({length: 4}, () => Math.floor(Math.random() * 16));
+      currentIndex = 0;
+      statusEl.textContent = 'Watch the pattern';
+      sequence.forEach((index, i) => {
+        setTimeout(() => {
+          const el = grid.children[index];
+          if (el) {
+            el.classList.add('active');
+            setTimeout(() => el.classList.remove('active'), 350);
+          }
+        }, i * 500);
+      });
+    }
+
+    function handleTile(index) {
+      if (!started) return;
+      if (sequence[currentIndex] === index) {
+        const el = grid.children[index];
+        if (el) el.classList.add('done');
+        currentIndex += 1;
+        score += 5; scoreEl.textContent = 'Score: ' + score;
+        if (currentIndex >= sequence.length) {
+          started = false; statusEl.textContent = 'Pattern complete';
+          alert('You nailed it! Score: ' + score);
+        }
+      } else {
+        alert('Wrong tile! Final score: ' + score);
+        started = false;
+      }
+    }
+
+    function startGame() {
+      score = 0; scoreEl.textContent = 'Score: 0';
+      tiles = Array.from({length: 16}, (_, i) => i);
+      renderGrid();
+      started = true;
+      pickSequence();
+    }
+
+    startBtn.addEventListener('click', startGame);
+    tiles = Array.from({length: 16}, (_, i) => i);
+    renderGrid();
+  </script>
 </body>
 </html>

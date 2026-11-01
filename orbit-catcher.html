@@ -5,20 +5,78 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Orbit Catch</title>
   <style>
-    :root { --bg: #07111f; --panel: rgba(15, 23, 42, 0.9); --line: rgba(148, 163, 184, 0.22); --text: #edf4ff; --muted: #adc1db; --accent: #22d3ee; --accent-2: #8b5cf6; }
-    * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; display: grid; place-items: center; font-family: Arial, sans-serif; color: var(--text); background: radial-gradient(circle at top, rgba(34,211,238,0.18), transparent 30%), linear-gradient(180deg, #050b16 0%, #0d1324 100%); }
-    .panel { width: min(680px, 90vw); padding: 36px 28px; border-radius: 24px; background: var(--panel); border: 1px solid var(--line); text-align: center; box-shadow: 0 16px 40px rgba(2, 6, 23, 0.45); }
-    h1 { margin: 0 0 12px; font-size: clamp(2rem, 4vw, 3rem); letter-spacing: -0.05em; background: linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-    p { color: var(--muted); font-size: 1.05rem; margin: 0 0 22px; }
-    a { display: inline-block; padding: 12px 20px; border-radius: 999px; color: white; text-decoration: none; background: linear-gradient(135deg, var(--accent), var(--accent-2)); font-weight: 700; }
+    :root { --bg:#07111f; --panel:rgba(15,23,42,0.88); --line:rgba(148,163,184,0.22); --text:#edf4ff; --muted:#adc1db; --accent:#22d3ee; --accent-2:#8b5cf6; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; display:grid; place-items:center; font-family:Arial,sans-serif; color:var(--text); background:radial-gradient(circle at top, rgba(34,211,238,0.18), transparent 30%), linear-gradient(180deg, #050b16 0%, #0d1324 100%); }
+    .panel { width:min(700px,92vw); padding:22px 20px 28px; background:var(--panel); border:1px solid var(--line); border-radius:24px; box-shadow:0 16px 40px rgba(0,0,0,0.3); }
+    a { color:#bfe8ff; text-decoration:none; font-weight:700; display:inline-block; margin-bottom:10px; }
+    h1 { margin:0 0 8px; font-size:clamp(2rem, 5vw, 3rem); letter-spacing:-0.05em; background:linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+    .hud { display:flex; justify-content:space-between; color:var(--muted); margin:10px 0 16px; font-weight:700; }
+    #arena { position:relative; height:360px; border-radius:18px; background:radial-gradient(circle at center, rgba(34,211,238,0.08), rgba(7,17,31,0.96)); border:1px solid var(--line); overflow:hidden; }
+    .star { position:absolute; width:18px; height:18px; border-radius:50%; background:radial-gradient(circle, #fef3c7, #fbbf24); box-shadow:0 0 12px #fbbf24; cursor:pointer; }
+    button { margin-top:16px; border:none; border-radius:12px; padding:12px 18px; font-weight:800; background:linear-gradient(135deg, var(--accent), var(--accent-2)); color:white; cursor:pointer; }
   </style>
 </head>
 <body>
-  <main class="panel">
+  <div class="panel">
+    <a href="index.html">← Back to arcade</a>
     <h1>Orbit Catch</h1>
-    <p>This game is currently under construction. It will be live here soon.</p>
-    <a href="index.html">Back to the arcade</a>
-  </main>
+    <div class="hud"><span id="score">Score: 0</span><span id="timer">Time: 20</span></div>
+    <div id="arena"></div>
+    <button id="start">Start Game</button>
+  </div>
+
+  <script>
+    const arena = document.getElementById('arena');
+    const scoreEl = document.getElementById('score');
+    const timerEl = document.getElementById('timer');
+    const startBtn = document.getElementById('start');
+    let score = 0, timeLeft = 20, started = false, stars = [], timerId;
+
+    function newStar() {
+      const star = document.createElement('div');
+      star.className = 'star';
+      const x = Math.random() * (arena.clientWidth - 18);
+      star.style.left = x + 'px';
+      star.style.top = '-18px';
+      star.addEventListener('click', () => {
+        if (!started) return;
+        score += 5; scoreEl.textContent = 'Score: ' + score; star.remove();
+        stars = stars.filter(s => s !== star);
+      });
+      arena.appendChild(star);
+      stars.push(star);
+    }
+
+    function tick() {
+      if (!started) return;
+      stars.forEach(star => {
+        const y = Number.parseFloat(star.style.top) || 0;
+        const next = y + 3;
+        star.style.top = next + 'px';
+        if (next > arena.clientHeight) {
+          star.remove();
+        }
+      });
+      stars = stars.filter(star => star.isConnected);
+      if (Math.random() < 0.08) newStar();
+    }
+
+    function startGame() {
+      score = 0; timeLeft = 20; started = true; arena.innerHTML = ''; scoreEl.textContent = 'Score: 0'; timerEl.textContent = 'Time: 20';
+      clearInterval(timerId);
+      timerId = setInterval(() => {
+        if (!started) return;
+        timeLeft--;
+        timerEl.textContent = 'Time: ' + timeLeft;
+        if (timeLeft <= 0) {
+          started = false; clearInterval(timerId); alert('Time up! Final score: ' + score);
+        }
+      }, 1000);
+      setInterval(tick, 30);
+    }
+
+    startBtn.addEventListener('click', startGame);
+  </script>
 </body>
 </html>

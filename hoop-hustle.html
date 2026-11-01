@@ -5,20 +5,53 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Hoop Hustle</title>
   <style>
-    :root { --bg: #07111f; --panel: rgba(15, 23, 42, 0.9); --line: rgba(148, 163, 184, 0.22); --text: #edf4ff; --muted: #adc1db; --accent: #22d3ee; --accent-2: #8b5cf6; }
-    * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; display: grid; place-items: center; font-family: Arial, sans-serif; color: var(--text); background: radial-gradient(circle at top, rgba(34,211,238,0.18), transparent 30%), linear-gradient(180deg, #050b16 0%, #0d1324 100%); }
-    .panel { width: min(680px, 90vw); padding: 36px 28px; border-radius: 24px; background: var(--panel); border: 1px solid var(--line); text-align: center; box-shadow: 0 16px 40px rgba(2, 6, 23, 0.45); }
-    h1 { margin: 0 0 12px; font-size: clamp(2rem, 4vw, 3rem); letter-spacing: -0.05em; background: linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-    p { color: var(--muted); font-size: 1.05rem; margin: 0 0 22px; }
-    a { display: inline-block; padding: 12px 20px; border-radius: 999px; color: white; text-decoration: none; background: linear-gradient(135deg, var(--accent), var(--accent-2)); font-weight: 700; }
+    :root { --bg:#07111f; --panel:rgba(15,23,42,0.88); --line:rgba(148,163,184,0.22); --text:#edf4ff; --muted:#adc1db; --accent:#22d3ee; --accent-2:#8b5cf6; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; display:grid; place-items:center; font-family:Arial,sans-serif; color:var(--text); background:radial-gradient(circle at top, rgba(34,211,238,0.18), transparent 30%), linear-gradient(180deg, #050b16 0%, #0d1324 100%); }
+    .panel { width:min(680px,92vw); padding:22px 20px 28px; background:var(--panel); border:1px solid var(--line); border-radius:24px; box-shadow:0 16px 40px rgba(0,0,0,0.3); }
+    a { color:#bfe8ff; text-decoration:none; font-weight:700; display:inline-block; margin-bottom:10px; }
+    h1 { margin:0 0 8px; font-size:clamp(2rem, 5vw, 3rem); letter-spacing:-0.05em; background:linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+    .hud { display:flex; justify-content:space-between; color:var(--muted); margin:10px 0 16px; font-weight:700; }
+    #court { position:relative; height:300px; border-radius:18px; border:1px solid var(--line); background:linear-gradient(180deg, rgba(15,23,42,0.92), rgba(10,15,24,0.8)); overflow:hidden; }
+    .hoop { position:absolute; width:150px; height:30px; border:5px solid #fbbf24; border-top:0; border-radius:0 0 60px 60px; left:calc(50% - 75px); bottom:40px; }
+    .ball { position:absolute; width:30px; height:30px; border-radius:50%; background:radial-gradient(circle at 30% 30%, #fff, #f59e0b); left:50%; top:30px; transform:translateX(-50%); }
+    button { margin-top:16px; border:none; border-radius:12px; padding:12px 18px; font-weight:800; background:linear-gradient(135deg, var(--accent), var(--accent-2)); color:white; cursor:pointer; }
   </style>
 </head>
 <body>
-  <main class="panel">
+  <div class="panel">
+    <a href="index.html">← Back to arcade</a>
     <h1>Hoop Hustle</h1>
-    <p>This game is currently under construction. It will be live here soon.</p>
-    <a href="index.html">Back to the arcade</a>
-  </main>
+    <div class="hud"><span id="score">Score: 0</span><span id="status">Ready</span></div>
+    <div id="court"><div class="hoop"></div><div class="ball" id="ball"></div></div>
+    <button id="shoot">Shoot</button>
+  </div>
+
+  <script>
+    const ball = document.getElementById('ball');
+    const scoreEl = document.getElementById('score');
+    const statusEl = document.getElementById('status');
+    const shootBtn = document.getElementById('shoot');
+    let score = 0, x = 50, y = 30, shot = false;
+    function animate() {
+      if (!shot) return;
+      y += 4;
+      x += (Math.random() * 10 - 5);
+      ball.style.top = y + 'px';
+      ball.style.left = x + '%';
+      if (y > 210 && x > 42 && x < 58) {
+        score += 10; scoreEl.textContent = 'Score: ' + score; statusEl.textContent = 'Swish!';
+        shot = false; ball.style.top = '30px'; ball.style.left = '50%';
+      }
+      if (y > 240) {
+        statusEl.textContent = 'Miss';
+        shot = false; ball.style.top = '30px'; ball.style.left = '50%';
+      }
+    }
+    shootBtn.addEventListener('click', () => {
+      shot = true; statusEl.textContent = 'Shoot!';
+    });
+    setInterval(animate, 28);
+  </script>
 </body>
 </html>

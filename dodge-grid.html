@@ -5,20 +5,96 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dodge Grid</title>
   <style>
-    :root { --bg: #07111f; --panel: rgba(15, 23, 42, 0.9); --line: rgba(148, 163, 184, 0.22); --text: #edf4ff; --muted: #adc1db; --accent: #22d3ee; --accent-2: #8b5cf6; }
-    * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; display: grid; place-items: center; font-family: Arial, sans-serif; color: var(--text); background: radial-gradient(circle at top, rgba(34,211,238,0.18), transparent 30%), linear-gradient(180deg, #050b16 0%, #0d1324 100%); }
-    .panel { width: min(680px, 90vw); padding: 36px 28px; border-radius: 24px; background: var(--panel); border: 1px solid var(--line); text-align: center; box-shadow: 0 16px 40px rgba(2, 6, 23, 0.45); }
-    h1 { margin: 0 0 12px; font-size: clamp(2rem, 4vw, 3rem); letter-spacing: -0.05em; background: linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-    p { color: var(--muted); font-size: 1.05rem; margin: 0 0 22px; }
-    a { display: inline-block; padding: 12px 20px; border-radius: 999px; color: white; text-decoration: none; background: linear-gradient(135deg, var(--accent), var(--accent-2)); font-weight: 700; }
+    :root { --bg:#07111f; --panel:rgba(15,23,42,0.88); --line:rgba(148,163,184,0.22); --text:#edf4ff; --muted:#adc1db; --accent:#22d3ee; --accent-2:#8b5cf6; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; display:grid; place-items:center; font-family:Arial,sans-serif; color:var(--text); background:radial-gradient(circle at top, rgba(34,211,238,0.18), transparent 30%), linear-gradient(180deg, #050b16 0%, #0d1324 100%); }
+    .panel { width:min(700px,92vw); padding:20px 20px 26px; background:var(--panel); border:1px solid var(--line); border-radius:24px; box-shadow:0 16px 40px rgba(0,0,0,0.3); }
+    a { color:#bfe8ff; text-decoration:none; font-weight:700; display:inline-block; margin-bottom:10px; }
+    h1 { margin:0 0 8px; font-size:clamp(2rem, 5vw, 3rem); letter-spacing:-0.05em; background:linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+    .hud { display:flex; justify-content:space-between; color:var(--muted); margin:10px 0 16px; font-weight:700; }
+    #board { position:relative; width:100%; height:420px; border-radius:18px; overflow:hidden; background:linear-gradient(180deg, rgba(15,23,42,0.9), rgba(10,15,24,0.78)); border:1px solid var(--line); }
+    .player, .enemy { position:absolute; width:26px; height:26px; border-radius:8px; }
+    .player { background:linear-gradient(135deg, var(--accent), #7dd3fc); }
+    .enemy { background:linear-gradient(135deg, #fb7185, #f43f5e); }
+    button { margin-top:16px; border:none; border-radius:12px; padding:12px 18px; font-weight:800; background:linear-gradient(135deg, var(--accent), var(--accent-2)); color:white; cursor:pointer; }
   </style>
 </head>
 <body>
-  <main class="panel">
+  <div class="panel">
+    <a href="index.html">← Back to arcade</a>
     <h1>Dodge Grid</h1>
-    <p>This game is currently under construction. It will be live here soon.</p>
-    <a href="index.html">Back to the arcade</a>
-  </main>
+    <div class="hud"><span id="score">Score: 0</span><span id="status">Ready</span></div>
+    <div id="board"></div>
+    <button id="start">Start Game</button>
+  </div>
+
+  <script>
+    const board = document.getElementById('board');
+    const scoreEl = document.getElementById('score');
+    const statusEl = document.getElementById('status');
+    const startBtn = document.getElementById('start');
+    let player, enemies = [], score = 0, started = false, moveInterval, enemyInterval;
+
+    function setPlayer(x, y) {
+      player = { x, y, el: document.createElement('div') };
+      player.el.className = 'player';
+      player.el.style.left = x + 'px';
+      player.el.style.top = y + 'px';
+      board.appendChild(player.el);
+    }
+
+    function addEnemy() {
+      const enemy = { x: Math.random() * (board.clientWidth - 26), y: -20, el: document.createElement('div') };
+      enemy.el.className = 'enemy';
+      enemy.el.style.left = enemy.x + 'px';
+      enemy.el.style.top = enemy.y + 'px';
+      board.appendChild(enemy.el);
+      enemies.push(enemy);
+    }
+
+    function handleKey(e) {
+      if (!started || !player) return;
+      const step = 24;
+      if (e.key === 'ArrowLeft') player.x = Math.max(0, player.x - step);
+      if (e.key === 'ArrowRight') player.x = Math.min(board.clientWidth - 26, player.x + step);
+      if (e.key === 'ArrowUp') player.y = Math.max(0, player.y - step);
+      if (e.key === 'ArrowDown') player.y = Math.min(board.clientHeight - 26, player.y + step);
+      player.el.style.left = player.x + 'px';
+      player.el.style.top = player.y + 'px';
+    }
+
+    function gameLoop() {
+      if (!started) return;
+      enemies.forEach(enemy => {
+        enemy.y += 3;
+        enemy.el.style.top = enemy.y + 'px';
+        if (enemy.y + 26 > player.y && enemy.y < player.y + 26 && enemy.x + 26 > player.x && enemy.x < player.x + 26) {
+          started = false;
+          clearInterval(moveInterval); clearInterval(enemyInterval); statusEl.textContent = 'Crashed!';
+          alert('Game over! Score: ' + score);
+          return;
+        }
+      });
+      enemies = enemies.filter(enemy => enemy.y < board.clientHeight + 30);
+      score += 1;
+      scoreEl.textContent = 'Score: ' + score;
+    }
+
+    function startGame() {
+      board.innerHTML = '';
+      setPlayer(120, board.clientHeight - 40);
+      enemies = [];
+      score = 0;
+      scoreEl.textContent = 'Score: 0';
+      statusEl.textContent = 'Playing';
+      started = true;
+      clearInterval(moveInterval); clearInterval(enemyInterval);
+      moveInterval = setInterval(gameLoop, 40);
+      enemyInterval = setInterval(addEnemy, 700);
+    }
+
+    document.addEventListener('keydown', handleKey);
+    startBtn.addEventListener('click', startGame);
+  </script>
 </body>
 </html>
