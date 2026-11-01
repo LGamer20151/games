@@ -3,41 +3,573 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Website Reset</title>
+  <title>Quick Play Arcade</title>
   <style>
+    :root {
+      --bg: #050816;
+      --bg-2: #0d1324;
+      --panel: rgba(15, 23, 42, 0.76);
+      --panel-strong: rgba(9, 13, 24, 0.92);
+      --line: rgba(148, 163, 184, 0.18);
+      --text: #edf4ff;
+      --muted: #a8b4cf;
+      --accent: #8b5cf6;
+      --accent-2: #22d3ee;
+      --accent-3: #fbbf24;
+      --accent-4: #34d399;
+      --pink: #ff53c4;
+      --glow: rgba(139, 92, 246, 0.32);
+      --shadow: rgba(15, 23, 42, 0.7);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
     body {
       margin: 0;
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
+      color: var(--text);
       font-family: Arial, sans-serif;
-      background: linear-gradient(180deg, #060b14, #111827);
-      color: #f8fafc;
+      line-height: 1.5;
+      background:
+        radial-gradient(circle at 15% 20%, rgba(34, 211, 238, 0.22), transparent 17%),
+        radial-gradient(circle at 80% 10%, rgba(139, 92, 246, 0.28), transparent 22%),
+        radial-gradient(circle at 45% 82%, rgba(255, 83, 196, 0.18), transparent 18%),
+        linear-gradient(180deg, #040914 0%, #0d1324 38%, #070d1a 100%);
+      min-height: 100vh;
+      overflow-x: hidden;
     }
-    .card {
-      width: min(90vw, 620px);
-      padding: 32px 24px;
-      border-radius: 20px;
-      background: rgba(15, 23, 42, 0.88);
-      border: 1px solid rgba(148, 163, 184, 0.25);
-      box-shadow: 0 18px 40px rgba(0,0,0,0.3);
-      text-align: center;
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      width: 420px;
+      height: 420px;
+      border-radius: 50%;
+      filter: blur(90px);
+      pointer-events: none;
+      opacity: 0.7;
+      z-index: 0;
     }
+
+    body::before {
+      background: rgba(34, 211, 238, 0.18);
+      top: -80px;
+      left: -60px;
+    }
+
+    body::after {
+      background: rgba(139, 92, 246, 0.2);
+      right: -60px;
+      bottom: -40px;
+    }
+
+    .page {
+      position: relative;
+      z-index: 1;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 20px 60px;
+    }
+
+    .hero {
+      margin-bottom: 28px;
+      padding: 28px 32px;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid var(--line);
+      border-radius: 26px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 22px 40px var(--shadow);
+    }
+
+    .eyebrow {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(139, 92, 246, 0.12);
+      border: 1px solid rgba(139, 92, 246, 0.32);
+      color: #d9c7ff;
+      font-size: 0.75rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+
     h1 {
-      margin: 0 0 12px;
-      font-size: clamp(2rem, 5vw, 3rem);
-    }
-    p {
       margin: 0;
-      color: #cbd5e1;
-      font-size: 1.05rem;
+      font-size: clamp(2.2rem, 5vw, 4rem);
+      letter-spacing: -0.06em;
+      line-height: 1.05;
+    }
+
+    .subtitle {
+      margin-top: 14px;
+      font-size: clamp(1rem, 2vw, 1.2rem);
+      color: var(--muted);
+      max-width: 760px;
+    }
+
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+      margin-top: 22px;
+    }
+
+    .stat {
+      min-width: 120px;
+      padding: 12px 14px;
+      background: rgba(15, 23, 42, 0.64);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+    }
+
+    .label {
+      display: block;
+      color: var(--muted);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+
+    .value {
+      font-size: 1.4rem;
+      font-weight: 800;
+    }
+
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin: 26px 0 18px;
+      flex-wrap: wrap;
+    }
+
+    .toolbar h2 {
+      margin: 0;
+      font-size: clamp(1.4rem, 3vw, 2rem);
+      letter-spacing: -0.04em;
+    }
+
+    .search-wrap {
+      position: relative;
+      width: min(100%, 370px);
+    }
+
+    .search-wrap input {
+      width: 100%;
+      padding: 12px 16px 12px 42px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(15, 23, 42, 0.7);
+      color: var(--text);
+      font-size: 1rem;
+      outline: none;
+    }
+
+    .search-wrap input::placeholder {
+      color: var(--muted);
+    }
+
+    .search-wrap::before {
+      content: "⌕";
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 1.2rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 18px;
+    }
+
+    .card {
+      position: relative;
+      overflow: hidden;
+      padding: 18px 16px 14px;
+      min-height: 142px;
+      border-radius: 22px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.82), rgba(9, 13, 24, 0.92));
+      box-shadow: 0 18px 32px rgba(2, 6, 23, 0.3);
+      transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(139, 92, 246, 0.45);
+      box-shadow: 0 22px 38px rgba(2, 6, 23, 0.42);
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto auto 0;
+      width: 120px;
+      height: 120px;
+      background: radial-gradient(circle, rgba(34, 211, 238, 0.18), transparent 62%);
+      pointer-events: none;
+    }
+
+    .game-tag {
+      display: inline-block;
+      margin-bottom: 10px;
+      padding: 5px 8px;
+      border-radius: 10px;
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #d6f4ff;
+      background: rgba(34, 211, 238, 0.1);
+      border: 1px solid rgba(34, 211, 238, 0.2);
+    }
+
+    .card h3 {
+      position: relative;
+      margin: 0 0 10px;
+      font-size: 1.2rem;
+      letter-spacing: -0.03em;
+    }
+
+    .card p {
+      position: relative;
+      margin: 0 0 16px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .play-btn {
+      position: relative;
+      display: inline-block;
+      padding: 9px 14px;
+      border-radius: 12px;
+      text-decoration: none;
+      color: white;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      font-weight: 700;
+      box-shadow: 0 12px 20px rgba(34, 211, 238, 0.22);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 640px) {
+      .hero {
+        padding: 22px 18px;
+      }
+
+      .toolbar {
+        display: block;
+      }
+
+      .search-wrap {
+        margin-top: 14px;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>Website Reset</h1>
-    <p>This repo has been cleared for a fresh start.</p>
+  <div class="page">
+    <header class="hero">
+      <span class="eyebrow">Game Portal</span>
+      <h1>Quick Play Arcade</h1>
+      <div class="subtitle">
+        A collection of fast, browser-based mini games built for pure fun. Pick a title and jump in.
+      </div>
+      <div class="stats">
+        <div class="stat">
+          <span class="label">Games</span>
+          <span class="value">40+</span>
+        </div>
+        <div class="stat">
+          <span class="label">Style</span>
+          <span class="value">Arcade</span>
+        </div>
+        <div class="stat">
+          <span class="label">Mode</span>
+          <span class="value">Instant</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="toolbar">
+      <h2>Featured Games</h2>
+      <div class="search-wrap">
+        <input id="search" type="text" placeholder="Search games..." />
+      </div>
+    </div>
+
+    <main class="grid" id="gameGrid">
+      <article class="card" data-name="2048 merge">
+        <span class="game-tag">Puzzle</span>
+        <h3>2048 Merge</h3>
+        <p>Slide numbers together and chase the highest tile.</p>
+        <a class="play-btn" href="2048-merge.html">Play</a>
+      </article>
+      <article class="card" data-name="3d asteroids">
+        <span class="game-tag">Action</span>
+        <h3>3D Asteroids</h3>
+        <p>Blast through space debris and survive the asteroid storm.</p>
+        <a class="play-btn" href="3d-asteroids.html">Play</a>
+      </article>
+      <article class="card" data-name="3d bounce">
+        <span class="game-tag">Arcade</span>
+        <h3>3D Bounce</h3>
+        <p>Keep the ball moving through a colorful 3D arena.</p>
+        <a class="play-btn" href="3d-bounce.html">Play</a>
+      </article>
+      <article class="card" data-name="3d breaker">
+        <span class="game-tag">Breakout</span>
+        <h3>3D Breaker</h3>
+        <p>Break the wall and chase a clean, high-score run.</p>
+        <a class="play-btn" href="3d-breaker.html">Play</a>
+      </article>
+      <article class="card" data-name="3d drift">
+        <span class="game-tag">Racing</span>
+        <h3>3D Drift</h3>
+        <p>Slide around corners and hold the perfect drift line.</p>
+        <a class="play-btn" href="3d-drift.html">Play</a>
+      </article>
+      <article class="card" data-name="3d orbit">
+        <span class="game-tag">Space</span>
+        <h3>3D Orbit</h3>
+        <p>Navigate a drifting orbit and keep control in motion.</p>
+        <a class="play-btn" href="3d-orbit.html">Play</a>
+      </article>
+      <article class="card" data-name="3d pillar">
+        <span class="game-tag">Skill</span>
+        <h3>3D Pillar</h3>
+        <p>Balance precision and timing in an obstacle run.</p>
+        <a class="play-btn" href="3d-pillar.html">Play</a>
+      </article>
+      <article class="card" data-name="3d portal">
+        <span class="game-tag">Platform</span>
+        <h3>3D Portal</h3>
+        <p>Find the route through shifting portals and gaps.</p>
+        <a class="play-btn" href="3d-portal.html">Play</a>
+      </article>
+      <article class="card" data-name="3d runner">
+        <span class="game-tag">Runner</span>
+        <h3>3D Runner</h3>
+        <p>Dash forward and keep your rhythm through danger zones.</p>
+        <a class="play-btn" href="3d-runner.html">Play</a>
+      </article>
+      <article class="card" data-name="3d snake">
+        <span class="game-tag">Classic</span>
+        <h3>3D Snake</h3>
+        <p>Grow longer and outmaneuver the walls and yourself.</p>
+        <a class="play-btn" href="3d-snake.html">Play</a>
+      </article>
+      <article class="card" data-name="3d target">
+        <span class="game-tag">Aim</span>
+        <h3>3D Target</h3>
+        <p>Hit the moving targets before time runs out.</p>
+        <a class="play-btn" href="3d-target.html">Play</a>
+      </article>
+      <article class="card" data-name="arua">
+        <span class="game-tag">Balance</span>
+        <h3>Arua</h3>
+        <p>Stay steady and keep your center of mass under control.</p>
+        <a class="play-btn" href="arua.html">Play</a>
+      </article>
+      <article class="card" data-name="balance beam">
+        <span class="game-tag">Skill</span>
+        <h3>Balance Beam</h3>
+        <p>Keep the balance and move carefully across the beam.</p>
+        <a class="play-btn" href="balance-beam.html">Play</a>
+      </article>
+      <article class="card" data-name="brick breaker">
+        <span class="game-tag">Arcade</span>
+        <h3>Brickbreaker</h3>
+        <p>Break every brick and push your score higher.</p>
+        <a class="play-btn" href="brickbreaker.html">Play</a>
+      </article>
+      <article class="card" data-name="catapult">
+        <span class="game-tag">Physics</span>
+        <h3>Catapult</h3>
+        <p>Launch with perfect timing and knock down the target.</p>
+        <a class="play-btn" href="catapult.html">Play</a>
+      </article>
+      <article class="card" data-name="chess">
+        <span class="game-tag">Board</span>
+        <h3>Chess</h3>
+        <p>Think a few moves ahead and stay sharp.</p>
+        <a class="play-btn" href="chess.html">Play</a>
+      </article>
+      <article class="card" data-name="chrome chicken">
+        <span class="game-tag">Arcade</span>
+        <h3>Chrome Chicken</h3>
+        <p>Fast fun and unpredictable movement in every run.</p>
+        <a class="play-btn" href="chromechicken.html">Play</a>
+      </article>
+      <article class="card" data-name="drift boss">
+        <span class="game-tag">Racing</span>
+        <h3>Drift Boss</h3>
+        <p>Chain drifts and build a high-scoring streak.</p>
+        <a class="play-btn" href="drift-boss.html">Play</a>
+      </article>
+      <article class="card" data-name="escape">
+        <span class="game-tag">Puzzle</span>
+        <h3>Escape</h3>
+        <p>Find a path out and beat the trap room.</p>
+        <a class="play-btn" href="escape.html">Play</a>
+      </article>
+      <article class="card" data-name="flappy duck">
+        <span class="game-tag">Arcade</span>
+        <h3>Flappy Duck</h3>
+        <p>Tap to rise and stay above the danger gaps.</p>
+        <a class="play-btn" href="flappy-duck.html">Play</a>
+      </article>
+      <article class="card" data-name="geometry dash">
+        <span class="game-tag">Rhythm</span>
+        <h3>Geometry Dash</h3>
+        <p>Jump, dodge, and keep every timing beat perfect.</p>
+        <a class="play-btn" href="geometrydash.html">Play</a>
+      </article>
+      <article class="card" data-name="gravity drop">
+        <span class="game-tag">Physics</span>
+        <h3>Gravity Drop</h3>
+        <p>Use gravity to your advantage and survive the fall.</p>
+        <a class="play-btn" href="gravity-drop.html">Play</a>
+      </article>
+      <article class="card" data-name="gravity sandbox">
+        <span class="game-tag">Sandbox</span>
+        <h3>Gravity Sandbox</h3>
+        <p>Experiment with motion and simulate playful gravity.</p>
+        <a class="play-btn" href="gravity-sandbox.html">Play</a>
+      </article>
+      <article class="card" data-name="hill climb">
+        <span class="game-tag">Driving</span>
+        <h3>Hill Climb</h3>
+        <p>Push forward across uneven terrain and rough hills.</p>
+        <a class="play-btn" href="hillclimb.html">Play</a>
+      </article>
+      <article class="card" data-name="lights out">
+        <span class="game-tag">Logic</span>
+        <h3>Lights Out</h3>
+        <p>Turn off every light and solve the board.</p>
+        <a class="play-btn" href="lights-out.html">Play</a>
+      </article>
+      <article class="card" data-name="memory match">
+        <span class="game-tag">Memory</span>
+        <h3>Memory Match</h3>
+        <p>Match pairs and train your visual memory.</p>
+        <a class="play-btn" href="memorymatch.html">Play</a>
+      </article>
+      <article class="card" data-name="minesweeper">
+        <span class="game-tag">Logic</span>
+        <h3>Minesweeper</h3>
+        <p>Flag the danger and clear the field with care.</p>
+        <a class="play-btn" href="minesweeper.html">Play</a>
+      </article>
+      <article class="card" data-name="motorcycle rave">
+        <span class="game-tag">Racing</span>
+        <h3>Motorcycle Rave</h3>
+        <p>Race through lanes and keep your ride stable.</p>
+        <a class="play-btn" href="motorcyclerave.html">Play</a>
+      </article>
+      <article class="card" data-name="obby">
+        <span class="game-tag">Physical</span>
+        <h3>Obby</h3>
+        <p>Leap, dodge, and keep moving through each obstacle.</p>
+        <a class="play-btn" href="obby.html">Play</a>
+      </article>
+      <article class="card" data-name="pacman">
+        <span class="game-tag">Classic</span>
+        <h3>Pacman</h3>
+        <p>Eat pellets, avoid ghosts, and chase a new high score.</p>
+        <a class="play-btn" href="pacman.html">Play</a>
+      </article>
+      <article class="card" data-name="parking">
+        <span class="game-tag">Driving</span>
+        <h3>Parking</h3>
+        <p>Line up the car and park with precision.</p>
+        <a class="play-btn" href="parking.html">Play</a>
+      </article>
+      <article class="card" data-name="plinko">
+        <span class="game-tag">Chance</span>
+        <h3>Plinko</h3>
+        <p>Drop the coin and watch it bounce into the prize slots.</p>
+        <a class="play-btn" href="plinko.html">Play</a>
+      </article>
+      <article class="card" data-name="ragdoll sim">
+        <span class="game-tag">Physics</span>
+        <h3>Ragdoll Sim</h3>
+        <p>Watch the physics react and explore chaotic motion.</p>
+        <a class="play-btn" href="ragdollsim.html">Play</a>
+      </article>
+      <article class="card" data-name="simon says">
+        <span class="game-tag">Memory</span>
+        <h3>Simon Says</h3>
+        <p>Repeat the pattern and keep the sequence alive.</p>
+        <a class="play-btn" href="simonsays.html">Play</a>
+      </article>
+      <article class="card" data-name="sliding puzzle">
+        <span class="game-tag">Puzzle</span>
+        <h3>Sliding Puzzle</h3>
+        <p>Arrange the tiles and finish the picture cleanly.</p>
+        <a class="play-btn" href="slidingpuzzle.html">Play</a>
+      </article>
+      <article class="card" data-name="snake">
+        <span class="game-tag">Classic</span>
+        <h3>Snake</h3>
+        <p>Eat, grow, and avoid crashing into your own trail.</p>
+        <a class="play-btn" href="snake.html">Play</a>
+      </article>
+      <article class="card" data-name="space shooter">
+        <span class="game-tag">Shooter</span>
+        <h3>Space Shooter</h3>
+        <p>Defend your ship, dodge enemies, and keep firing.</p>
+        <a class="play-btn" href="spaceshooter.html">Play</a>
+      </article>
+      <article class="card" data-name="spot the difference">
+        <span class="game-tag">Observation</span>
+        <h3>Spot the Difference</h3>
+        <p>Compare both scenes and find every mismatch.</p>
+        <a class="play-btn" href="spotthedifference.html">Play</a>
+      </article>
+      <article class="card" data-name="tic tac toe">
+        <span class="game-tag">Board</span>
+        <h3>Tic-Tac-Toe</h3>
+        <p>Take the center, plan ahead, and line up three.</p>
+        <a class="play-btn" href="tictactoe.html">Play</a>
+      </article>
+      <article class="card" data-name="whack a mole">
+        <span class="game-tag">Reaction</span>
+        <h3>Whack-a-Mole</h3>
+        <p>Hit the popping targets as fast as you can.</p>
+        <a class="play-btn" href="whackamole.html">Play</a>
+      </article>
+      <article class="card" data-name="wordle infinite">
+        <span class="game-tag">Word</span>
+        <h3>Wordle Infinite</h3>
+        <p>Crack the five-letter word and keep the streak alive.</p>
+        <a class="play-btn" href="wordleinfinite.html">Play</a>
+      </article>
+    </main>
   </div>
+
+  <script>
+    const searchInput = document.getElementById('search');
+    const cards = [...document.querySelectorAll('.card')];
+
+    searchInput.addEventListener('input', (event) => {
+      const q = event.target.value.trim().toLowerCase();
+
+      cards.forEach(card => {
+        const name = card.dataset.name.toLowerCase();
+        const visible = !q || name.includes(q);
+        card.classList.toggle('hidden', !visible);
+      });
+    });
+  </script>
 </body>
 </html>
