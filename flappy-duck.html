@@ -11,14 +11,9 @@
       --line: rgba(148, 163, 184, 0.2);
       --text: #edf6ff;
       --muted: #b8c8e4;
-      --glow: rgba(34, 211, 238, 0.5);
-      --accent: #7dd3fc;
-      --accent-2: #a78bfa;
       --gold: #f9d976;
     }
-
     * { box-sizing: border-box; }
-
     body {
       margin: 0;
       min-height: 100vh;
@@ -29,21 +24,19 @@
       font-family: Arial, sans-serif;
       color: var(--text);
       background:
-        radial-gradient(circle at 20% 15%, rgba(34, 211, 238, 0.18), transparent 18%),
-        radial-gradient(circle at 80% 10%, rgba(167, 139, 250, 0.18), transparent 22%),
+        radial-gradient(circle at 20% 15%, rgba(34,211,238,0.18), transparent 18%),
+        radial-gradient(circle at 80% 10%, rgba(167,139,250,0.18), transparent 22%),
         linear-gradient(180deg, var(--bg-1), var(--bg-2));
     }
-
     .game-shell {
       width: min(100%, 520px);
       background: var(--panel);
       border: 1px solid var(--line);
       border-radius: 28px;
-      box-shadow: 0 24px 50px rgba(2, 6, 23, 0.55);
+      box-shadow: 0 24px 50px rgba(2,6,23,0.55);
       backdrop-filter: blur(12px);
       padding: 18px 18px 20px;
     }
-
     .topbar {
       display: flex;
       align-items: center;
@@ -51,41 +44,36 @@
       gap: 12px;
       margin-bottom: 12px;
     }
-
     .back-link {
       color: #cfe8ff;
       text-decoration: none;
       font-weight: 700;
-      opacity: 0.9;
+      opacity: 0.96;
     }
-
     h1 {
       margin: 0;
-      font-size: clamp(2rem, 4vw, 2.7rem);
+      font-size: clamp(2rem, 4vw, 2.75rem);
       letter-spacing: -0.06em;
       line-height: 1.1;
-      text-shadow: 0 0 24px rgba(125, 211, 252, 0.4);
+      text-shadow: 0 0 22px rgba(125,211,252,0.35);
     }
-
     #score {
       font-size: 1.1rem;
       font-weight: 700;
       color: var(--gold);
-      text-shadow: 0 0 18px rgba(249, 217, 118, 0.4);
+      text-shadow: 0 0 16px rgba(249,217,118,0.4);
     }
-
     canvas {
       width: 100%;
       height: auto;
       display: block;
       margin: 0 auto;
       border-radius: 22px;
-      border: 1px solid rgba(148, 163, 184, 0.18);
+      border: 1px solid rgba(148,163,184,0.18);
       background: linear-gradient(180deg, #72d7ff 0%, #4bb7ff 34%, #d3f3ff 100%);
-      box-shadow: inset 0 0 28px rgba(255,255,255,0.16), 0 14px 28px rgba(2,6,23,0.24);
+      box-shadow: inset 0 0 28px rgba(255,255,255,0.14), 0 14px 28px rgba(2,6,23,0.22);
       cursor: pointer;
     }
-
     .help {
       margin: 12px 2px 0;
       text-align: center;
@@ -112,7 +100,6 @@
 
     const W = canvas.width, H = canvas.height;
     const GRAVITY = 0.45, FLAP = -8.5, PIPE_W = 66, GAP = 144, PIPE_SPEED = 2.8, SPACING = 220;
-
     let duck, pipes, score, gameOver;
 
     function reset() {
@@ -136,28 +123,22 @@
 
     function update() {
       if (gameOver) return;
-
       duck.vy += GRAVITY;
       duck.y += duck.vy;
-
       for (const p of pipes) {
         p.x -= PIPE_SPEED;
-
         const inX = duck.x + duck.r > p.x && duck.x - duck.r < p.x + PIPE_W;
         const inGap = duck.y - duck.r > p.top && duck.y + duck.r < p.top + GAP;
         if (inX && !inGap) gameOver = true;
-
         if (!p.passed && p.x + PIPE_W < duck.x) {
           p.passed = true;
           score++;
           scoreEl.textContent = 'Score: ' + score;
         }
       }
-
       if (pipes.length && pipes[0].x < -PIPE_W) pipes.shift();
       const last = pipes[pipes.length - 1];
       if (last && last.x < W - SPACING) addPipe(W + 20);
-
       if (duck.y + duck.r > H || duck.y - duck.r < 0) gameOver = true;
     }
 
@@ -195,15 +176,12 @@
       const pipeGrad = ctx.createLinearGradient(x, 0, x + width, 0);
       pipeGrad.addColorStop(0, '#5fe273');
       pipeGrad.addColorStop(1, '#3ec762');
-
       ctx.fillStyle = pipeGrad;
       ctx.fillRect(x, 0, width, top);
       ctx.fillRect(x, top + GAP, width, H - (top + GAP));
-
       ctx.fillStyle = '#2ca54a';
       ctx.fillRect(x - 4, top - 18, width + 8, 18);
       ctx.fillRect(x - 4, top + GAP, width + 8, 18);
-
       ctx.fillStyle = 'rgba(255,255,255,0.25)';
       ctx.fillRect(x + 10, 0, 8, top);
       ctx.fillRect(x + 10, top + GAP, 8, H - top - GAP);
@@ -212,49 +190,40 @@
     function drawDuck() {
       const cx = duck.x;
       const cy = duck.y;
-
       ctx.save();
       ctx.translate(cx, cy);
       ctx.rotate(Math.max(-0.7, Math.min(0.9, duck.vy * 0.08)));
-
       ctx.fillStyle = '#fdf1a3';
       ctx.beginPath();
       ctx.ellipse(0, 0, 18, 14, 0, 0, Math.PI * 2);
       ctx.fill();
-
       ctx.fillStyle = '#f7d163';
       ctx.beginPath();
       ctx.ellipse(-6, 2, 12, 8, -0.5, 0, Math.PI * 2);
       ctx.fill();
-
       ctx.fillStyle = '#f7b267';
       ctx.beginPath();
       ctx.moveTo(17, 0);
       ctx.lineTo(30, 5);
       ctx.lineTo(17, 9);
       ctx.fill();
-
       ctx.fillStyle = '#1f2430';
       ctx.beginPath();
       ctx.arc(7, -4, 2.5, 0, Math.PI * 2);
       ctx.fill();
-
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
       ctx.arc(8, -5, 1.1, 0, Math.PI * 2);
       ctx.fill();
-
       ctx.restore();
     }
 
     function draw() {
       drawBackground();
-
       for (const p of pipes) drawPipe(p.x, p.top, PIPE_W);
       drawDuck();
-
       if (gameOver) {
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.35)';
+        ctx.fillStyle = 'rgba(15,23,42,0.35)';
         ctx.fillRect(0, 0, W, H);
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 30px Arial';
@@ -279,7 +248,6 @@
       draw();
       requestAnimationFrame(loop);
     }
-
     reset();
     loop();
   </script>

@@ -5,19 +5,91 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>3D Runner</title>
   <style>
-    body { margin:0; background:#090d17; color:#fff; font-family:Arial,sans-serif; text-align:center; }
-    a { color:#8ec5ff; }
-    canvas { background:linear-gradient(#050816,#0d1b2a); border-radius:12px; width:min(92vw,900px); height:auto; display:block; margin:16px auto 0; }
-    #hud { margin-top:14px; font-size:20px; }
-    button { margin-top:16px; padding:12px 22px; font-size:18px; background:#7aa2ff; border:none; border-radius:10px; cursor:pointer; font-weight:bold; }
+    :root {
+      --bg-1: #040b17;
+      --bg-2: #101b2e;
+      --panel: rgba(13, 20, 33, 0.8);
+      --line: rgba(148, 163, 184, 0.18);
+      --text: #edf5ff;
+      --gold: #f8d98d;
+      --shadow: rgba(2, 6, 23, 0.6);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 28px 18px;
+      font-family: Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 20% 12%, rgba(34,211,238,0.14), transparent 18%),
+        radial-gradient(circle at 80% 10%, rgba(167,139,250,0.18), transparent 22%),
+        linear-gradient(180deg, var(--bg-1), var(--bg-2));
+    }
+    .game-shell {
+      width: min(100%, 940px);
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      box-shadow: 0 24px 48px var(--shadow);
+      backdrop-filter: blur(12px);
+      padding: 18px 18px 20px;
+    }
+    a {
+      color: #b8d9ff;
+      text-decoration: none;
+      font-weight: 700;
+    }
+    h1 {
+      margin: 8px 0 12px;
+      font-size: clamp(2rem, 4vw, 2.8rem);
+      letter-spacing: -0.06em;
+      line-height: 1.1;
+      text-shadow: 0 0 22px rgba(125, 211, 252, 0.28);
+    }
+    #hud {
+      margin-top: 10px;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--gold);
+      text-shadow: 0 0 14px rgba(248, 217, 141, 0.32);
+    }
+    canvas {
+      display: block;
+      width: min(92vw, 900px);
+      height: auto;
+      margin: 16px auto 0;
+      border-radius: 22px;
+      border: 1px solid rgba(148,163,184,0.18);
+      background: linear-gradient(180deg, #050816, #0b1830 48%, #13273f 100%);
+      box-shadow: inset 0 0 28px rgba(34, 211, 238, 0.08), 0 14px 28px rgba(2,6,23,0.26);
+    }
+    button {
+      display: block;
+      margin: 16px auto 0;
+      padding: 12px 22px;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #8ec5ff, #dfeeff);
+      color: #0f172a;
+      cursor: pointer;
+      box-shadow: 0 12px 18px rgba(142, 197, 255, 0.2);
+    }
   </style>
 </head>
 <body>
-  <a href="index.html">&larr; Back to menu</a>
-  <h1>3D Runner</h1>
-  <div id="hud">Score: 0</div>
-  <canvas id="game" width="900" height="520"></canvas>
-  <button onclick="resetGame()">Restart</button>
+  <div class="game-shell">
+    <a href="index.html">&larr; Back to menu</a>
+    <h1>3D Runner</h1>
+    <div id="hud">Score: 0</div>
+    <canvas id="game" width="900" height="520"></canvas>
+    <button onclick="resetGame()">Restart</button>
+  </div>
   <script>
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
@@ -62,31 +134,56 @@
 
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = '#050816';
+
+      const sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      sky.addColorStop(0, '#071527');
+      sky.addColorStop(0.5, '#0c2138');
+      sky.addColorStop(1, '#123557');
+      ctx.fillStyle = sky;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = '#121b2d';
+
+      for (let i = 0; i < 18; i++) {
+        const x = 40 + i * 46;
+        ctx.fillStyle = 'rgba(255,255,255,0.08)';
+        ctx.fillRect(x, 120, 18, 280);
+      }
+
+      const roadGrad = ctx.createLinearGradient(180, 380, 720, 520);
+      roadGrad.addColorStop(0, '#1d2a3b');
+      roadGrad.addColorStop(1, '#0a1524');
+      ctx.fillStyle = roadGrad;
       ctx.fillRect(180, 380, 540, 120);
+
       for (let i = 0; i < 20; i++) {
-        ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+        ctx.strokeStyle = 'rgba(255,255,255,0.14)';
         ctx.beginPath();
         ctx.moveTo(150 + i * 30, 380);
         ctx.lineTo(240 + i * 30, 520);
         ctx.stroke();
       }
+
       const lanesX = [-2, 0, 2];
       for (const obs of obstacles) {
         const p = project(lanesX[obs.lane], obs.z);
-        ctx.fillStyle = '#f472b6';
+        const grad = ctx.createRadialGradient(p.x, p.y, 4, p.x, p.y, 42);
+        grad.addColorStop(0, '#f9a8d4');
+        grad.addColorStop(1, '#db2777');
+        ctx.fillStyle = grad;
         ctx.fillRect(p.x - 24, p.y - 24, 48, 48);
       }
+
       const p = project(lanesX[player.lane], 0.4);
-      ctx.fillStyle = '#7dd3fc';
+      const playerGrad = ctx.createLinearGradient(p.x - 18, p.y - 28, p.x + 18, p.y + 28);
+      playerGrad.addColorStop(0, '#7dd3fc');
+      playerGrad.addColorStop(1, '#2563eb');
+      ctx.fillStyle = playerGrad;
       ctx.fillRect(p.x - 18, p.y - 28, 36, 56);
+
       if (gameOver) {
-        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillStyle = 'rgba(2, 6, 23, 0.45)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 40px Arial';
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 42px Arial';
         ctx.textAlign = 'center';
         ctx.fillText('Crash!', canvas.width / 2, canvas.height / 2);
       }

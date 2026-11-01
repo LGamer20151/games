@@ -13,9 +13,7 @@
       --muted: #b8c8e4;
       --gold: #f9d976;
     }
-
     * { box-sizing: border-box; }
-
     body {
       margin: 0;
       min-height: 100vh;
@@ -26,21 +24,19 @@
       font-family: Arial, sans-serif;
       color: var(--text);
       background:
-        radial-gradient(circle at 20% 12%, rgba(34, 211, 238, 0.16), transparent 18%),
-        radial-gradient(circle at 80% 10%, rgba(167, 139, 250, 0.16), transparent 22%),
+        radial-gradient(circle at 20% 12%, rgba(34,211,238,0.16), transparent 18%),
+        radial-gradient(circle at 80% 10%, rgba(167,139,250,0.16), transparent 22%),
         linear-gradient(180deg, var(--bg-1), var(--bg-2));
     }
-
     .game-shell {
       width: min(100%, 560px);
       background: var(--panel);
       border: 1px solid var(--line);
       border-radius: 28px;
-      box-shadow: 0 24px 50px rgba(2, 6, 23, 0.55);
+      box-shadow: 0 24px 50px rgba(2,6,23,0.55);
       backdrop-filter: blur(12px);
       padding: 18px 18px 20px;
     }
-
     .topbar {
       display: flex;
       align-items: center;
@@ -48,40 +44,35 @@
       gap: 12px;
       margin-bottom: 10px;
     }
-
     .back-link {
       color: #cfe8ff;
       text-decoration: none;
       font-weight: 700;
     }
-
     h1 {
       margin: 0 0 12px;
       font-size: clamp(2rem, 4vw, 2.7rem);
       letter-spacing: -0.06em;
       line-height: 1;
-      text-shadow: 0 0 22px rgba(125, 211, 252, 0.32);
+      text-shadow: 0 0 22px rgba(125,211,252,0.32);
     }
-
     #score {
       font-size: 1.1rem;
       font-weight: 700;
       color: var(--gold);
-      text-shadow: 0 0 16px rgba(249, 217, 118, 0.4);
+      text-shadow: 0 0 16px rgba(249,217,118,0.4);
     }
-
     canvas {
       width: min(100%, 500px);
       height: auto;
       display: block;
       margin: 0 auto;
       border-radius: 20px;
-      border: 1px solid rgba(148, 163, 184, 0.18);
-      background: linear-gradient(180deg, rgba(13, 19, 31, 0.96), rgba(12, 17, 30, 0.86));
-      box-shadow: inset 0 0 26px rgba(34, 211, 238, 0.06), 0 14px 28px rgba(2,6,23,0.24);
+      border: 1px solid rgba(148,163,184,0.18);
+      background: linear-gradient(180deg, rgba(13,19,31,0.96), rgba(12,17,30,0.86));
+      box-shadow: inset 0 0 26px rgba(34,211,238,0.06), 0 14px 28px rgba(2,6,23,0.24);
       cursor: pointer;
     }
-
     button {
       display: block;
       margin: 14px auto 0;
@@ -93,7 +84,7 @@
       background: linear-gradient(135deg, #8ec5ff, #d7ebff);
       color: #0f172a;
       cursor: pointer;
-      box-shadow: 0 12px 18px rgba(142, 197, 255, 0.2);
+      box-shadow: 0 12px 18px rgba(142,197,255,0.2);
     }
   </style>
 </head>
@@ -113,13 +104,11 @@
     const ctx = canvas.getContext('2d');
     const scoreEl = document.getElementById('score');
     const dropBtn = document.getElementById('drop');
-
     const W = canvas.width, H = canvas.height;
     const ROWS = 10, PEG_GAP = 38, RADIUS = 8;
     const slotValues = [100, 50, 20, 10, 5, 2, 5, 10, 20, 50, 100];
     const slotCount = slotValues.length;
     const slotWidth = W / slotCount;
-
     let discs = [];
     let score = 0;
 
@@ -137,28 +126,18 @@
     const pegList = pegs();
 
     function newDisc() {
-      return {
-        x: W / 2 + (Math.random() - 0.5) * 8,
-        y: 16,
-        vx: 0,
-        vy: 0,
-        done: false,
-        slot: null
-      };
+      return { x: W / 2 + (Math.random() - 0.5) * 8, y: 16, vx: 0, vy: 0, done: false, slot: null };
     }
 
     function update(d) {
       d.vy += 0.25;
       d.x += d.vx;
       d.y += d.vy;
-
       for (const p of pegList) {
-        const dx = d.x - p.x;
-        const dy = d.y - p.y;
+        const dx = d.x - p.x, dy = d.y - p.y;
         const dist = Math.hypot(dx, dy);
         if (dist < RADIUS + 5) {
-          const nx = dx / dist;
-          const ny = dy / dist;
+          const nx = dx / dist, ny = dy / dist;
           const dot = d.vx * nx + d.vy * ny;
           d.vx -= 2 * dot * nx;
           d.vy -= 2 * dot * ny;
@@ -169,10 +148,8 @@
           d.vy *= 0.78;
         }
       }
-
       if (d.x < RADIUS) { d.x = RADIUS; d.vx = Math.abs(d.vx); }
       if (d.x > W - RADIUS) { d.x = W - RADIUS; d.vx = -Math.abs(d.vx); }
-
       if (d.y > H - 48 - RADIUS) {
         d.done = true;
         d.slot = Math.min(slotCount - 1, Math.max(0, Math.floor(d.x / slotWidth)));
@@ -187,7 +164,6 @@
       bg.addColorStop(1, '#060b17');
       ctx.fillStyle = bg;
       ctx.fillRect(0, 0, W, H);
-
       for (const p of pegList) {
         ctx.save();
         ctx.beginPath();
@@ -198,24 +174,21 @@
         ctx.fill();
         ctx.restore();
       }
-
       for (let i = 0; i < slotCount; i++) {
         const color = slotValues[i] >= 50 ? '#f59e0b' : slotValues[i] >= 20 ? '#f472b6' : '#34d399';
         ctx.fillStyle = color;
         ctx.fillRect(i * slotWidth + 2, H - 48, slotWidth - 4, 48);
-
         ctx.fillStyle = '#0b1220';
         ctx.font = 'bold 12px Arial';
         ctx.textAlign = 'center';
         ctx.fillText(slotValues[i], i * slotWidth + slotWidth / 2, H - 20);
       }
-
       for (const d of discs) {
         if (d.done) continue;
         ctx.save();
         ctx.beginPath();
         ctx.fillStyle = '#f6d365';
-        ctx.shadowColor = 'rgba(246, 211, 101, 0.9)';
+        ctx.shadowColor = 'rgba(246,211,101,0.9)';
         ctx.shadowBlur = 18;
         ctx.arc(d.x, d.y, RADIUS, 0, Math.PI * 2);
         ctx.fill();
@@ -229,10 +202,8 @@
       drawBoard();
       requestAnimationFrame(loop);
     }
-
     dropBtn.addEventListener('click', () => discs.push(newDisc()));
     canvas.addEventListener('click', () => discs.push(newDisc()));
-
     loop();
   </script>
 </body>
