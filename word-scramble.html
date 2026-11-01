@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Word Scramble</title>
+  <style>
+    :root { --bg: #07111f; --panel: rgba(15, 23, 42, 0.9); --line: rgba(148, 163, 184, 0.22); --text: #edf4ff; --muted: #adc1db; --accent: #22d3ee; --accent-2: #8b5cf6; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; font-family: Arial, sans-serif; color: var(--text); background: radial-gradient(circle at top, rgba(34,211,238,0.18), transparent 30%), linear-gradient(180deg, #050b16 0%, #0d1324 100%); }
+    .panel { width: min(680px, 90vw); padding: 36px 28px; border-radius: 24px; background: var(--panel); border: 1px solid var(--line); text-align: center; box-shadow: 0 16px 40px rgba(2, 6, 23, 0.45); }
+    h1 { margin: 0 0 12px; font-size: clamp(2rem, 4vw, 3rem); letter-spacing: -0.05em; background: linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    p { color: var(--muted); font-size: 1.05rem; margin: 0 0 22px; }
+    a { display: inline-block; padding: 12px 20px; border-radius: 999px; color: white; text-decoration: none; background: linear-gradient(135deg, var(--accent), var(--accent-2)); font-weight: 700; }
+  </style>
+</head>
+<body>
+  <main class="panel">
+    <h1>Word Scramble</h1>
+    <p>This game is currently under construction. It will be live here soon.</p>
+    <a href="index.html">Back to the arcade</a>
+  </main>
+</body>
+</html>
