@@ -168,6 +168,38 @@
       margin: 0;
     }
 
+    .search-wrap {
+      position: relative;
+      margin-top: 22px;
+      max-width: 470px;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 14px 18px 14px 46px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      background: rgba(15, 23, 42, 0.8);
+      color: var(--text);
+      font-size: 16px;
+      outline: none;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02);
+    }
+
+    .search-input::placeholder {
+      color: var(--muted);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 18px;
+      color: var(--muted);
+      pointer-events: none;
+    }
+
     .stats {
       position: relative;
       display: flex;
@@ -198,158 +230,130 @@
       scroll-margin-top: 20px;
     }
 
-    .section h2 {
-      font-size: clamp(1.5rem, 2vw, 2.2rem);
-      margin: 0 0 8px;
-      letter-spacing: -0.04em;
-      color: #f1f7ff;
-    }
-
-    .section .intro {
-      color: var(--muted);
-      font-size: 15px;
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
       margin: 0 0 18px;
     }
 
-    .menu {
+    .section h2 {
+      margin: 0;
+      font-size: clamp(1.4rem, 2vw, 2rem);
+      letter-spacing: -0.04em;
+    }
+
+    .games-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
       gap: 18px;
     }
 
     .card {
-      display: flex;
-      flex-direction: column;
-      background:
-        linear-gradient(180deg, rgba(25, 31, 46, 0.96), rgba(15, 20, 29, 0.96)),
-        radial-gradient(circle at top left, rgba(34, 211, 238, 0.24), transparent 30%),
-        linear-gradient(160deg, rgba(139, 92, 246, 0.08), rgba(34, 211, 238, 0.04));
-      border-radius: 18px;
-      padding: 18px 18px 14px;
-      text-decoration: none;
-      color: #fff;
-      min-height: 178px;
-      border: 1px solid rgba(148, 163, 184, 0.15);
-      box-shadow: 0 10px 28px rgba(2, 6, 23, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.04);
-      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, filter 0.18s ease;
-      overflow: hidden;
       position: relative;
-      isolation: isolate;
+      display: block;
+      text-decoration: none;
+      color: var(--text);
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.78));
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 16px 16px 14px;
+      min-height: 190px;
+      overflow: hidden;
+      box-shadow: 0 18px 28px rgba(2, 6, 23, 0.22);
+      transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(34, 211, 238, 0.38);
+      box-shadow: 0 24px 32px rgba(2, 6, 23, 0.28);
     }
 
     .card::before {
       content: "";
       position: absolute;
-      inset: 0;
-      background: linear-gradient(135deg, rgba(34,211,238,0.12), transparent 38%, rgba(139,92,246,0.14));
-      opacity: 0;
-      transition: opacity 0.2s ease;
-      z-index: 0;
-    }
-
-    .card::after {
-      content: "";
-      position: absolute;
-      width: 160px;
-      height: 160px;
-      right: -40px;
-      top: -36px;
-      background: radial-gradient(circle, rgba(34,211,238,0.15), rgba(34,211,238,0) 60%);
-      z-index: 0;
+      inset: 0 0 auto;
+      height: 48%;
+      background: linear-gradient(135deg, rgba(34, 211, 238, 0.18), rgba(139, 92, 246, 0.16));
       pointer-events: none;
     }
 
-    .card:hover {
-      transform: translateY(-5px) scale(1.01);
-      box-shadow: 0 20px 36px rgba(2, 6, 23, 0.38), 0 0 0 1px rgba(34, 211, 238, 0.12);
-      border-color: rgba(34, 211, 238, 0.25);
-      filter: brightness(1.04);
+    .card-inner {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
     }
 
-    .card:hover::before { opacity: 1; }
-
-    .card > * { position: relative; z-index: 1; }
-
-    .card .title {
-      font-size: 1.25rem;
-      font-weight: 800;
-      letter-spacing: -0.04em;
-      margin-bottom: 8px;
-      color: #f9fbff;
-    }
-
-    .card .desc {
-      font-size: 0.95rem;
-      color: #d7def2;
-      flex-grow: 1;
-      line-height: 1.5;
-    }
-
-    .card .tag {
+    .tag {
       align-self: flex-start;
-      margin-top: 12px;
-      font-size: 10px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1.55px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
       padding: 6px 10px;
       border-radius: 999px;
-      background: linear-gradient(135deg, rgba(34,211,238,0.14), rgba(139,92,246,0.18));
-      border: 1px solid rgba(148, 163, 184, 0.2);
-      color: #f9e7a8;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03);
+      background: rgba(15, 23, 42, 0.72);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
     }
 
-    footer {
-      text-align: center;
-      padding: 22px;
-      color: #9eb4d5;
-      font-size: 14px;
-      border-top: 1px solid var(--line);
-      background: rgba(8, 11, 20, 0.72);
+    .tag .mini-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-2), var(--accent-4));
+      box-shadow: 0 0 8px rgba(34, 211, 238, 0.8);
     }
 
-    @media (max-width: 760px) {
+    .card h3 {
+      margin: 18px 0 10px;
+      font-size: 1.6rem;
+      letter-spacing: -0.05em;
+    }
+
+    .card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.96rem;
+    }
+
+    .card-meta {
+      margin-top: auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-top: 16px;
+      color: #dfeafc;
+      font-size: 0.84rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .card-meta span:last-child {
+      color: var(--accent-3);
+      font-weight: 700;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 900px) {
       .layout {
         flex-direction: column;
-        padding: 14px;
-        gap: 14px;
       }
 
       .sidebar {
         width: 100%;
         height: auto;
         position: static;
-        border-radius: 18px;
-      }
-
-      .sidebar nav {
-        display: flex;
-        flex-wrap: wrap;
-        flex-direction: row;
-        padding: 10px;
-      }
-
-      .sidebar a {
-        padding: 10px 12px;
-        font-size: 14px;
-        margin: 0;
-      }
-
-      .divider {
-        display: none;
-      }
-
-      header {
-        padding: 28px 20px 18px;
-      }
-
-      main {
-        padding: 20px 20px 26px;
-      }
-
-      .menu {
-        grid-template-columns: 1fr;
       }
     }
   </style>
@@ -357,126 +361,204 @@
 <body>
   <div class="layout">
     <aside class="sidebar">
-      <nav aria-label="Game categories">
+      <nav>
         <a class="home" href="#top"><span class="dot"></span>Home</a>
         <div class="divider"></div>
         <a href="#arcade"><span class="dot"></span>Arcade</a>
-        <a href="#driving"><span class="dot"></span>Driving</a>
-        <a href="#classic"><span class="dot"></span>Classic</a>
-        <a href="#physics"><span class="dot"></span>Physics</a>
-        <a href="#puzzle"><span class="dot"></span>Puzzle and Strategy</a>
-        <a href="#more"><span class="dot"></span>More Games</a>
-        <a href="#3d"><span class="dot"></span>3D</a>
+        <a href="#puzzle"><span class="dot"></span>Puzzle</a>
+        <a href="#skill"><span class="dot"></span>Skill</a>
+        <a href="#sports"><span class="dot"></span>Sports</a>
       </nav>
     </aside>
 
-    <div class="content" id="top">
-      <header>
+    <div class="content">
+      <header id="top">
         <h1>Quick Play Arcade</h1>
-        <p>Pick a game, play for a few minutes, and come back for more. Arcade action, puzzles, and a little strategy, all in one place.</p>
+        <p>Jump into a fast arcade session. Pick a game, start playing, and challenge your reflexes with colorful mini-games.</p>
+
+        <div class="search-wrap" aria-label="Search games">
+          <span class="search-icon">🔎</span>
+          <input id="gameSearch" class="search-input" type="text" placeholder="Search games..." aria-label="Search games" />
+        </div>
+
         <div class="stats">
-          <span class="stat-pill">40 games</span>
-          <span class="stat-pill">7 categories</span>
-          <span class="stat-pill">No install</span>
+          <span class="stat-pill">18+ Games</span>
+          <span class="stat-pill">Instant Play</span>
+          <span class="stat-pill">Arcade mode</span>
         </div>
       </header>
 
       <main>
         <section class="section" id="arcade">
-          <h2>Arcade</h2>
-          <p class="intro">Fast rounds with simple controls and high scores to beat.</p>
-          <div class="menu">
-            <a class="card" href="plinko.html"><div class="title">Plinko</div><div class="desc">Drop discs through the pegs and watch where they land to win points.</div><span class="tag">Arcade</span></a>
-            <a class="card" href="flappy-duck.html"><div class="title">Flappy Duck</div><div class="desc">Flap through the pipe gaps. One tap at a time, see how far you get.</div><span class="tag">Arcade</span></a>
-            <a class="card" href="whackamole.html"><div class="title">Whack-a-Mole</div><div class="desc">Whack the moles as they pop up before the 30 seconds run out.</div><span class="tag">Arcade</span></a>
-            <a class="card" href="geometrydash.html"><div class="title">Geometry Dash</div><div class="desc">Jump over spikes and blocks as the speed keeps climbing. How far can you get?</div><span class="tag">Arcade</span></a>
-            <a class="card" href="brickbreaker.html"><div class="title">Brick Breaker</div><div class="desc">Bounce a ball off your paddle and smash rows of bricks before you run out of lives.</div><span class="tag">Arcade</span></a>
-            <a class="card" href="spaceshooter.html"><div class="title">Space Shooter</div><div class="desc">Pilot your ship, dodge asteroids, and blast enemies as they get faster.</div><span class="tag">Arcade</span></a>
+          <div class="section-head">
+            <h2>Arcade</h2>
           </div>
-        </section>
+          <div class="games-grid" id="gamesGrid">
+            <a class="card" href="brickbreaker.html" data-name="brick breaker brickbreaker breakout ball">
+              <div class="card-inner">
+                <span class="tag"><span class="mini-dot"></span>Arcade</span>
+                <h3>Brick Breaker</h3>
+                <p>Smash the wall and keep the ball alive.</p>
+                <div class="card-meta"><span>Skill</span><span>Play</span></div>
+              </div>
+            </a>
 
-        <section class="section" id="driving">
-          <h2>Driving</h2>
-          <p class="intro">Speed, drifts, and sharp corners.</p>
-          <div class="menu">
-            <a class="card" href="drift-boss.html"><div class="title">Drift Boss</div><div class="desc">Slide around corners at speed and rack up points with every drift.</div><span class="tag">Driving</span></a>
-            <a class="card" href="hillclimb.html"><div class="title">Hill Climb</div><div class="desc">Drive over bumpy hills, manage your fuel, and land on your wheels to go farther.</div><span class="tag">Driving</span></a>
-            <a class="card" href="parking.html"><div class="title">Parking Challenge</div><div class="desc">Squeeze into the tight spot before time runs out. Park straight for a bonus.</div><span class="tag">Driving</span></a>
-            <a class="card" href="motorcyclerave.html"><div class="title">Motorcycle Rave</div><div class="desc">Ride a neon motorcycle, collect glowing orbs, and outpace the computer rider.</div><span class="tag">Driving</span></a>
-          </div>
-        </section>
+            <a class="card" href="snake.html" data-name="snake slither classic">
+              <div class="card-inner">
+                <span class="tag"><span class="mini-dot"></span>Arcade</span>
+                <h3>Snake</h3>
+                <p>Grow longer and dodge your own tail.</p>
+                <div class="card-meta"><span>Classic</span><span>Play</span></div>
+              </div>
+            </a>
 
-        <section class="section" id="classic">
-          <h2>Classic and Platform</h2>
-          <p class="intro">Timeless favorites and jumping challenges.</p>
-          <div class="menu">
-            <a class="card" href="snake.html"><div class="title">Snake</div><div class="desc">Eat food, avoid walls and your own tail, and grow as long as you can.</div><span class="tag">Classic</span></a>
-            <a class="card" href="simonsays.html"><div class="title">Simon Says</div><div class="desc">Watch the colors light up, then repeat the sequence. Each round adds one more step.</div><span class="tag">Classic</span></a>
-            <a class="card" href="obby.html"><div class="title">Obby</div><div class="desc">Jump across platforms, dodge the gaps, and reach the flag at the top.</div><span class="tag">Platformer</span></a>
-            <a class="card" href="pacman.html"><div class="title">Pac-Man Style Maze</div><div class="desc">Chomp pellets, dodge glowing ghosts, and grab power pellets to turn the tables.</div><span class="tag">Classic</span></a>
-          </div>
-        </section>
+            <a class="card" href="flappy-duck.html" data-name="flappy duck bird flying gap">
+              <div class="card-inner">
+                <span class="tag"><span class="mini-dot"></span>Arcade</span>
+                <h3>Flappy Duck</h3>
+                <p>Flap through tight gaps and beat your record.</p>
+                <div class="card-meta"><span>Action</span><span>Play</span></div>
+              </div>
+            </a>
 
-        <section class="section" id="physics">
-          <h2>Physics</h2>
-          <p class="intro">Gravity, momentum, and balance.</p>
-          <div class="menu">
-            <a class="card" href="ragdollsim.html"><div class="title">Ragdoll Swing</div><div class="desc">Swing from anchor point to anchor point using momentum and timing.</div><span class="tag">Physics</span></a>
-            <a class="card" href="catapult.html"><div class="title">Catapult</div><div class="desc">Charge up, aim, and launch a gnome as far as you can.</div><span class="tag">Physics</span></a>
-            <a class="card" href="gravity-sandbox.html"><div class="title">Gravity Sandbox</div><div class="desc">Drop balls, create structure, and play with gravity in a real-time sandbox.</div><span class="tag">Physics</span></a>
-            <a class="card" href="gravity-drop.html"><div class="title">Gravity Drop</div><div class="desc">Catch the falling orbs before they hit the floor and keep your combo alive.</div><span class="tag">Physics</span></a>
-            <a class="card" href="balance-beam.html"><div class="title">Balance Beam</div><div class="desc">Keep the ball centered while the platform shifts and your timing gets tighter.</div><span class="tag">Physics</span></a>
+            <a class="card" href="plinko.html" data-name="plinko drop slots prize">
+              <div class="card-inner">
+                <span class="tag"><span class="mini-dot"></span>Arcade</span>
+                <h3>Plinko</h3>
+                <p>Drop discs and chase the highest payout.</p>
+                <div class="card-meta"><span>Chance</span><span>Play</span></div>
+              </div>
+            </a>
+
+            <a class="card" href="whackamole.html" data-name="whack a mole hammer moles">
+              <div class="card-inner">
+                <span class="tag"><span class="mini-dot"></span>Arcade</span>
+                <h3>Whack-a-Mole</h3>
+                <p>Hit the pop-ups before the timer runs out.</p>
+                <div class="card-meta"><span>Reflex</span><span>Play</span></div>
+              </div>
+            </a>
+
+            <a class="card" href="3d-runner.html" data-name="3d runner endless road">
+              <div class="card-inner">
+                <span class="tag"><span class="mini-dot"></span>Arcade</span>
+                <h3>3D Runner</h3>
+                <p>Slide through lanes and dodge incoming obstacles.</p>
+                <div class="card-meta"><span>Speed</span><span>Play</span></div>
+              </div>
+            </a>
           </div>
         </section>
 
         <section class="section" id="puzzle">
-          <h2>Puzzle and Strategy</h2>
-          <p class="intro">Think ahead and solve the board.</p>
-          <div class="menu">
-            <a class="card" href="tictactoe.html"><div class="title">Tic Tac Toe</div><div class="desc">Classic X and O strategy against a smart computer or a friend.</div><span class="tag">Puzzle</span></a>
-            <a class="card" href="memorymatch.html"><div class="title">Card match</div><div class="desc">Flip cards over and find matching pairs in the fewest moves possible.</div><span class="tag">Puzzle</span></a>
-            <a class="card" href="chess.html"><div class="title">Chess</div><div class="desc">Plan ahead, trap your opponent, and win the board with smart tactics.</div><span class="tag">Strategy</span></a>
-            <a class="card" href="lights-out.html"><div class="title">Lights Out</div><div class="desc">Toggle the board, solve the pattern, and clear every light with as few taps as possible.</div><span class="tag">Puzzle</span></a>
-            <a class="card" href="2048-merge.html"><div class="title">2048 Merge</div><div class="desc">Slide tiles together, build bigger numbers, and chase a high score without filling the board.</div><span class="tag">Puzzle</span></a>
+          <div class="section-head">
+            <h2>Puzzle</h2>
+          </div>
+          <div class="games-grid">
+            <a class="card" href="2048-merge.html" data-name="2048 merge number puzzle tiles">
+              <div class="card-inner">
+                <span class="tag"><span class="mini-dot"></span>Puzzle</span>
+                <h3>2048 Merge</h3>
+                <p>Combine matching tiles and chase a higher score.</p>
+                <div class="card-meta"><span>Logic</span><span>Play</span></div>
+              </div>
+            </a>
+
+            <a class="card" href="memorymatch.html" data-name="memory match cards pairs puzzle">
+              <div class="card-inner">
+                <span class="tag"><span class="mini-dot"></span>Puzzle</span>
+                <h3>Memory Match</h3>
+                <p>Flip cards and match them before the timer ends.</p>
+                <div class="card-meta"><span>Memory</span><span>Play</span></div>
+              </div>
+            </a>
+
+            <a class="card" href="lights-out.html" data-name="lights out puzzle board switch">
+              <div class="card-inner">
+                <span class="tag"><span class="mini-dot"></span>Puzzle</span>
+                <h3>Lights Out</h3>
+                <p>Switch every light off in a single clever pattern.</p>
+                <div class="card-meta"><span>Focus</span><span>Play</span></div>
+              </div>
+            </a>
           </div>
         </section>
 
-        <section class="section" id="more">
-          <h2>More Games</h2>
-          <p class="intro">Bonus picks and extra challenges from the rest of the arcade.</p>
-          <div class="menu">
-            <a class="card" href="arua.html"><div class="title">Arua</div><div class="desc">A quick arcade challenge with a playful spin on classic action.</div><span class="tag">Bonus</span></a>
-            <a class="card" href="chromechicken.html"><div class="title">Chrome Chicken</div><div class="desc">A quirky little browser game with surprising movement and timing.</div><span class="tag">Bonus</span></a>
-            <a class="card" href="escape.html"><div class="title">Escape</div><div class="desc">Solve the room, plan the route, and find your way out.</div><span class="tag">Adventure</span></a>
-            <a class="card" href="minesweeper.html"><div class="title">Minesweeper</div><div class="desc">Search for safe tiles and flag the hidden mines before it blows up.</div><span class="tag">Logic</span></a>
-            <a class="card" href="slidingpuzzle.html"><div class="title">Sliding Puzzle</div><div class="desc">Slide the tiles into place and finish the picture in as few moves as possible.</div><span class="tag">Puzzle</span></a>
-            <a class="card" href="spotthedifference.html"><div class="title">Spot the Difference</div><div class="desc">Compare both scenes carefully and find every mismatch.</div><span class="tag">Visual</span></a>
-            <a class="card" href="wordleinfinite.html"><div class="title">Wordle Infinite</div><div class="desc">Guess the hidden word, test your vocabulary, and chase a new streak.</div><span class="tag">Word</span></a>
+        <section class="section" id="skill">
+          <div class="section-head">
+            <h2>Skill</h2>
+          </div>
+          <div class="games-grid">
+            <a class="card" href="3d-bounce.html" data-name="3d bounce ball arena">
+              <div class="card-inner">
+                <span class="tag"><span class="mini-dot"></span>Skill</span>
+                <h3>3D Bounce</h3>
+                <p>Keep the ball in play with quick timing.</p>
+                <div class="card-meta"><span>Timing</span><span>Play</span></div>
+              </div>
+            </a>
+
+            <a class="card" href="drift-boss.html" data-name="drift boss racing drift">
+              <div class="card-inner">
+                <span class="tag"><span class="mini-dot"></span>Skill</span>
+                <h3>Drift Boss</h3>
+                <p>Balance speed and drift control on each turn.</p>
+                <div class="card-meta"><span>Driving</span><span>Play</span></div>
+              </div>
+            </a>
+
+            <a class="card" href="parking.html" data-name="parking car precision challenge">
+              <div class="card-inner">
+                <span class="tag"><span class="mini-dot"></span>Skill</span>
+                <h3>Parking</h3>
+                <p>Line up the vehicle without scraping the walls.</p>
+                <div class="card-meta"><span>Precision</span><span>Play</span></div>
+              </div>
+            </a>
           </div>
         </section>
 
-        <section class="section" id="3d">
-          <h2>3D</h2>
-          <p class="intro">Fast pseudo-3D browser games built for the arcade.</p>
-          <div class="menu">
-            <a class="card" href="3d-runner.html"><div class="title">3D Runner</div><div class="desc">Dodge the incoming barriers in a neon lane runner.</div><span class="tag">3D</span></a>
-            <a class="card" href="3d-drift.html"><div class="title">3D Drift</div><div class="desc">Slide through glowing gates and hold the line through the tunnel.</div><span class="tag">3D</span></a>
-            <a class="card" href="3d-asteroids.html"><div class="title">3D Asteroids</div><div class="desc">Weave between field-sized rocks and survive the storm.</div><span class="tag">3D</span></a>
-            <a class="card" href="3d-orbit.html"><div class="title">3D Orbit</div><div class="desc">Thread a path through a field of orbiting hazards.</div><span class="tag">3D</span></a>
-            <a class="card" href="3d-bounce.html"><div class="title">3D Bounce</div><div class="desc">Bounce across glowing platforms and keep your rhythm.</div><span class="tag">3D</span></a>
-            <a class="card" href="3d-pillar.html"><div class="title">3D Pillar Hop</div><div class="desc">Jump between pillars as the tunnel twists and speeds up.</div><span class="tag">3D</span></a>
-            <a class="card" href="3d-snake.html"><div class="title">3D Snake</div><div class="desc">Guide a glowing snake through a deep 3D lane maze.</div><span class="tag">3D</span></a>
-            <a class="card" href="3d-target.html"><div class="title">3D Target</div><div class="desc">Lock on to floating targets and hit them before they vanish.</div><span class="tag">3D</span></a>
-            <a class="card" href="3d-portal.html"><div class="title">3D Portal</div><div class="desc">Move through shifting portal gates in a speed-run challenge.</div><span class="tag">3D</span></a>
-            <a class="card" href="3d-breaker.html"><div class="title">3D Breaker</div><div class="desc">Smash the wall of blocks and keep the cube chain alive.</div><span class="tag">3D</span></a>
+        <section class="section" id="sports">
+          <div class="section-head">
+            <h2>Sports</h2>
+          </div>
+          <div class="games-grid">
+            <a class="card" href="catapult.html" data-name="catapult aim launch">
+              <div class="card-inner">
+                <span class="tag"><span class="mini-dot"></span>Sports</span>
+                <h3>Catapult</h3>
+                <p>Launch your shot with perfect power and angle.</p>
+                <div class="card-meta"><span>Aim</span><span>Play</span></div>
+              </div>
+            </a>
+
+            <a class="card" href="hillclimb.html" data-name="hill climb race mountain skill">
+              <div class="card-inner">
+                <span class="tag"><span class="mini-dot"></span>Sports</span>
+                <h3>Hill Climb</h3>
+                <p>Push through rough terrain and keep momentum.</p>
+                <div class="card-meta"><span>Race</span><span>Play</span></div>
+              </div>
+            </a>
           </div>
         </section>
       </main>
-
-      <footer>
-        <p>&copy; 2026 Quick Play Arcade. Hosted on GitHub Pages.</p>
-      </footer>
     </div>
   </div>
+
+  <script>
+    const searchInput = document.getElementById('gameSearch');
+    const cards = [...document.querySelectorAll('.card')];
+
+    searchInput.addEventListener('input', (e) => {
+      const query = e.target.value.trim().toLowerCase();
+
+      cards.forEach((card) => {
+        const text = card.dataset.name || card.textContent.toLowerCase();
+        const match = text.includes(query);
+        card.classList.toggle('hidden', !match && query !== '');
+      });
+    });
+  </script>
 </body>
 </html>
