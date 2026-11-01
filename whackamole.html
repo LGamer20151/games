@@ -5,88 +5,216 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Whack-a-Mole</title>
   <style>
-    body { background:#0d0e12; color:#fff; font-family:Arial, sans-serif; text-align:center; margin:0; padding:20px; }
-    a { color:#89b4fa; }
-    #info { font-size:20px; margin:14px 0; }
-    #board { display:grid; grid-template-columns:repeat(3, 110px); gap:14px; justify-content:center; }
-    .hole { width:110px; height:110px; border-radius:50%; background:#1c1d24; border:none; font-size:50px; cursor:pointer; }
-    .hole.up { background:#f9e2af; }
-    #start { margin-top:20px; padding:12px 26px; font-size:18px; border:none; border-radius:8px; background:#89b4fa; color:#0d0e12; font-weight:bold; cursor:pointer; }
+    :root {
+      --bg-1: #050816;
+      --bg-2: #0f172a;
+      --panel: rgba(15, 23, 42, 0.8);
+      --line: rgba(148, 163, 184, 0.2);
+      --text: #edf6ff;
+      --muted: #b8c8e4;
+      --gold: #f9d976;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 28px 18px;
+      font-family: Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 18% 12%, rgba(34, 211, 238, 0.16), transparent 18%),
+        radial-gradient(circle at 80% 10%, rgba(167, 139, 250, 0.18), transparent 22%),
+        linear-gradient(180deg, var(--bg-1), var(--bg-2));
+    }
+
+    .game-shell {
+      width: min(100%, 500px);
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      box-shadow: 0 24px 50px rgba(2, 6, 23, 0.55);
+      backdrop-filter: blur(12px);
+      padding: 18px 18px 20px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .back-link {
+      color: #cfe8ff;
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: clamp(2rem, 4vw, 2.7rem);
+      letter-spacing: -0.06em;
+      line-height: 1;
+      text-shadow: 0 0 22px rgba(34, 211, 238, 0.28);
+    }
+
+    #info {
+      font-size: 1.02rem;
+      font-weight: 700;
+      color: var(--gold);
+      text-shadow: 0 0 14px rgba(249, 217, 118, 0.4);
+    }
+
+    #board {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(100px, 1fr));
+      gap: 16px;
+      margin: 12px auto 0;
+      max-width: 360px;
+    }
+
+    .hole {
+      position: relative;
+      aspect-ratio: 1;
+      border: none;
+      border-radius: 50%;
+      background: radial-gradient(circle at 50% 35%, #2b3041 0%, #171d2e 42%, #0c1220 100%);
+      box-shadow: inset 0 18px 26px rgba(255,255,255,0.05), inset 0 -18px 22px rgba(2,6,23,0.8), 0 10px 18px rgba(2,6,23,0.2);
+      cursor: pointer;
+      overflow: hidden;
+      transition: transform 0.12s ease, box-shadow 0.12s ease;
+    }
+
+    .hole::before {
+      content: "";
+      position: absolute;
+      inset: 14% 12% 10%;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.34);
+      box-shadow: inset 0 -10px 18px rgba(0,0,0,0.35);
+    }
+
+    .hole.up {
+      background: radial-gradient(circle at 50% 25%, #fef3c7 0%, #d97706 28%, #7c2d12 100%);
+      box-shadow: 0 0 20px rgba(249, 115, 22, 0.3), inset 0 14px 20px rgba(255,255,255,0.25);
+      transform: translateY(-4px);
+    }
+
+    .hole span {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: clamp(2.1rem, 5vw, 3rem);
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+      z-index: 1;
+    }
+
+    #start {
+      display: block;
+      margin: 18px auto 0;
+      padding: 12px 26px;
+      border: none;
+      border-radius: 12px;
+      font-weight: 800;
+      font-size: 1rem;
+      background: linear-gradient(135deg, #8ec5ff, #d7ebff);
+      color: #0f172a;
+      cursor: pointer;
+      box-shadow: 0 12px 18px rgba(142, 197, 255, 0.2);
+    }
   </style>
 </head>
 <body>
-  <a href="index.html">&larr; Back to menu</a>
-  <h1>Whack-a-Mole</h1>
-  <div id="info">Score: 0 &nbsp;|&nbsp; Time: 30</div>
-  <div id="board"></div>
-  <button id="start">Start</button>
-<script>
-const board = document.getElementById('board');
-const info = document.getElementById('info');
-const startBtn = document.getElementById('start');
-let holes = [], score = 0, timeLeft = 30, moleTimer = null, clock = null, active = false, upIndex = -1;
+  <div class="game-shell">
+    <div class="topbar">
+      <a class="back-link" href="index.html">&larr; Back to menu</a>
+      <div id="info">Score: 0 &nbsp;|&nbsp; Time: 30</div>
+    </div>
+    <h1>Whack-a-Mole</h1>
+    <div id="board"></div>
+    <button id="start">Start</button>
+  </div>
 
-for (let i = 0; i < 9; i++) {
-  const b = document.createElement('button');
-  b.className = 'hole';
-  b.addEventListener('click', () => whack(i));
-  board.appendChild(b);
-  holes.push(b);
-}
+  <script>
+    const board = document.getElementById('board');
+    const info = document.getElementById('info');
+    const startBtn = document.getElementById('start');
+    let holes = [], score = 0, timeLeft = 30, moleTimer = null, clock = null, active = false, upIndex = -1;
 
-function render() {
-  info.textContent = 'Score: ' + score + '   |   Time: ' + timeLeft;
-}
+    for (let i = 0; i < 9; i++) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'hole';
+      const face = document.createElement('span');
+      b.appendChild(face);
+      b.addEventListener('click', () => whack(i));
+      board.appendChild(b);
+      holes.push(b);
+    }
 
-function showMole() {
-  if (upIndex !== -1) holes[upIndex].classList.remove('up');
-  upIndex = Math.floor(Math.random() * 9);
-  holes[upIndex].classList.add('up');
-  holes[upIndex].textContent = '';
-  holes[upIndex].textContent = '\u{1F439}';
-}
+    function render() {
+      info.textContent = 'Score: ' + score + '   |   Time: ' + timeLeft;
+    }
 
-function hideMole() {
-  if (upIndex !== -1) {
-    holes[upIndex].classList.remove('up');
-    holes[upIndex].textContent = '';
-    upIndex = -1;
-  }
-}
+    function showMole() {
+      if (upIndex !== -1) {
+        holes[upIndex].classList.remove('up');
+        holes[upIndex].querySelector('span').textContent = '';
+      }
+      upIndex = Math.floor(Math.random() * 9);
+      holes[upIndex].classList.add('up');
+      holes[upIndex].querySelector('span').textContent = '🐹';
+    }
 
-function whack(i) {
-  if (!active) return;
-  if (i === upIndex) {
-    score++;
-    hideMole();
-    render();
-  }
-}
+    function hideMole() {
+      if (upIndex !== -1) {
+        holes[upIndex].classList.remove('up');
+        holes[upIndex].querySelector('span').textContent = '';
+        upIndex = -1;
+      }
+    }
 
-function endGame() {
-  active = false;
-  clearInterval(clock);
-  clearInterval(moleTimer);
-  hideMole();
-  startBtn.disabled = false;
-  startBtn.textContent = 'Play Again';
-  info.textContent = 'Game over! Final score: ' + score;
-}
+    function whack(i) {
+      if (!active) return;
+      if (i === upIndex) {
+        score++;
+        hideMole();
+        render();
+      }
+    }
 
-startBtn.addEventListener('click', () => {
-  score = 0;
-  timeLeft = 30;
-  active = true;
-  startBtn.disabled = true;
-  render();
-  showMole();
-  moleTimer = setInterval(() => { hideMole(); showMole(); }, 700);
-  clock = setInterval(() => {
-    timeLeft--;
-    render();
-    if (timeLeft <= 0) endGame();
-  }, 1000);
-});
-</script>
+    function endGame() {
+      active = false;
+      clearInterval(clock);
+      clearInterval(moleTimer);
+      hideMole();
+      startBtn.disabled = false;
+      startBtn.textContent = 'Play Again';
+      info.textContent = 'Game over! Final score: ' + score;
+    }
+
+    startBtn.addEventListener('click', () => {
+      score = 0;
+      timeLeft = 30;
+      active = true;
+      startBtn.disabled = true;
+      render();
+      showMole();
+      moleTimer = setInterval(() => { hideMole(); showMole(); }, 700);
+      clock = setInterval(() => {
+        timeLeft--;
+        render();
+        if (timeLeft <= 0) endGame();
+      }, 1000);
+    });
+  </script>
 </body>
 </html>

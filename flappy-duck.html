@@ -4,139 +4,284 @@
   <meta charset="UTF-8">
   <title>Flappy Duck</title>
   <style>
-    body { background:#1e1e2e; color:#fff; font-family:Arial, sans-serif; text-align:center; margin:0; padding:20px; }
-    canvas { background:#11111b; border-radius:8px; display:block; margin:0 auto; cursor:pointer; }
-    a { color:#89b4fa; display:inline-block; margin-top:14px; }
-    #score { font-size:22px; margin-top:10px; }
+    :root {
+      --bg-1: #050816;
+      --bg-2: #0f172a;
+      --panel: rgba(15, 23, 42, 0.78);
+      --line: rgba(148, 163, 184, 0.2);
+      --text: #edf6ff;
+      --muted: #b8c8e4;
+      --glow: rgba(34, 211, 238, 0.5);
+      --accent: #7dd3fc;
+      --accent-2: #a78bfa;
+      --gold: #f9d976;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 28px 18px;
+      font-family: Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 20% 15%, rgba(34, 211, 238, 0.18), transparent 18%),
+        radial-gradient(circle at 80% 10%, rgba(167, 139, 250, 0.18), transparent 22%),
+        linear-gradient(180deg, var(--bg-1), var(--bg-2));
+    }
+
+    .game-shell {
+      width: min(100%, 520px);
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      box-shadow: 0 24px 50px rgba(2, 6, 23, 0.55);
+      backdrop-filter: blur(12px);
+      padding: 18px 18px 20px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .back-link {
+      color: #cfe8ff;
+      text-decoration: none;
+      font-weight: 700;
+      opacity: 0.9;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 4vw, 2.7rem);
+      letter-spacing: -0.06em;
+      line-height: 1.1;
+      text-shadow: 0 0 24px rgba(125, 211, 252, 0.4);
+    }
+
+    #score {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--gold);
+      text-shadow: 0 0 18px rgba(249, 217, 118, 0.4);
+    }
+
+    canvas {
+      width: 100%;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+      border-radius: 22px;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      background: linear-gradient(180deg, #72d7ff 0%, #4bb7ff 34%, #d3f3ff 100%);
+      box-shadow: inset 0 0 28px rgba(255,255,255,0.16), 0 14px 28px rgba(2,6,23,0.24);
+      cursor: pointer;
+    }
+
+    .help {
+      margin: 12px 2px 0;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.96rem;
+    }
   </style>
 </head>
 <body>
-  <a href="index.html">&larr; Back to menu</a>
-  <h1>Flappy Duck</h1>
-  <canvas id="game" width="400" height="500"></canvas>
-  <div id="score">Score: 0</div>
-  <p>Space, W, or Up (or click): flap. Fly through the gaps.</p>
+  <div class="game-shell">
+    <div class="topbar">
+      <a class="back-link" href="index.html">&larr; Back to menu</a>
+      <div id="score">Score: 0</div>
+    </div>
+    <h1>Flappy Duck</h1>
+    <canvas id="game" width="420" height="520"></canvas>
+    <div class="help">Space, W, or Up (or click): flap through the gaps.</div>
+  </div>
 
-<script>
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
-const scoreEl = document.getElementById('score');
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
 
-const W = canvas.width, H = canvas.height;
-const GRAVITY = 0.45, FLAP = -8, PIPE_W = 60, GAP = 130, PIPE_SPEED = 2.5, SPACING = 220;
+    const W = canvas.width, H = canvas.height;
+    const GRAVITY = 0.45, FLAP = -8.5, PIPE_W = 66, GAP = 144, PIPE_SPEED = 2.8, SPACING = 220;
 
-let duck, pipes, score, gameOver;
+    let duck, pipes, score, gameOver;
 
-function reset() {
-  duck = { x: 80, y: H / 2, r: 16, vy: 0 };
-  pipes = [];
-  score = 0;
-  gameOver = false;
-  scoreEl.textContent = 'Score: 0';
-  for (let i = 0; i < 3; i++) addPipe(W + i * SPACING);
-}
-
-function addPipe(x) {
-  const top = 60 + Math.random() * (H - GAP - 120);
-  pipes.push({ x, top, passed: false });
-}
-
-function flap() {
-  if (gameOver) { reset(); return; }
-  duck.vy = FLAP;
-}
-
-function update() {
-  if (gameOver) return;
-
-  duck.vy += GRAVITY;
-  duck.y += duck.vy;
-
-  for (const p of pipes) {
-    p.x -= PIPE_SPEED;
-
-    // Collision with top or bottom pipe
-    const inX = duck.x + duck.r > p.x && duck.x - duck.r < p.x + PIPE_W;
-    const inGap = duck.y - duck.r > p.top && duck.y + duck.r < p.top + GAP;
-    if (inX && !inGap) gameOver = true;
-
-    if (!p.passed && p.x + PIPE_W < duck.x) {
-      p.passed = true;
-      score++;
-      scoreEl.textContent = 'Score: ' + score;
+    function reset() {
+      duck = { x: 92, y: H / 2, r: 18, vy: 0 };
+      pipes = [];
+      score = 0;
+      gameOver = false;
+      scoreEl.textContent = 'Score: 0';
+      for (let i = 0; i < 3; i++) addPipe(W + i * SPACING);
     }
-  }
 
-  // Remove off-screen pipes and add new ones
-  if (pipes.length && pipes[0].x < -PIPE_W) pipes.shift();
-  const last = pipes[pipes.length - 1];
-  if (last && last.x < W - SPACING) addPipe(W);
+    function addPipe(x) {
+      const top = 60 + Math.random() * (H - GAP - 150);
+      pipes.push({ x, top, passed: false });
+    }
 
-  // Hitting the ground or ceiling
-  if (duck.y + duck.r > H || duck.y - duck.r < 0) gameOver = true;
-}
+    function flap() {
+      if (gameOver) { reset(); return; }
+      duck.vy = FLAP;
+    }
 
-function draw() {
-  ctx.clearRect(0, 0, W, H);
+    function update() {
+      if (gameOver) return;
 
-  ctx.fillStyle = '#a6e3a1';
-  for (const p of pipes) {
-    ctx.fillRect(p.x, 0, PIPE_W, p.top);
-    ctx.fillRect(p.x, p.top + GAP, PIPE_W, H - p.top - GAP);
-  }
+      duck.vy += GRAVITY;
+      duck.y += duck.vy;
 
-  // Duck body
-  ctx.fillStyle = '#f9e2af';
-  ctx.beginPath();
-  ctx.arc(duck.x, duck.y, duck.r, 0, Math.PI * 2);
-  ctx.fill();
+      for (const p of pipes) {
+        p.x -= PIPE_SPEED;
 
-  // Beak
-  ctx.fillStyle = '#fab387';
-  ctx.beginPath();
-  ctx.moveTo(duck.x + duck.r - 4, duck.y - 3);
-  ctx.lineTo(duck.x + duck.r + 8, duck.y + 2);
-  ctx.lineTo(duck.x + duck.r - 4, duck.y + 6);
-  ctx.fill();
+        const inX = duck.x + duck.r > p.x && duck.x - duck.r < p.x + PIPE_W;
+        const inGap = duck.y - duck.r > p.top && duck.y + duck.r < p.top + GAP;
+        if (inX && !inGap) gameOver = true;
 
-  // Eye
-  ctx.fillStyle = '#11111b';
-  ctx.beginPath();
-  ctx.arc(duck.x + 5, duck.y - 5, 2.5, 0, Math.PI * 2);
-  ctx.fill();
+        if (!p.passed && p.x + PIPE_W < duck.x) {
+          p.passed = true;
+          score++;
+          scoreEl.textContent = 'Score: ' + score;
+        }
+      }
 
-  // Wing
-  ctx.fillStyle = '#fab387';
-  ctx.beginPath();
-  ctx.ellipse(duck.x - 4, duck.y + 2, 7, 4, -0.3, 0, Math.PI * 2);
-  ctx.fill();
+      if (pipes.length && pipes[0].x < -PIPE_W) pipes.shift();
+      const last = pipes[pipes.length - 1];
+      if (last && last.x < W - SPACING) addPipe(W + 20);
 
-  if (gameOver) {
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 28px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('Game Over', W / 2, H / 2);
-    ctx.font = '16px Arial';
-    ctx.fillText('Press Space to play again', W / 2, H / 2 + 30);
-  }
-}
+      if (duck.y + duck.r > H || duck.y - duck.r < 0) gameOver = true;
+    }
 
-window.addEventListener('keydown', e => {
-  const key = e.key.toLowerCase();
-  if (key === ' ' || key === 'w' || key === 'arrowup') {
-    e.preventDefault();
-    flap();
-  }
-});
-canvas.addEventListener('click', flap);
+    function drawBackground() {
+      const sky = ctx.createLinearGradient(0, 0, 0, H);
+      sky.addColorStop(0, '#7ad8ff');
+      sky.addColorStop(0.45, '#5ec4ff');
+      sky.addColorStop(1, '#dcf7ff');
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, W, H);
 
-function loop() {
-  update();
-  draw();
-  setTimeout(() => requestAnimationFrame(loop), 0);
-}
-reset();
-loop();
-</script>
+      ctx.fillStyle = 'rgba(255, 248, 190, 0.85)';
+      ctx.beginPath();
+      ctx.arc(W - 72, 86, 42, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      for (let i = 0; i < 6; i++) {
+        const x = (i * 82 + (performance.now() * 0.02) % 90) % (W + 120) - 60;
+        const y = 60 + (i % 3) * 45;
+        ctx.beginPath();
+        ctx.arc(x, y, 16, 0, Math.PI * 2);
+        ctx.arc(x + 18, y + 4, 18, 0, Math.PI * 2);
+        ctx.arc(x - 18, y + 4, 18, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.fillStyle = '#9adf72';
+      ctx.fillRect(0, H - 54, W, 54);
+      ctx.fillStyle = '#6ebd52';
+      ctx.fillRect(0, H - 54, W, 10);
+    }
+
+    function drawPipe(x, top, width) {
+      const pipeGrad = ctx.createLinearGradient(x, 0, x + width, 0);
+      pipeGrad.addColorStop(0, '#5fe273');
+      pipeGrad.addColorStop(1, '#3ec762');
+
+      ctx.fillStyle = pipeGrad;
+      ctx.fillRect(x, 0, width, top);
+      ctx.fillRect(x, top + GAP, width, H - (top + GAP));
+
+      ctx.fillStyle = '#2ca54a';
+      ctx.fillRect(x - 4, top - 18, width + 8, 18);
+      ctx.fillRect(x - 4, top + GAP, width + 8, 18);
+
+      ctx.fillStyle = 'rgba(255,255,255,0.25)';
+      ctx.fillRect(x + 10, 0, 8, top);
+      ctx.fillRect(x + 10, top + GAP, 8, H - top - GAP);
+    }
+
+    function drawDuck() {
+      const cx = duck.x;
+      const cy = duck.y;
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(Math.max(-0.7, Math.min(0.9, duck.vy * 0.08)));
+
+      ctx.fillStyle = '#fdf1a3';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 18, 14, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#f7d163';
+      ctx.beginPath();
+      ctx.ellipse(-6, 2, 12, 8, -0.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#f7b267';
+      ctx.beginPath();
+      ctx.moveTo(17, 0);
+      ctx.lineTo(30, 5);
+      ctx.lineTo(17, 9);
+      ctx.fill();
+
+      ctx.fillStyle = '#1f2430';
+      ctx.beginPath();
+      ctx.arc(7, -4, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(8, -5, 1.1, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function draw() {
+      drawBackground();
+
+      for (const p of pipes) drawPipe(p.x, p.top, PIPE_W);
+      drawDuck();
+
+      if (gameOver) {
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.35)';
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 30px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Game Over', W / 2, H / 2 - 8);
+        ctx.font = '18px Arial';
+        ctx.fillText('Tap or press space to retry', W / 2, H / 2 + 26);
+      }
+    }
+
+    window.addEventListener('keydown', e => {
+      const key = e.key.toLowerCase();
+      if (key === ' ' || key === 'w' || key === 'arrowup') {
+        e.preventDefault();
+        flap();
+      }
+    });
+    canvas.addEventListener('click', flap);
+
+    function loop() {
+      update();
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    reset();
+    loop();
+  </script>
 </body>
 </html>
