@@ -19,9 +19,7 @@
     }
 
     * { box-sizing: border-box; }
-
     html { scroll-behavior: smooth; }
-
     body {
       margin: 0;
       min-height: 100vh;
@@ -29,9 +27,7 @@
       color: var(--text);
       background: radial-gradient(circle at top, rgba(76, 126, 214, 0.28), transparent 34%), linear-gradient(180deg, var(--bg) 0%, #050b17 100%);
     }
-
     .layout { display: flex; min-height: 100vh; }
-
     .sidebar {
       width: 250px;
       background: rgba(9, 16, 27, 0.9);
@@ -41,7 +37,6 @@
       top: 0;
       height: 100vh;
     }
-
     .brand {
       font-size: 24px;
       letter-spacing: 4px;
@@ -51,9 +46,7 @@
       margin-bottom: 18px;
       text-align: center;
     }
-
     .search-wrap { margin-bottom: 18px; }
-
     .search-wrap input {
       width: 100%;
       background: rgba(13, 22, 37, 0.9);
@@ -65,21 +58,17 @@
       outline: none;
       transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
-
     .search-wrap input:focus {
       border-color: rgba(126, 233, 255, 0.75);
       box-shadow: 0 0 18px rgba(118, 192, 255, 0.18);
     }
-
     .search-wrap input::placeholder { color: rgba(235, 247, 255, 0.5); }
-
     .nav-group {
       display: flex;
       flex-direction: column;
       gap: 10px;
       margin-top: 10px;
     }
-
     .nav-btn {
       width: 100%;
       border: 1px solid var(--line);
@@ -94,7 +83,6 @@
       transition: all 0.15s ease;
       text-align: left;
     }
-
     .nav-btn:hover,
     .nav-btn.active {
       background: linear-gradient(180deg, rgba(104, 169, 255, 0.22), rgba(70, 109, 204, 0.18));
@@ -103,11 +91,8 @@
       color: var(--cyan);
       transform: translateX(2px);
     }
-
     .content { flex: 1; padding: 40px 28px 70px; }
-
     .hero { text-align: center; margin-bottom: 28px; }
-
     h1 {
       margin: 0 0 12px;
       font-size: clamp(36px, 5vw, 72px);
@@ -115,7 +100,6 @@
       text-transform: uppercase;
       color: var(--cyan);
     }
-
     .subtitle {
       margin: 0;
       color: var(--muted);
@@ -123,7 +107,6 @@
       text-transform: uppercase;
       font-size: 12px;
     }
-
     .count {
       font-size: 12px;
       letter-spacing: 1.6px;
@@ -132,13 +115,11 @@
       margin-top: 10px;
       text-align: center;
     }
-
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 20px;
     }
-
     .game-card {
       display: block;
       position: relative;
@@ -153,13 +134,11 @@
       transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease;
       overflow: hidden;
     }
-
     .game-card:hover {
       transform: translateY(-4px);
       box-shadow: 0 0 24px rgba(126, 233, 255, 0.18);
       border-color: rgba(126, 233, 255, 0.75);
     }
-
     .game-card::before {
       content: "";
       position: absolute;
@@ -169,7 +148,6 @@
       background: linear-gradient(90deg, var(--cyan), var(--blue), var(--green));
       opacity: 0.9;
     }
-
     .game-card .badge {
       display: inline-block;
       margin-bottom: 18px;
@@ -183,13 +161,11 @@
       font-size: 10px;
       font-weight: 700;
     }
-
     .game-card h2 {
       margin: 0 0 10px;
       font-size: clamp(20px, 2vw, 28px);
       letter-spacing: 1px;
     }
-
     .game-card p {
       margin: 0;
       color: var(--muted);
@@ -197,7 +173,6 @@
       letter-spacing: 1.1px;
       text-transform: uppercase;
     }
-
     .play {
       margin-top: 20px;
       display: inline-flex;
@@ -209,9 +184,7 @@
       text-transform: uppercase;
       font-size: 11px;
     }
-
     .play::after { content: "→"; font-size: 16px; }
-
     .empty-state {
       grid-column: 1 / -1;
       text-align: center;
@@ -224,7 +197,6 @@
       text-transform: uppercase;
       font-size: 12px;
     }
-
     @media (max-width: 900px) {
       .layout { flex-direction: column; }
       .sidebar {
@@ -247,7 +219,6 @@
       </div>
       <div class="nav-group" id="navGroup"></div>
     </aside>
-
     <main class="content">
       <div class="hero">
         <h1>Pick a game</h1>
@@ -257,7 +228,6 @@
       <div class="grid" id="gameGrid"></div>
     </main>
   </div>
-
   <script>
     const games = [
       { name: "Galatrix", file: "galatrix.html", genre: "Shooter" },
@@ -320,11 +290,7 @@
     const gameCount = document.getElementById("gameCount");
     const searchInput = document.getElementById("searchInput");
     let activeCategory = "all";
-
-    const categories = [
-      "all",
-      ...Array.from(new Set(games.map(game => game.genre)))
-    ];
+    const categories = ["all", ...Array.from(new Set(games.map(game => game.genre)))];
 
     function renderNav() {
       navGroup.innerHTML = "";
@@ -347,9 +313,7 @@
       const searchTerm = searchInput.value.trim().toLowerCase();
       return games.filter(game => {
         const matchesCategory = activeCategory === "all" || game.genre === activeCategory;
-        const matchesSearch = !searchTerm ||
-          game.name.toLowerCase().includes(searchTerm) ||
-          game.genre.toLowerCase().includes(searchTerm);
+        const matchesSearch = !searchTerm || game.name.toLowerCase().includes(searchTerm) || game.genre.toLowerCase().includes(searchTerm);
         return matchesCategory && matchesSearch;
       });
     }
@@ -357,7 +321,6 @@
     function renderGames() {
       const filtered = getFilteredGames();
       gameGrid.innerHTML = "";
-
       if (!filtered.length) {
         const empty = document.createElement("div");
         empty.className = "empty-state";
@@ -380,7 +343,6 @@
         `;
         gameGrid.appendChild(card);
       });
-
       gameCount.textContent = `${filtered.length} Games`;
     }
 
