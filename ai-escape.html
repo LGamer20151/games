@@ -106,6 +106,40 @@
       display: inline-block;
     }
 
+    .api-config {
+      display: grid;
+      grid-template-columns: 1.4fr 0.8fr auto;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .api-config input {
+      border: 1px solid var(--line);
+      background: rgba(4, 11, 21, 0.9);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px 11px;
+      font-size: 13px;
+      outline: none;
+    }
+
+    .api-config input:focus {
+      border-color: rgba(126, 233, 255, 0.7);
+      box-shadow: 0 0 0 2px rgba(126, 233, 255, 0.12);
+    }
+
+    .tiny-btn {
+      border: 1px solid rgba(126, 233, 255, 0.4);
+      background: rgba(126, 233, 255, 0.08);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 12px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+
     .chat-log {
       height: 170px;
       overflow-y: auto;
@@ -207,11 +241,18 @@
         <span>AI Console</span>
         <span><span class="status-dot"></span> Online</span>
       </div>
+
+      <div class="api-config">
+        <input id="apiKeyInput" type="password" placeholder="OpenAI API key (optional)" aria-label="OpenAI API key" />
+        <input id="modelInput" type="text" value="gpt-4o-mini" aria-label="OpenAI model name" />
+        <button id="saveApiBtn" class="tiny-btn" type="button">Save</button>
+      </div>
+
       <div id="chatLog" class="chat-log" aria-live="polite">
-        <div class="msg ai">I am the system AI. Ask me how to win, how the enemy is behaving, or anything about the escape route.</div>
+        <div class="msg ai">I am the AI console for this maze. Add your OpenAI API key to enable live GPT responses, or ask me directly and I’ll answer using the current game state.</div>
       </div>
       <div class="input-row">
-        <input id="aiInput" type="text" maxlength="220" placeholder="Ask the AI a question..." aria-label="Ask the AI a question" />
+        <input id="aiInput" type="text" maxlength="500" placeholder="Ask the AI a question..." aria-label="Ask the AI a question" />
         <button id="askBtn" type="button">Ask</button>
       </div>
     </div>
@@ -227,6 +268,35 @@
     const aiInput = document.getElementById('aiInput');
     const askBtn = document.getElementById('askBtn');
     const chatLog = document.getElementById('chatLog');
+    const apiKeyInput = document.getElementById('apiKeyInput');
+    const modelInput = document.getElementById('modelInput');
+    const saveApiBtn = document.getElementById('saveApiBtn');
+
+    const DEFAULT_MODEL = 'gpt-4o-mini';
+
+    function loadApiConfig() {
+      const key = localStorage.getItem('ai-escape-openai-key') || '';
+      const model = localStorage.getItem('ai-escape-openai-model') || DEFAULT_MODEL;
+      apiKeyInput.value = key;
+      modelInput.value = model;
+    }
+
+    function saveApiConfig() {
+      const key = apiKeyInput.value.trim();
+      const model = modelInput.value.trim() || DEFAULT_MODEL;
+      if (key) {
+        localStorage.setItem('ai-escape-openai-key', key);
+        localStorage.setItem('ai-escape-openai-model', model);
+        addAiMessage('API settings saved. Live GPT responses are now enabled for this browser.', false);
+      } else {
+        localStorage.removeItem('ai-escape-openai-key');
+        localStorage.setItem('ai-escape-openai-model', model);
+        addAiMessage('No API key saved. The assistant will use the local game-aware fallback mode.', false);
+      }
+    }
+
+    saveApiBtn.addEventListener('click', saveApiConfig);
+    loadApiConfig();
 
     const TILE = 40;
     const COLS = 15;
@@ -329,7 +399,6 @@
       pickupState.length = 0;
       pickups.forEach(item => pickupState.push({ ...item, active: true }));
       updateHud();
-      addAiSystemMessage('The maze has reset. The enemy is back on patrol and the core route has been refreshed.');
     }
 
     const pickupState = [];
@@ -360,9 +429,6 @@
           updateHud();
           if (state.score === pickups.length) {
             state.status = 'WON';
-            addAiSystemMessage('All cores collected. The AI has lost the track. You have escaped the maze.');
-          } else {
-            addAiSystemMessage(`Core secured. ${pickups.length - state.score} cores remain on the map.`);
           }
           break;
         }
@@ -390,7 +456,6 @@
           collectPickup();
           if (player.x === enemy.x && player.y === enemy.y) {
             state.status = 'LOST';
-            addAiSystemMessage('The AI reached your last position. The run failed. Press R to restart.');
           }
         }
         state.playerMoveDelay = 120;
@@ -422,7 +487,6 @@
 
       if (enemy.x === player.x && enemy.y === player.y) {
         state.status = 'LOST';
-        addAiSystemMessage('The AI caught you in the final corridor. Press R to restart.');
       }
     }
 
@@ -542,15 +606,11 @@
       chatLog.scrollTop = chatLog.scrollHeight;
     }
 
-    function addAiSystemMessage(text) {
-      addAiMessage(text, false);
-    }
-
-    function getGameStatusSummary() {
+    function getGameStateSummary() {
       const remaining = pickups.length - state.score;
       const dist = Math.abs(player.x - enemy.x) + Math.abs(player.y - enemy.y);
       let statusText = 'The AI is scanning the maze.';
-      if (state.status === 'WON') statusText = 'You already escaped.';
+      if (state.status === 'WON') statusText = 'You have already escaped.';
       else if (state.status === 'LOST') statusText = 'The AI caught you.';
       else if (dist <= 5) statusText = 'The enemy is in hunt mode and close to your position.';
       else if (dist <= 10) statusText = 'The enemy is nearby but still searching.';
@@ -559,65 +619,109 @@
         remaining,
         dist,
         statusText,
-        mode: state.status === 'RUNNING' ? (dist <= 5 ? 'HUNT' : 'SCAN') : (state.status === 'WON' ? 'ESCAPED' : 'CAUGHT')
+        mode: state.status === 'RUNNING' ? (dist <= 5 ? 'HUNT' : 'SCAN') : (state.status === 'WON' ? 'ESCAPED' : 'CAUGHT'),
+        score: state.score,
+        player: { x: player.x, y: player.y },
+        enemy: { x: enemy.x, y: enemy.y },
+        canWin: state.status === 'RUNNING'
       };
     }
 
-    function generateAiAnswer(question) {
+    function buildFallbackAnswer(question) {
       const q = question.trim().toLowerCase();
-      if (!q) return 'Ask me a question about the game or the AI.';
+      if (!q) return 'Ask me anything about the maze or the AI.';
 
-      if (['hi', 'hello', 'hey', 'good morning', 'good evening'].some(token => q.includes(token))) {
-        return 'Hello. I am the AI console for this maze. Ask about the enemy, the cores, or how to escape.';
+      if (['hi', 'hello', 'hey', 'greetings'].some(token => q.includes(token))) {
+        return 'Hello. I can help with movement, enemy distance, remaining cores, and the best strategy for escaping the maze.';
       }
 
-      if (q.includes('how to win') || q.includes('win') || q.includes('escape')) {
-        return 'Collect all 5 cores, avoid the enemy, and keep moving through the safe corridors. Once all cores are gathered, the maze opens and you escape.';
+      if (q.includes('how to win') || q.includes('escape') || q.includes('win')) {
+        return 'Collect all 5 cores while avoiding the AI. The enemy uses pathfinding, so stay unpredictable and use the open corridors to keep your distance.';
       }
 
-      if (q.includes('how to move') || q.includes('move') || q.includes('controls')) {
-        return 'Use WASD or the arrow keys to move one tile at a time. Press R anytime to restart the run.';
+      if (q.includes('move') || q.includes('controls') || q.includes('how to move')) {
+        return 'Use WASD or the arrow keys to move one tile at a time. Press R to reset the maze any time.';
       }
 
       if (q.includes('enemy') || q.includes('ai') || q.includes('chasing') || q.includes('hunt')) {
-        const info = getGameStatusSummary();
-        return `The enemy is ${info.mode.toLowerCase()} mode. Distance to you is ${info.dist}. ${info.statusText}`;
+        const info = getGameStateSummary();
+        return `The enemy is in ${info.mode} mode. Distance to you: ${info.dist}. ${info.statusText}`;
       }
 
-      if (q.includes('core') || q.includes('score') || q.includes('collect') || q.includes('remaining')) {
-        const info = getGameStatusSummary();
-        return `You have ${state.score} of 5 cores. ${info.remaining} core${info.remaining === 1 ? '' : 's'} remain. Collect them all to escape.`;
+      if (q.includes('core') || q.includes('score') || q.includes('remaining') || q.includes('collect')) {
+        const info = getGameStateSummary();
+        return `You have ${info.score} of 5 cores. ${info.remaining} core${info.remaining === 1 ? '' : 's'} remain on the map.`;
       }
 
-      if (q.includes('status') || q.includes('what is happening') || q.includes('where am i') || q.includes('state')) {
-        const info = getGameStatusSummary();
-        return `You are in ${info.mode} mode. ${info.statusText} You have ${state.score} of 5 cores, and ${info.remaining} remain.`;
+      if (q.includes('status') || q.includes('what is happening') || q.includes('state')) {
+        const info = getGameStateSummary();
+        return `Current status: ${info.mode}. ${info.statusText} You are at (${info.player.x}, ${info.player.y}) and the AI is at (${info.enemy.x}, ${info.enemy.y}).`;
       }
 
       if (q.includes('restart') || q.includes('reset')) {
-        return 'Press R to reset the map and start again. The AI and the cores reset with it.';
+        return 'Press R on the keyboard to restart the run. That resets the map, the enemy, and all cores.';
       }
 
-      if (q.includes('what are you') || q.includes('who are you')) {
-        return 'I am the local AI assistant built into this maze. I can explain the game state, the enemy, and the win condition.';
-      }
-
-      if (q.includes('thanks') || q.includes('thank you')) {
-        return 'You are welcome. Ask for a hint or status update anytime.';
-      }
-
-      return 'I can help with: movement controls, enemy behavior, remaining cores, or how to win. Ask me a more specific question and I will answer based on the current game state.';
+      return 'I can answer questions about controls, the enemy, remaining cores, and the best way to escape. Ask me something more specific.';
     }
 
-    function handleAiQuestion() {
+    async function askChatGpt(question) {
+      const key = localStorage.getItem('ai-escape-openai-key');
+      const model = localStorage.getItem('ai-escape-openai-model') || DEFAULT_MODEL;
+      const stateSummary = getGameStateSummary();
+
+      const systemPrompt = `You are the AI assistant for a browser game called AI Escape. The player is trying to gather all 5 cores and escape a maze while an enemy AI pursues them. Current game state: score=${stateSummary.score}/5, remaining=${stateSummary.remaining}, player=(${stateSummary.player.x}, ${stateSummary.player.y}), enemy=(${stateSummary.enemy.x}, ${stateSummary.enemy.y}), mode=${stateSummary.mode}, distance=${stateSummary.dist}. Give helpful, concise, game-specific answers. Keep replies short and practical.`;
+
+      if (!key) {
+        return buildFallbackAnswer(question);
+      }
+
+      try {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${key}`
+          },
+          body: JSON.stringify({
+            model,
+            temperature: 0.7,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: question }
+            ]
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`API request failed with status ${response.status}`);
+        }
+
+        const data = await response.json();
+        const content = data?.choices?.[0]?.message?.content;
+        if (!content) {
+          throw new Error('No content returned by API');
+        }
+
+        return content.trim();
+      } catch (error) {
+        return `The live AI request failed, so I switched to the local game-aware assistant. ${buildFallbackAnswer(question)}`;
+      }
+    }
+
+    async function handleAiQuestion() {
       const question = aiInput.value.trim();
       if (!question) return;
 
       addAiMessage(question, true);
       aiInput.value = '';
+      askBtn.disabled = true;
+      askBtn.textContent = 'Thinking...';
 
-      const answer = generateAiAnswer(question);
-      setTimeout(() => addAiMessage(answer, false), 180);
+      const answer = await askChatGpt(question);
+      addAiMessage(answer, false);
+      askBtn.disabled = false;
+      askBtn.textContent = 'Ask';
     }
 
     askBtn.addEventListener('click', handleAiQuestion);
