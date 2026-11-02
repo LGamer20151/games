@@ -20,9 +20,7 @@
 
     * { box-sizing: border-box; }
 
-    html {
-      scroll-behavior: smooth;
-    }
+    html { scroll-behavior: smooth; }
 
     body {
       margin: 0;
@@ -32,10 +30,7 @@
       background: radial-gradient(circle at top, rgba(76, 126, 214, 0.28), transparent 34%), linear-gradient(180deg, var(--bg) 0%, #050b17 100%);
     }
 
-    .layout {
-      display: flex;
-      min-height: 100vh;
-    }
+    .layout { display: flex; min-height: 100vh; }
 
     .sidebar {
       width: 250px;
@@ -57,9 +52,7 @@
       text-align: center;
     }
 
-    .search-wrap {
-      margin-bottom: 18px;
-    }
+    .search-wrap { margin-bottom: 18px; }
 
     .search-wrap input {
       width: 100%;
@@ -78,9 +71,7 @@
       box-shadow: 0 0 18px rgba(118, 192, 255, 0.18);
     }
 
-    .search-wrap input::placeholder {
-      color: rgba(235, 247, 255, 0.5);
-    }
+    .search-wrap input::placeholder { color: rgba(235, 247, 255, 0.5); }
 
     .nav-group {
       display: flex;
@@ -113,15 +104,9 @@
       transform: translateX(2px);
     }
 
-    .content {
-      flex: 1;
-      padding: 40px 28px 70px;
-    }
+    .content { flex: 1; padding: 40px 28px 70px; }
 
-    .hero {
-      text-align: center;
-      margin-bottom: 28px;
-    }
+    .hero { text-align: center; margin-bottom: 28px; }
 
     h1 {
       margin: 0 0 12px;
@@ -225,10 +210,7 @@
       font-size: 11px;
     }
 
-    .play::after {
-      content: "→";
-      font-size: 16px;
-    }
+    .play::after { content: "→"; font-size: 16px; }
 
     .empty-state {
       grid-column: 1 / -1;
@@ -244,10 +226,7 @@
     }
 
     @media (max-width: 900px) {
-      .layout {
-        flex-direction: column;
-      }
-
+      .layout { flex-direction: column; }
       .sidebar {
         width: 100%;
         height: auto;
@@ -255,11 +234,7 @@
         border-right: none;
         border-bottom: 1px solid var(--line);
       }
-
-      .nav-group {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      }
+      .nav-group { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
     }
   </style>
 </head>
@@ -267,11 +242,9 @@
   <div class="layout">
     <aside class="sidebar">
       <div class="brand">Game Hub</div>
-
       <div class="search-wrap">
         <input id="searchInput" type="text" placeholder="Search games..." aria-label="Search games" />
       </div>
-
       <div class="nav-group" id="navGroup"></div>
     </aside>
 
@@ -280,7 +253,6 @@
         <h1>Pick a game</h1>
         <p class="subtitle">Choose your challenge</p>
       </div>
-
       <div class="count" id="gameCount">0 Games</div>
       <div class="grid" id="gameGrid"></div>
     </main>
@@ -356,7 +328,6 @@
 
     function renderNav() {
       navGroup.innerHTML = "";
-
       categories.forEach(category => {
         const btn = document.createElement("button");
         btn.type = "button";
@@ -374,20 +345,17 @@
 
     function getFilteredGames() {
       const searchTerm = searchInput.value.trim().toLowerCase();
-
       return games.filter(game => {
         const matchesCategory = activeCategory === "all" || game.genre === activeCategory;
         const matchesSearch = !searchTerm ||
           game.name.toLowerCase().includes(searchTerm) ||
           game.genre.toLowerCase().includes(searchTerm);
-
         return matchesCategory && matchesSearch;
       });
     }
 
     function renderGames() {
       const filtered = getFilteredGames();
-
       gameGrid.innerHTML = "";
 
       if (!filtered.length) {
@@ -417,7 +385,6 @@
     }
 
     searchInput.addEventListener("input", renderGames);
-
     renderNav();
     renderGames();
   </script>
