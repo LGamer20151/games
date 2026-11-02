@@ -30,10 +30,11 @@
       background:
         radial-gradient(circle at top, rgba(122, 167, 255, 0.18), transparent 34%),
         linear-gradient(180deg, #040b15 0%, #07131f 100%);
+      padding: 22px 0;
     }
 
     .game-shell {
-      width: min(860px, calc(100vw - 28px));
+      width: min(920px, calc(100vw - 28px));
       background: rgba(12, 19, 30, 0.9);
       border: 1px solid var(--line);
       border-radius: 20px;
@@ -77,6 +78,108 @@
       background: radial-gradient(circle at center, rgba(17, 34, 53, 0.8), rgba(4, 11, 21, 1));
     }
 
+    .chat-panel {
+      border-top: 1px solid var(--line);
+      background: rgba(9, 14, 24, 0.85);
+      padding: 14px 16px 12px;
+    }
+
+    .chat-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+      color: var(--cyan);
+      font-size: 12px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 12px rgba(158, 247, 200, 0.8);
+      display: inline-block;
+    }
+
+    .chat-log {
+      height: 170px;
+      overflow-y: auto;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(6, 12, 20, 0.7);
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .msg {
+      max-width: 82%;
+      padding: 9px 11px;
+      border-radius: 12px;
+      line-height: 1.4;
+      font-size: 14px;
+      word-wrap: break-word;
+    }
+
+    .msg.ai {
+      background: rgba(122, 167, 255, 0.12);
+      border: 1px solid rgba(122, 167, 255, 0.25);
+      color: var(--text);
+      align-self: flex-start;
+    }
+
+    .msg.user {
+      background: rgba(126, 233, 255, 0.12);
+      border: 1px solid rgba(126, 233, 255, 0.24);
+      color: var(--text);
+      align-self: flex-end;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    input {
+      flex: 1;
+      border: 1px solid var(--line);
+      background: rgba(4, 11, 21, 0.9);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 12px 13px;
+      font-size: 14px;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: rgba(126, 233, 255, 0.7);
+      box-shadow: 0 0 0 2px rgba(126, 233, 255, 0.12);
+    }
+
+    button {
+      background: linear-gradient(135deg, var(--cyan), var(--blue));
+      color: #03131d;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-weight: 800;
+      cursor: pointer;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      transition: transform 0.15s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+    }
+
     .help {
       padding: 12px 18px 16px;
       font-size: 12px;
@@ -98,6 +201,21 @@
       </div>
     </div>
     <canvas id="game" width="760" height="520"></canvas>
+
+    <div class="chat-panel">
+      <div class="chat-header">
+        <span>AI Console</span>
+        <span><span class="status-dot"></span> Online</span>
+      </div>
+      <div id="chatLog" class="chat-log" aria-live="polite">
+        <div class="msg ai">I am the system AI. Ask me how to win, how the enemy is behaving, or anything about the escape route.</div>
+      </div>
+      <div class="input-row">
+        <input id="aiInput" type="text" maxlength="220" placeholder="Ask the AI a question..." aria-label="Ask the AI a question" />
+        <button id="askBtn" type="button">Ask</button>
+      </div>
+    </div>
+
     <div class="help">Move with WASD or arrow keys • collect all cores • press R to restart</div>
   </div>
 
@@ -106,6 +224,9 @@
     const ctx = canvas.getContext('2d');
     const scoreLabel = document.getElementById('scoreLabel');
     const modeLabel = document.getElementById('modeLabel');
+    const aiInput = document.getElementById('aiInput');
+    const askBtn = document.getElementById('askBtn');
+    const chatLog = document.getElementById('chatLog');
 
     const TILE = 40;
     const COLS = 15;
@@ -208,6 +329,7 @@
       pickupState.length = 0;
       pickups.forEach(item => pickupState.push({ ...item, active: true }));
       updateHud();
+      addAiSystemMessage('The maze has reset. The enemy is back on patrol and the core route has been refreshed.');
     }
 
     const pickupState = [];
@@ -238,6 +360,9 @@
           updateHud();
           if (state.score === pickups.length) {
             state.status = 'WON';
+            addAiSystemMessage('All cores collected. The AI has lost the track. You have escaped the maze.');
+          } else {
+            addAiSystemMessage(`Core secured. ${pickups.length - state.score} cores remain on the map.`);
           }
           break;
         }
@@ -265,6 +390,7 @@
           collectPickup();
           if (player.x === enemy.x && player.y === enemy.y) {
             state.status = 'LOST';
+            addAiSystemMessage('The AI reached your last position. The run failed. Press R to restart.');
           }
         }
         state.playerMoveDelay = 120;
@@ -296,6 +422,7 @@
 
       if (enemy.x === player.x && enemy.y === player.y) {
         state.status = 'LOST';
+        addAiSystemMessage('The AI caught you in the final corridor. Press R to restart.');
       }
     }
 
@@ -405,6 +532,100 @@
       const key = event.key.toLowerCase();
       keys[event.key] = false;
       keys[key] = false;
+    });
+
+    function addAiMessage(text, fromUser = false) {
+      const message = document.createElement('div');
+      message.className = `msg ${fromUser ? 'user' : 'ai'}`;
+      message.textContent = text;
+      chatLog.appendChild(message);
+      chatLog.scrollTop = chatLog.scrollHeight;
+    }
+
+    function addAiSystemMessage(text) {
+      addAiMessage(text, false);
+    }
+
+    function getGameStatusSummary() {
+      const remaining = pickups.length - state.score;
+      const dist = Math.abs(player.x - enemy.x) + Math.abs(player.y - enemy.y);
+      let statusText = 'The AI is scanning the maze.';
+      if (state.status === 'WON') statusText = 'You already escaped.';
+      else if (state.status === 'LOST') statusText = 'The AI caught you.';
+      else if (dist <= 5) statusText = 'The enemy is in hunt mode and close to your position.';
+      else if (dist <= 10) statusText = 'The enemy is nearby but still searching.';
+
+      return {
+        remaining,
+        dist,
+        statusText,
+        mode: state.status === 'RUNNING' ? (dist <= 5 ? 'HUNT' : 'SCAN') : (state.status === 'WON' ? 'ESCAPED' : 'CAUGHT')
+      };
+    }
+
+    function generateAiAnswer(question) {
+      const q = question.trim().toLowerCase();
+      if (!q) return 'Ask me a question about the game or the AI.';
+
+      if (['hi', 'hello', 'hey', 'good morning', 'good evening'].some(token => q.includes(token))) {
+        return 'Hello. I am the AI console for this maze. Ask about the enemy, the cores, or how to escape.';
+      }
+
+      if (q.includes('how to win') || q.includes('win') || q.includes('escape')) {
+        return 'Collect all 5 cores, avoid the enemy, and keep moving through the safe corridors. Once all cores are gathered, the maze opens and you escape.';
+      }
+
+      if (q.includes('how to move') || q.includes('move') || q.includes('controls')) {
+        return 'Use WASD or the arrow keys to move one tile at a time. Press R anytime to restart the run.';
+      }
+
+      if (q.includes('enemy') || q.includes('ai') || q.includes('chasing') || q.includes('hunt')) {
+        const info = getGameStatusSummary();
+        return `The enemy is ${info.mode.toLowerCase()} mode. Distance to you is ${info.dist}. ${info.statusText}`;
+      }
+
+      if (q.includes('core') || q.includes('score') || q.includes('collect') || q.includes('remaining')) {
+        const info = getGameStatusSummary();
+        return `You have ${state.score} of 5 cores. ${info.remaining} core${info.remaining === 1 ? '' : 's'} remain. Collect them all to escape.`;
+      }
+
+      if (q.includes('status') || q.includes('what is happening') || q.includes('where am i') || q.includes('state')) {
+        const info = getGameStatusSummary();
+        return `You are in ${info.mode} mode. ${info.statusText} You have ${state.score} of 5 cores, and ${info.remaining} remain.`;
+      }
+
+      if (q.includes('restart') || q.includes('reset')) {
+        return 'Press R to reset the map and start again. The AI and the cores reset with it.';
+      }
+
+      if (q.includes('what are you') || q.includes('who are you')) {
+        return 'I am the local AI assistant built into this maze. I can explain the game state, the enemy, and the win condition.';
+      }
+
+      if (q.includes('thanks') || q.includes('thank you')) {
+        return 'You are welcome. Ask for a hint or status update anytime.';
+      }
+
+      return 'I can help with: movement controls, enemy behavior, remaining cores, or how to win. Ask me a more specific question and I will answer based on the current game state.';
+    }
+
+    function handleAiQuestion() {
+      const question = aiInput.value.trim();
+      if (!question) return;
+
+      addAiMessage(question, true);
+      aiInput.value = '';
+
+      const answer = generateAiAnswer(question);
+      setTimeout(() => addAiMessage(answer, false), 180);
+    }
+
+    askBtn.addEventListener('click', handleAiQuestion);
+    aiInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        handleAiQuestion();
+      }
     });
 
     requestAnimationFrame(tick);
