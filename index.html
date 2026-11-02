@@ -123,8 +123,8 @@
     .game-card {
       display: block;
       position: relative;
-      min-height: 180px;
-      padding: 18px 18px 16px;
+      min-height: 240px;
+      padding: 0;
       border-radius: 18px;
       text-decoration: none;
       color: var(--text);
@@ -147,10 +147,46 @@
       height: 5px;
       background: linear-gradient(90deg, var(--cyan), var(--blue), var(--green));
       opacity: 0.9;
+      z-index: 2;
+    }
+    .game-thumb {
+      position: relative;
+      height: 150px;
+      display: flex;
+      align-items: end;
+      justify-content: flex-start;
+      padding: 16px;
+      border-bottom: 1px solid rgba(126, 233, 255, 0.18);
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      overflow: hidden;
+    }
+    .game-thumb::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(4, 8, 14, 0.12), rgba(5, 7, 14, 0.8));
+    }
+    .game-thumb span {
+      position: relative;
+      z-index: 1;
+      font-size: 22px;
+      line-height: 1.1;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: white;
+      text-shadow: 0 2px 12px rgba(0,0,0,0.45);
+      max-width: 80%;
+    }
+    .game-card-content {
+      position: relative;
+      padding: 18px 18px 16px;
+      z-index: 1;
     }
     .game-card .badge {
       display: inline-block;
-      margin-bottom: 18px;
+      margin-bottom: 12px;
       padding: 6px 10px;
       border-radius: 999px;
       background: rgba(126, 233, 255, 0.08);
@@ -229,6 +265,66 @@
     </main>
   </div>
   <script>
+    const genreColors = {
+      Shooter: ["#2B6CB0", "#7EE9FF"],
+      Puzzle: ["#805AD5", "#9EF7C8"],
+      AI: ["#0EA5E9", "#14B8A6"],
+      Action: ["#F97316", "#FACC15"],
+      Skill: ["#10B981", "#7EE9FF"],
+      Arcade: ["#EC4899", "#F59E0B"],
+      Reflex: ["#7C3AED", "#22D3EE"],
+      Avoid: ["#FB7185", "#FDE68A"],
+      Racing: ["#0F172A", "#60A5FA"],
+      Adventure: ["#15803D", "#86EFAC"],
+      Rhythm: ["#E11D48", "#A78BFA"],
+      Physics: ["#1D4ED8", "#67E8F9"],
+      Driving: ["#2DD4BF", "#93C5FD"],
+      Sports: ["#22C55E", "#F0ABFC"],
+      Logic: ["#14B8A6", "#BFDBFE"],
+      Memory: ["#F59E0B", "#FDE68A"],
+      Classic: ["#F43F5E", "#FDBA74"],
+      Strategy: ["#3B82F6", "#A7F3D0"],
+      Drawing: ["#F59E0B", "#FB7185"],
+      Simulation: ["#6D28D9", "#8B5CF6"],
+      Speed: [""],
+      Platformer: ["#0EA5E9", "#34D399"],
+      Chance: ["#D946EF", "#FDE68A"],
+      Word: ["#16A34A", "#A7F3D0"],
+      Default: ["#0B1730", "#7EE9FF"]
+    };
+
+    function createGameThumbnail(name, genre) {
+      const initials = name
+        .split(/\s|[-_]/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map(part => part[0]?.toUpperCase() || "")
+        .join("") || "G";
+
+      const palette = genreColors[genre] || genreColors.Default;
+      const start = palette[0] || "#0B1730";
+      const end = palette[1] || "#7EE9FF";
+      const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500">
+          <defs>
+            <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="${start}"/>
+              <stop offset="100%" stop-color="${end}"/>
+            </linearGradient>
+          </defs>
+          <rect width="800" height="500" fill="url(#g)"/>
+          <circle cx="660" cy="90" r="120" fill="rgba(255,255,255,0.12)"/>
+          <circle cx="130" cy="370" r="150" fill="rgba(255,255,255,0.08)"/>
+          <rect x="70" y="310" width="230" height="12" rx="6" fill="rgba(255,255,255,0.35)"/>
+          <rect x="70" y="340" width="180" height="12" rx="6" fill="rgba(255,255,255,0.2)"/>
+          <text x="70" y="230" font-size="118" font-weight="800" fill="rgba(255,255,255,0.96)" font-family="Arial, Helvetica, sans-serif">${initials}</text>
+          <text x="72" y="270" font-size="30" font-weight="700" fill="rgba(255,255,255,0.88)" letter-spacing="4" font-family="Arial, Helvetica, sans-serif">${genre.toUpperCase()}</text>
+        </svg>
+      `;
+
+      return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+    }
+
     const games = [
       { name: "Galatrix", file: "galatrix.html", genre: "Shooter" },
       { name: "2048 Merge", file: "2048-merge.html", genre: "Puzzle" },
@@ -340,11 +436,19 @@
           card.target = "_blank";
           card.rel = "noopener noreferrer";
         }
+
+        const thumb = createGameThumbnail(game.name, game.genre);
+
         card.innerHTML = `
-          <div class="badge">${game.genre}</div>
-          <h2>${game.name}</h2>
-          <p>${activeCategory === "all" ? `Game ${index + 1}` : game.genre}</p>
-          <div class="play">Play now</div>
+          <div class="game-thumb" style="background-image: url('${thumb}')">
+            <span>${game.name}</span>
+          </div>
+          <div class="game-card-content">
+            <div class="badge">${game.genre}</div>
+            <h2>${game.name}</h2>
+            <p>${activeCategory === "all" ? `Game ${index + 1}` : game.genre}</p>
+            <div class="play">Play now</div>
+          </div>
         `;
         gameGrid.appendChild(card);
       });
