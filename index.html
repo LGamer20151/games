@@ -53,8 +53,33 @@
       text-transform: uppercase;
       color: var(--cyan);
       font-weight: 700;
-      margin-bottom: 28px;
+      margin-bottom: 18px;
       text-align: center;
+    }
+
+    .search-wrap {
+      margin-bottom: 18px;
+    }
+
+    .search-wrap input {
+      width: 100%;
+      background: rgba(13, 22, 37, 0.9);
+      border: 1px solid var(--line);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 11px 12px;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .search-wrap input:focus {
+      border-color: rgba(126, 233, 255, 0.75);
+      box-shadow: 0 0 18px rgba(118, 192, 255, 0.18);
+    }
+
+    .search-wrap input::placeholder {
+      color: rgba(235, 247, 255, 0.5);
     }
 
     .nav-group {
@@ -205,6 +230,19 @@
       font-size: 16px;
     }
 
+    .empty-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 30px 12px;
+      color: var(--muted);
+      border: 1px dashed var(--line);
+      border-radius: 16px;
+      background: rgba(9, 16, 27, 0.48);
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      font-size: 12px;
+    }
+
     @media (max-width: 900px) {
       .layout {
         flex-direction: column;
@@ -229,6 +267,11 @@
   <div class="layout">
     <aside class="sidebar">
       <div class="brand">Game Hub</div>
+
+      <div class="search-wrap">
+        <input id="searchInput" type="text" placeholder="Search games..." aria-label="Search games" />
+      </div>
+
       <div class="nav-group" id="navGroup"></div>
     </aside>
 
@@ -312,6 +355,7 @@
     const gameGrid = document.getElementById("gameGrid");
     const navGroup = document.getElementById("navGroup");
     const gameCount = document.getElementById("gameCount");
+    const searchInput = document.getElementById("searchInput");
     let activeCategory = "all";
 
     const categories = [
@@ -337,12 +381,33 @@
       });
     }
 
+    function getFilteredGames() {
+      const searchTerm = searchInput.value.trim().toLowerCase();
+
+      return games.filter(game => {
+        const matchesCategory = activeCategory === "all" || game.genre === activeCategory;
+        const matchesSearch = !searchTerm ||
+          game.name.toLowerCase().includes(searchTerm) ||
+          game.genre.toLowerCase().includes(searchTerm);
+
+        return matchesCategory && matchesSearch;
+      });
+    }
+
     function renderGames() {
-      const filtered = activeCategory === "all"
-        ? games
-        : games.filter(game => game.genre === activeCategory);
+      const filtered = getFilteredGames();
 
       gameGrid.innerHTML = "";
+
+      if (!filtered.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.textContent = "No games match your search";
+        gameGrid.appendChild(empty);
+        gameCount.textContent = "0 Games";
+        return;
+      }
+
       filtered.forEach((game, index) => {
         const card = document.createElement("a");
         card.href = game.file;
@@ -359,6 +424,8 @@
 
       gameCount.textContent = `${filtered.length} Games`;
     }
+
+    searchInput.addEventListener("input", renderGames);
 
     renderNav();
     renderGames();
