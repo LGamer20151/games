@@ -14,7 +14,8 @@
       --blue: #77a9ff;
       --green: #9ef7c8;
       --text: #ebf7ff;
-      --muted: rgba(235, 247, 255, 0.72);
+      --muted: rgba(235, 247, 255, 0.7);
+      --shadow: rgba(94, 156, 255, 0.16);
     }
 
     * { box-sizing: border-box; }
@@ -30,9 +31,9 @@
     }
 
     .shell {
-      max-width: 1220px;
+      max-width: 1260px;
       margin: 0 auto;
-      padding: 40px 20px 64px;
+      padding: 48px 20px 72px;
     }
 
     .topbar {
@@ -46,7 +47,7 @@
       border-radius: 16px;
       background: rgba(10, 19, 31, 0.65);
       backdrop-filter: blur(6px);
-      box-shadow: 0 0 22px rgba(95, 156, 255, 0.12);
+      box-shadow: 0 0 22px var(--shadow);
     }
 
     .brand {
@@ -101,7 +102,7 @@
       color: var(--text);
       background: linear-gradient(180deg, rgba(18, 31, 51, 0.95), rgba(9, 18, 30, 0.9));
       border: 1px solid var(--line);
-      box-shadow: 0 0 18px rgba(110, 171, 255, 0.12);
+      box-shadow: 0 0 18px var(--shadow);
       transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease;
       overflow: hidden;
     }
@@ -185,32 +186,82 @@
 
   <script>
     const games = [
-      { name: 'Galatrix', file: 'galatrix.html', genre: 'Orbit Defense' },
-      { name: 'Brick Breaker', file: 'brickbreaker.html', genre: 'Arcade' },
-      { name: 'Snake', file: 'snake.html', genre: 'Classic' },
-      { name: 'Space Shooter', file: 'spaceshooter.html', genre: 'Shooter' },
-      { name: 'Pacman', file: 'pacman.html', genre: 'Classic' },
-      { name: '2048 Merge', file: '2048-merge.html', genre: 'Puzzle' },
-      { name: 'Flappy Duck', file: 'flappy-duck.html', genre: 'Arcade' },
-      { name: 'Tic Tac Toe', file: 'tictactoe.html', genre: 'Puzzle' },
-      { name: 'Reaction Rush', file: 'reaction-rush.html', genre: 'Reflex' },
-      { name: 'Memory Match', file: 'memorymatch.html', genre: 'Memory' },
-      { name: 'Minesweeper', file: 'minesweeper.html', genre: 'Logic' },
-      { name: 'Word Scramble', file: 'word-scramble.html', genre: 'Word' }
+      { name: "Galatrix", file: "galatrix.html", genre: "Orbit Defense" },
+      { name: "2048 Merge", file: "2048-merge.html", genre: "Puzzle" },
+      { name: "3D Asteroids", file: "3d-asteroids.html", genre: "3D" },
+      { name: "3D Bounce", file: "3d-bounce.html", genre: "3D" },
+      { name: "3D Breaker", file: "3d-breaker.html", genre: "3D" },
+      { name: "3D Drift", file: "3d-drift.html", genre: "3D" },
+      { name: "3D Orbit", file: "3d-orbit.html", genre: "3D" },
+      { name: "3D Pillar", file: "3d-pillar.html", genre: "3D" },
+      { name: "3D Portal", file: "3d-portal.html", genre: "3D" },
+      { name: "3D Runner", file: "3d-runner.html", genre: "3D" },
+      { name: "3D Snake", file: "3d-snake.html", genre: "3D" },
+      { name: "3D Target", file: "3d-target.html", genre: "3D" },
+      { name: "Arua", file: "arua.html", genre: "Action" },
+      { name: "Balance Beam", file: "balance-beam.html", genre: "Skill" },
+      { name: "Bowling Burst", file: "bowling-burst.html", genre: "Arcade" },
+      { name: "Brick Breaker", file: "brickbreaker.html", genre: "Arcade" },
+      { name: "Bubble Pop", file: "bubble-pop.html", genre: "Arcade" },
+      { name: "Catapult", file: "catapult.html", genre: "Skill" },
+      { name: "Chess", file: "chess.html", genre: "Strategy" },
+      { name: "Chrome Chicken", file: "chromechicken.html", genre: "Arcade" },
+      { name: "Color Switch", file: "color-switch.html", genre: "Reflex" },
+      { name: "Comet Catch", file: "comet-catch.html", genre: "Arcade" },
+      { name: "Dodge Grid", file: "dodge-grid.html", genre: "Avoid" },
+      { name: "Drift Boss", file: "drift-boss.html", genre: "Racing" },
+      { name: "Escape", file: "escape.html", genre: "Adventure" },
+      { name: "Flappy Duck", file: "flappy-duck.html", genre: "Arcade" },
+      { name: "Geometry Dash", file: "geometrydash.html", genre: "Rhythm" },
+      { name: "Gravity Drop", file: "gravity-drop.html", genre: "Physics" },
+      { name: "Gravity Sandbox", file: "gravity-sandbox.html", genre: "Physics" },
+      { name: "Hill Climb", file: "hillclimb.html", genre: "Driving" },
+      { name: "Hoop Hustle", file: "hoop-hustle.html", genre: "Sports" },
+      { name: "Lights Out", file: "lights-out.html", genre: "Puzzle" },
+      { name: "Line Slicer", file: "line-slicer.html", genre: "Arcade" },
+      { name: "Memory Match", file: "memorymatch.html", genre: "Memory" },
+      { name: "Minesweeper", file: "minesweeper.html", genre: "Logic" },
+      { name: "Motorcycle Rave", file: "motorcyclerave.html", genre: "Racing" },
+      { name: "Number Rush", file: "number-rush.html", genre: "Speed" },
+      { name: "Obby", file: "obby.html", genre: "Platformer" },
+      { name: "Orbit Catcher", file: "orbit-catcher.html", genre: "Arcade" },
+      { name: "Pacman", file: "pacman.html", genre: "Classic" },
+      { name: "Parking", file: "parking.html", genre: "Driving" },
+      { name: "Pattern Lock", file: "pattern-lock.html", genre: "Puzzle" },
+      { name: "Plinko", file: "plinko.html", genre: "Chance" },
+      { name: "Precision Aim", file: "precision-aim.html", genre: "Shooter" },
+      { name: "Ragdoll Sim", file: "ragdollsim.html", genre: "Simulation" },
+      { name: "Reaction Rush", file: "reaction-rush.html", genre: "Reflex" },
+      { name: "Rhythm Rush", file: "rhythm-rush.html", genre: "Rhythm" },
+      { name: "Simon Says", file: "simonsays.html", genre: "Memory" },
+      { name: "Skate Sprint", file: "skate-sprint.html", genre: "Sports" },
+      { name: "Sliding Puzzle", file: "slidingpuzzle.html", genre: "Puzzle" },
+      { name: "Snake", file: "snake.html", genre: "Classic" },
+      { name: "Soccer Swoop", file: "soccer-swoop.html", genre: "Sports" },
+      { name: "Space Shooter", file: "spaceshooter.html", genre: "Shooter" },
+      { name: "Spot the Difference", file: "spotthedifference.html", genre: "Puzzle" },
+      { name: "Star Dodge", file: "star-dodge.html", genre: "Avoid" },
+      { name: "Target Trick", file: "target-trick.html", genre: "Shooter" },
+      { name: "Tic Tac Toe", file: "tictactoe.html", genre: "Puzzle" },
+      { name: "Tile Hop", file: "tile-hop.html", genre: "Rhythm" },
+      { name: "Treasure Hunt", file: "treasure-hunt.html", genre: "Adventure" },
+      { name: "Whack a Mole", file: "whackamole.html", genre: "Arcade" },
+      { name: "Word Scramble", file: "word-scramble.html", genre: "Word" },
+      { name: "Wordle Infinite", file: "wordleinfinite.html", genre: "Word" }
     ];
 
-    const grid = document.getElementById('gameGrid');
-    const count = document.getElementById('gameCount');
+    const grid = document.getElementById("gameGrid");
+    const count = document.getElementById("gameCount");
 
     games.forEach((game, index) => {
-      const card = document.createElement('a');
+      const card = document.createElement("a");
       card.href = game.file;
-      card.className = 'game-card';
-      card.setAttribute('aria-label', `Play ${game.name}`);
+      card.className = "game-card";
+      card.setAttribute("aria-label", `Play ${game.name}`);
       card.innerHTML = `
         <div class="badge">${game.genre}</div>
         <h2>${game.name}</h2>
-        <p>Level ${index + 1}</p>
+        <p>Game ${index + 1}</p>
         <div class="play">Play now</div>
       `;
       grid.appendChild(card);
