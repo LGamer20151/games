@@ -20,59 +20,87 @@
 
     * { box-sizing: border-box; }
 
+    html {
+      scroll-behavior: smooth;
+    }
+
     body {
       margin: 0;
       min-height: 100vh;
       font-family: Arial, Helvetica, sans-serif;
       color: var(--text);
-      background:
-        radial-gradient(circle at top, rgba(76, 126, 214, 0.28), transparent 34%),
-        linear-gradient(180deg, var(--bg) 0%, #050b17 100%);
+      background: radial-gradient(circle at top, rgba(76, 126, 214, 0.28), transparent 34%), linear-gradient(180deg, var(--bg) 0%, #050b17 100%);
     }
 
-    .shell {
-      max-width: 1260px;
-      margin: 0 auto;
-      padding: 48px 20px 72px;
-    }
-
-    .topbar {
+    .layout {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 16px;
-      margin-bottom: 30px;
-      padding: 12px 18px;
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      background: rgba(10, 19, 31, 0.65);
-      backdrop-filter: blur(6px);
-      box-shadow: 0 0 22px var(--shadow);
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      width: 250px;
+      background: rgba(9, 16, 27, 0.9);
+      border-right: 1px solid var(--line);
+      padding: 24px 18px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
     }
 
     .brand {
-      font-size: clamp(18px, 2vw, 28px);
+      font-size: 24px;
       letter-spacing: 4px;
       text-transform: uppercase;
       color: var(--cyan);
       font-weight: 700;
+      margin-bottom: 28px;
+      text-align: center;
     }
 
-    .count {
-      font-size: 12px;
-      letter-spacing: 1.6px;
+    .nav-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .nav-btn {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: rgba(15, 25, 41, 0.7);
+      color: var(--text);
+      font-size: 11px;
+      letter-spacing: 1.5px;
       text-transform: uppercase;
-      color: var(--muted);
+      border-radius: 12px;
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-align: left;
+    }
+
+    .nav-btn:hover,
+    .nav-btn.active {
+      background: linear-gradient(180deg, rgba(104, 169, 255, 0.22), rgba(70, 109, 204, 0.18));
+      border-color: rgba(126, 233, 255, 0.7);
+      box-shadow: 0 0 18px rgba(118, 192, 255, 0.18);
+      color: var(--cyan);
+      transform: translateX(2px);
+    }
+
+    .content {
+      flex: 1;
+      padding: 40px 28px 70px;
     }
 
     .hero {
       text-align: center;
-      margin-bottom: 30px;
+      margin-bottom: 28px;
     }
 
     h1 {
       margin: 0 0 12px;
-      font-size: clamp(34px, 6vw, 72px);
+      font-size: clamp(36px, 5vw, 72px);
       letter-spacing: 5px;
       text-transform: uppercase;
       color: var(--cyan);
@@ -84,6 +112,15 @@
       letter-spacing: 2px;
       text-transform: uppercase;
       font-size: 12px;
+    }
+
+    .count {
+      font-size: 12px;
+      letter-spacing: 1.6px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 10px;
+      text-align: center;
     }
 
     .grid {
@@ -167,26 +204,48 @@
       content: "→";
       font-size: 16px;
     }
+
+    @media (max-width: 900px) {
+      .layout {
+        flex-direction: column;
+      }
+
+      .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+        border-right: none;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .nav-group {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      }
+    }
   </style>
 </head>
 <body>
-  <div class="shell">
-    <div class="topbar">
+  <div class="layout">
+    <aside class="sidebar">
       <div class="brand">Game Hub</div>
+      <div class="nav-group" id="navGroup"></div>
+    </aside>
+
+    <main class="content">
+      <div class="hero">
+        <h1>Pick a game</h1>
+        <p class="subtitle">Choose your challenge</p>
+      </div>
+
       <div class="count" id="gameCount">0 Games</div>
-    </div>
-
-    <div class="hero">
-      <h1>Pick a game</h1>
-      <p class="subtitle">Choose your challenge</p>
-    </div>
-
-    <div class="grid" id="gameGrid"></div>
+      <div class="grid" id="gameGrid"></div>
+    </main>
   </div>
 
   <script>
     const games = [
-      { name: "Galatrix", file: "galatrix.html", genre: "Orbit Defense" },
+      { name: "Galatrix", file: "galatrix.html", genre: "Shooter" },
       { name: "2048 Merge", file: "2048-merge.html", genre: "Puzzle" },
       { name: "3D Asteroids", file: "3d-asteroids.html", genre: "3D" },
       { name: "3D Bounce", file: "3d-bounce.html", genre: "3D" },
@@ -250,24 +309,59 @@
       { name: "Wordle Infinite", file: "wordleinfinite.html", genre: "Word" }
     ];
 
-    const grid = document.getElementById("gameGrid");
-    const count = document.getElementById("gameCount");
+    const gameGrid = document.getElementById("gameGrid");
+    const navGroup = document.getElementById("navGroup");
+    const gameCount = document.getElementById("gameCount");
+    let activeCategory = "all";
 
-    games.forEach((game, index) => {
-      const card = document.createElement("a");
-      card.href = game.file;
-      card.className = "game-card";
-      card.setAttribute("aria-label", `Play ${game.name}`);
-      card.innerHTML = `
-        <div class="badge">${game.genre}</div>
-        <h2>${game.name}</h2>
-        <p>Game ${index + 1}</p>
-        <div class="play">Play now</div>
-      `;
-      grid.appendChild(card);
-    });
+    const categories = [
+      "all",
+      ...Array.from(new Set(games.map(game => game.genre)))
+    ];
 
-    count.textContent = `${games.length} Games`;
+    function renderNav() {
+      navGroup.innerHTML = "";
+
+      categories.forEach(category => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = `nav-btn ${activeCategory === category ? "active" : ""}`;
+        btn.textContent = category === "all" ? "Home" : category;
+        btn.dataset.category = category;
+        btn.addEventListener("click", () => {
+          activeCategory = category;
+          renderNav();
+          renderGames();
+        });
+        navGroup.appendChild(btn);
+      });
+    }
+
+    function renderGames() {
+      const filtered = activeCategory === "all"
+        ? games
+        : games.filter(game => game.genre === activeCategory);
+
+      gameGrid.innerHTML = "";
+      filtered.forEach((game, index) => {
+        const card = document.createElement("a");
+        card.href = game.file;
+        card.className = "game-card";
+        card.setAttribute("aria-label", `Play ${game.name}`);
+        card.innerHTML = `
+          <div class="badge">${game.genre}</div>
+          <h2>${game.name}</h2>
+          <p>${activeCategory === "all" ? `Game ${index + 1}` : game.genre}</p>
+          <div class="play">Play now</div>
+        `;
+        gameGrid.appendChild(card);
+      });
+
+      gameCount.textContent = `${filtered.length} Games`;
+    }
+
+    renderNav();
+    renderGames();
   </script>
 </body>
 </html>
