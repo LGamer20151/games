@@ -1,1 +1,408 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Ragdoll Sim</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:radial-gradient(circle,#0b1120,#050816);color:#fff;font-family:Arial,sans-serif}.game{width:min(92vw,560px);background:rgba(15,23,42,.9);padding:18px;border-radius:20px;border:1px solid rgba(148,163,184,.2)}.top{display:flex;justify-content:space-between;align-items:center}.top a{color:#dfeaff;text-decoration:none}.stats{display:flex;justify-content:space-between;margin:12px 0}.arena{position:relative;height:300px;overflow:hidden;border-radius:16px;background:linear-gradient(180deg,rgba(34,211,238,.08),rgba(139,92,246,.08));border:1px solid rgba(148,163,184,.2)}.head{position:absolute;width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#fbbf24,#f97316)}.body{position:absolute;width:14px;height:42px;border-radius:10px;background:linear-gradient(135deg,#22d3ee,#8b5cf6)}.button{width:100%;margin-top:14px;padding:12px;border:none;border-radius:12px;background:linear-gradient(90deg,#22d3ee,#8b5cf6);color:#fff;font-weight:bold;cursor:pointer}</style></head><body><div class="game"><div class="top"><h2>Ragdoll Sim</h2><a href="index.html">← Home</a></div><div class="stats"><span>Score: <strong id="score">0</strong></span><span>State: <strong id="state">Idle</strong></span></div><div class="arena" id="arena"></div><button class="button" id="startBtn">Start</button></div><script>const arena=document.getElementById('arena');const scoreEl=document.getElementById('score');const stateEl=document.getElementById('state');let score=0;function spawn(){arena.innerHTML='';const head=document.createElement('div');head.className='head';head.style.left='48%';head.style.top='28%';arena.appendChild(head);const body=document.createElement('div');body.className='body';body.style.left='48.8%';body.style.top='46%';arena.appendChild(body);score++;scoreEl.textContent=score;stateEl.textContent='Wiggle';}document.getElementById('startBtn').addEventListener('click',spawn);spawn();</script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ragdoll Sim</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(circle, #0b1120 0%, #050b16 38%, #02060d 100%);
+      color: #fff;
+      font-family: Arial, sans-serif;
+    }
+
+    .game {
+      width: min(92vw, 560px);
+      padding: 18px;
+      background: rgba(15, 23, 38, 0.92);
+      border: 1px solid rgba(146, 206, 255, 0.35);
+      border-radius: 20px;
+      box-shadow: 0 0 28px rgba(96, 151, 255, 0.18);
+    }
+
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .top h2 {
+      margin: 0;
+      font-size: clamp(20px, 3vw, 30px);
+      letter-spacing: 1px;
+      color: #dff9ff;
+    }
+
+    .top a {
+      color: #7feaff;
+      text-decoration: none;
+      font-size: 12px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+
+    .stats {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(18, 31, 49, 0.7);
+      border: 1px solid rgba(146, 206, 255, 0.25);
+      font-size: 13px;
+      letter-spacing: 0.8px;
+      color: #dbefff;
+    }
+
+    .arena {
+      position: relative;
+      height: 300px;
+      overflow: hidden;
+      border-radius: 16px;
+      border: 1px solid rgba(146, 206, 255, 0.35);
+      background: linear-gradient(180deg, rgba(34, 52, 70, 0.8), rgba(12, 20, 30, 0.9));
+      cursor: grab;
+    }
+
+    .arena.dragging {
+      cursor: grabbing;
+    }
+
+    .ground {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 26px;
+      background: linear-gradient(180deg, rgba(100, 227, 159, 0.22), rgba(42, 104, 68, 0.7));
+      border-top: 2px solid rgba(127, 246, 177, 0.5);
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .button {
+      width: 100%;
+      margin-top: 14px;
+      border: none;
+      padding: 12px 16px;
+      background: linear-gradient(180deg, #293d6c, #1a2b49);
+      color: white;
+      font-weight: 700;
+      letter-spacing: 1.6px;
+      text-transform: uppercase;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: transform 0.12s ease, box-shadow 0.12s ease;
+      box-shadow: 0 0 18px rgba(118, 192, 255, 0.18);
+    }
+
+    .button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 22px rgba(118, 192, 255, 0.24);
+    }
+  </style>
+</head>
+<body>
+  <div class="game">
+    <div class="top">
+      <h2>Ragdoll Sim</h2>
+      <a href="index.html">Home</a>
+    </div>
+
+    <div class="stats">
+      <span>Score: <strong id="score">0</strong></span>
+      <span>State: <strong id="state">Idle</strong></span>
+    </div>
+
+    <div class="arena" id="arena">
+      <canvas id="canvas" width="560" height="300"></canvas>
+      <div class="ground"></div>
+    </div>
+
+    <button class="button" id="startBtn">Start</button>
+  </div>
+
+  <script>
+    const arena = document.getElementById('arena');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const stateEl = document.getElementById('state');
+    const startBtn = document.getElementById('startBtn');
+
+    const pointer = { x: 0, y: 0, down: false, moved: false };
+    let grabbed = null;
+    let grabOffsetX = 0;
+    let grabOffsetY = 0;
+    let lastPointerX = 0;
+    let lastPointerY = 0;
+    let score = 0;
+    let lastFrame = 0;
+
+    function setState(text) {
+      stateEl.textContent = text;
+    }
+
+    function updateScore() {
+      scoreEl.textContent = score;
+    }
+
+    function createRagdoll() {
+      const cx = canvas.width / 2;
+      const cy = 80;
+
+      return {
+        points: [
+          { x: cx, y: cy - 34, vx: 0, vy: 0, radius: 16, mass: 1.3 },
+          { x: cx, y: cy, vx: 0, vy: 0, radius: 10, mass: 1.5 },
+          { x: cx, y: cy + 42, vx: 0, vy: 0, radius: 10, mass: 1.6 },
+          { x: cx - 28, y: cy + 8, vx: 0, vy: 0, radius: 7, mass: 1.0 },
+          { x: cx + 28, y: cy + 8, vx: 0, vy: 0, radius: 7, mass: 1.0 },
+          { x: cx - 26, y: cy + 90, vx: 0, vy: 0, radius: 7, mass: 1.0 },
+          { x: cx + 26, y: cy + 90, vx: 0, vy: 0, radius: 7, mass: 1.0 },
+          { x: cx - 18, y: cy + 140, vx: 0, vy: 0, radius: 8, mass: 1.0 },
+          { x: cx + 18, y: cy + 140, vx: 0, vy: 0, radius: 8, mass: 1.0 }
+        ],
+        constraints: [
+          [0, 1, 30],
+          [1, 2, 52],
+          [1, 3, 42],
+          [1, 4, 42],
+          [2, 5, 52],
+          [2, 6, 52],
+          [5, 7, 38],
+          [6, 8, 38],
+          [3, 5, 30],
+          [4, 6, 30],
+          [3, 1, 24],
+          [4, 1, 24]
+        ]
+      };
+    }
+
+    let ragdoll = createRagdoll();
+
+    function resetRagdoll() {
+      ragdoll = createRagdoll();
+      score = 0;
+      updateScore();
+      setState('Ready');
+    }
+
+    function getPointerPos(event) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      pointer.x = (event.clientX - rect.left) * scaleX;
+      pointer.y = (event.clientY - rect.top) * scaleY;
+    }
+
+    function findGrabPoint() {
+      for (let i = ragdoll.points.length - 1; i >= 0; i--) {
+        const p = ragdoll.points[i];
+        const dx = pointer.x - p.x;
+        const dy = pointer.y - p.y;
+        if (Math.hypot(dx, dy) <= 30) {
+          return p;
+        }
+      }
+      return null;
+    }
+
+    function applySpring(a, b, distance) {
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const current = Math.hypot(dx, dy) || 0.0001;
+      const diff = (current - distance) / current;
+      const offsetX = dx * diff * 0.12;
+      const offsetY = dy * diff * 0.12;
+
+      a.x += offsetX;
+      a.y += offsetY;
+      b.x -= offsetX;
+      b.y -= offsetY;
+    }
+
+    function updatePhysics(dt) {
+      const gravity = 0.34;
+
+      for (const p of ragdoll.points) {
+        if (grabbed && p === grabbed) continue;
+
+        p.vy += gravity * dt * 60;
+        p.x += p.vx * dt * 60;
+        p.y += p.vy * dt * 60;
+        p.vx *= 0.995;
+        p.vy *= 0.995;
+
+        if (p.y > canvas.height - 16) {
+          p.y = canvas.height - 16;
+          p.vy *= -0.18;
+          p.vx *= 0.85;
+        }
+
+        if (p.x < 18) {
+          p.x = 18;
+          p.vx *= -0.15;
+        }
+
+        if (p.x > canvas.width - 18) {
+          p.x = canvas.width - 18;
+          p.vx *= -0.15;
+        }
+      }
+
+      for (let i = 0; i < 6; i++) {
+        for (const [aIndex, bIndex, length] of ragdoll.constraints) {
+          const a = ragdoll.points[aIndex];
+          const b = ragdoll.points[bIndex];
+          applySpring(a, b, length);
+        }
+      }
+
+      const head = ragdoll.points[0];
+      const pelvis = ragdoll.points[2];
+      const angle = Math.atan2(pelvis.y - head.y, pelvis.x - head.x);
+      if (Math.abs(angle) > 1.1) {
+        score += 1;
+        updateScore();
+      }
+    }
+
+    function drawRagdoll() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = 'rgba(255,255,255,0.05)';
+      for (let y = 0; y < canvas.height; y += 26) {
+        ctx.fillRect(0, y, canvas.width, 1);
+      }
+
+      const [head, neck, torso, leftArm, rightArm, leftLeg, rightLeg, leftFoot, rightFoot] = ragdoll.points;
+
+      ctx.strokeStyle = '#c3f6ff';
+      ctx.lineWidth = 5;
+      ctx.lineCap = 'round';
+
+      ctx.beginPath();
+      ctx.moveTo(neck.x, neck.y);
+      ctx.lineTo(torso.x, torso.y);
+      ctx.lineTo(leftLeg.x, leftLeg.y);
+      ctx.lineTo(leftFoot.x, leftFoot.y);
+      ctx.moveTo(torso.x, torso.y);
+      ctx.lineTo(rightLeg.x, rightLeg.y);
+      ctx.lineTo(rightFoot.x, rightFoot.y);
+      ctx.moveTo(neck.x, neck.y);
+      ctx.lineTo(leftArm.x, leftArm.y);
+      ctx.lineTo(leftArm.x, leftArm.y);
+      ctx.moveTo(neck.x, neck.y);
+      ctx.lineTo(rightArm.x, rightArm.y);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(head.x, head.y, head.radius, 0, Math.PI * 2);
+      ctx.fillStyle = '#dffcff';
+      ctx.fill();
+
+      ctx.fillStyle = '#82d3ff';
+      ctx.fillRect(head.x - 5, head.y - 2, 10, 4);
+
+      ctx.beginPath();
+      ctx.arc(head.x, head.y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#1d2d45';
+      ctx.fill();
+
+      if (grabbed) {
+        ctx.beginPath();
+        ctx.arc(grabbed.x, grabbed.y, 12, 0, Math.PI * 2);
+        ctx.strokeStyle = '#ffb86a';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+    }
+
+    function tick(ts) {
+      const dt = Math.min(1.5, (ts - lastFrame) / 16.666 || 1);
+      lastFrame = ts;
+
+      if (!pointer.down || !grabbed) {
+        updatePhysics(dt);
+      }
+
+      drawRagdoll();
+      requestAnimationFrame(tick);
+    }
+
+    arena.addEventListener('pointerdown', (event) => {
+      getPointerPos(event);
+      const candidate = findGrabPoint();
+
+      if (candidate) {
+        grabbed = candidate;
+        grabOffsetX = pointer.x - candidate.x;
+        grabOffsetY = pointer.y - candidate.y;
+        pointer.down = true;
+        arena.classList.add('dragging');
+        setState('Dragging');
+      }
+    });
+
+    arena.addEventListener('pointermove', (event) => {
+      if (!pointer.down) {
+        getPointerPos(event);
+        return;
+      }
+
+      getPointerPos(event);
+      if (grabbed) {
+        grabbed.x = pointer.x - grabOffsetX;
+        grabbed.y = pointer.y - grabOffsetY;
+        grabbed.vx = (pointer.x - lastPointerX) * 0.55;
+        grabbed.vy = (pointer.y - lastPointerY) * 0.55;
+      }
+
+      lastPointerX = pointer.x;
+      lastPointerY = pointer.y;
+    });
+
+    arena.addEventListener('pointerup', () => {
+      if (grabbed) {
+        grabbed.vx = (pointer.x - lastPointerX) * 0.7;
+        grabbed.vy = (pointer.y - lastPointerY) * 0.7;
+      }
+
+      pointer.down = false;
+      grabbed = null;
+      arena.classList.remove('dragging');
+      setState('Flung');
+    });
+
+    arena.addEventListener('pointerleave', () => {
+      pointer.down = false;
+      grabbed = null;
+      arena.classList.remove('dragging');
+      setState('Idle');
+    });
+
+    startBtn.addEventListener('click', () => {
+      resetRagdoll();
+      setState('Ready');
+    });
+
+    lastPointerX = canvas.width / 2;
+    lastPointerY = canvas.height / 2;
+    resetRagdoll();
+    requestAnimationFrame(tick);
+  </script>
+</body>
+</html>
