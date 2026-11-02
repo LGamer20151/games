@@ -265,6 +265,7 @@
       { name: "Pattern Lock", file: "pattern-lock.html", genre: "Puzzle" },
       { name: "Plinko", file: "plinko.html", genre: "Chance" },
       { name: "Precision Aim", file: "precision-aim.html", genre: "Shooter" },
+      { name: "Quick Draw", file: "https://quickdraw.withgoogle.com/", genre: "Drawing" },
       { name: "Ragdoll Sim", file: "ragdollsim.html", genre: "Simulation" },
       { name: "Reaction Rush", file: "reaction-rush.html", genre: "Reflex" },
       { name: "Rhythm Rush", file: "rhythm-rush.html", genre: "Rhythm" },
@@ -335,6 +336,10 @@
         card.href = game.file;
         card.className = "game-card";
         card.setAttribute("aria-label", `Play ${game.name}`);
+        if (game.file.startsWith("http")) {
+          card.target = "_blank";
+          card.rel = "noopener noreferrer";
+        }
         card.innerHTML = `
           <div class="badge">${game.genre}</div>
           <h2>${game.name}</h2>
