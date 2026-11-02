@@ -3,609 +3,220 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Galatrix</title>
+  <title>Game Hub</title>
   <style>
     :root {
-      --bg0: #030814;
-      --bg1: #081426;
-      --panel: rgba(9, 18, 32, 0.84);
-      --line: rgba(127, 210, 255, 0.42);
-      --cyan: #77ecff;
-      --blue: #6ab0ff;
-      --green: #7ef7b1;
-      --orange: #ffb45f;
-      --red: #ff5c77;
-      --text: #eafaff;
+      --bg: #030914;
+      --bg2: #0b1730;
+      --panel: rgba(13, 22, 37, 0.82);
+      --line: rgba(128, 217, 255, 0.45);
+      --cyan: #7ee9ff;
+      --blue: #77a9ff;
+      --green: #9ef7c8;
+      --text: #ebf7ff;
+      --muted: rgba(235, 247, 255, 0.72);
     }
 
     * { box-sizing: border-box; }
 
-    html, body {
+    body {
       margin: 0;
-      height: 100%;
-      overflow: hidden;
+      min-height: 100vh;
       font-family: Arial, Helvetica, sans-serif;
-      background: radial-gradient(circle at top, #0f1d38, #050b18 40%, #020610 100%);
       color: var(--text);
+      background:
+        radial-gradient(circle at top, rgba(76, 126, 214, 0.28), transparent 34%),
+        linear-gradient(180deg, var(--bg) 0%, #050b17 100%);
     }
 
-    #gameWrap {
-      position: relative;
-      width: 100vw;
-      height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: radial-gradient(circle at center, rgba(36, 74, 136, 0.22), transparent 52%);
+    .shell {
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 40px 20px 64px;
     }
 
-    canvas {
-      width: min(92vw, 1000px);
-      height: min(86vh, 700px);
-      display: block;
-      background: linear-gradient(to bottom, rgba(6, 10, 18, 0.98), rgba(4, 8, 15, 1));
-      border: 2px solid var(--line);
-      border-radius: 12px;
-      box-shadow:
-        0 0 0 2px rgba(123, 210, 255, 0.12),
-        0 0 34px rgba(94, 167, 255, 0.25),
-        inset 0 0 30px rgba(113, 177, 255, 0.08);
-    }
-
-    #hud {
-      position: absolute;
-      top: 18px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: min(92vw, 1000px);
+    .topbar {
       display: flex;
       justify-content: space-between;
-      pointer-events: none;
-      z-index: 2;
-      padding: 0 14px;
-    }
-
-    .tag {
-      background: rgba(7, 12, 26, 0.7);
-      border: 1px solid rgba(123, 210, 255, 0.4);
-      color: var(--cyan);
-      padding: 8px 12px;
-      border-radius: 999px;
-      font-size: 12px;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      box-shadow: 0 0 16px rgba(118, 218, 255, 0.12);
-    }
-
-    #startOverlay {
-      position: absolute;
-      inset: 0;
-      display: flex;
       align-items: center;
-      justify-content: center;
-      background: rgba(2, 8, 16, 0.34);
-      backdrop-filter: blur(2px);
-      z-index: 3;
+      gap: 16px;
+      margin-bottom: 30px;
+      padding: 12px 18px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(10, 19, 31, 0.65);
+      backdrop-filter: blur(6px);
+      box-shadow: 0 0 22px rgba(95, 156, 255, 0.12);
     }
 
-    .panel {
-      width: min(84vw, 420px);
+    .brand {
+      font-size: clamp(18px, 2vw, 28px);
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: var(--cyan);
+      font-weight: 700;
+    }
+
+    .count {
+      font-size: 12px;
+      letter-spacing: 1.6px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .hero {
       text-align: center;
-      padding: 28px 24px 22px;
-      border-radius: 18px;
-      border: 1px solid var(--line);
-      background: rgba(9, 18, 31, 0.85);
-      box-shadow:
-        0 0 20px rgba(111, 170, 255, 0.18),
-        inset 0 0 18px rgba(125, 194, 255, 0.05);
+      margin-bottom: 30px;
     }
 
     h1 {
-      margin: 0 0 8px;
-      font-size: clamp(28px, 4.2vw, 42px);
-      letter-spacing: 4px;
-      color: var(--cyan);
+      margin: 0 0 12px;
+      font-size: clamp(34px, 6vw, 72px);
+      letter-spacing: 5px;
       text-transform: uppercase;
+      color: var(--cyan);
     }
 
     .subtitle {
-      margin: 0 0 20px;
-      color: rgba(234, 250, 255, 0.8);
+      margin: 0;
+      color: var(--muted);
       letter-spacing: 2px;
       text-transform: uppercase;
       font-size: 12px;
     }
 
-    button {
-      border: 1px solid rgba(127, 244, 255, 0.6);
-      background: linear-gradient(180deg, rgba(104, 169, 255, 0.24), rgba(70, 109, 204, 0.18));
-      color: white;
-      padding: 14px 24px;
-      border-radius: 12px;
-      cursor: pointer;
-      font-weight: 700;
-      letter-spacing: 1.4px;
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+    }
+
+    .game-card {
+      display: block;
+      position: relative;
+      min-height: 180px;
+      padding: 18px 18px 16px;
+      border-radius: 18px;
+      text-decoration: none;
+      color: var(--text);
+      background: linear-gradient(180deg, rgba(18, 31, 51, 0.95), rgba(9, 18, 30, 0.9));
+      border: 1px solid var(--line);
+      box-shadow: 0 0 18px rgba(110, 171, 255, 0.12);
+      transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease;
+      overflow: hidden;
+    }
+
+    .game-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 0 24px rgba(126, 233, 255, 0.18);
+      border-color: rgba(126, 233, 255, 0.75);
+    }
+
+    .game-card::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto auto 0;
+      width: 100%;
+      height: 5px;
+      background: linear-gradient(90deg, var(--cyan), var(--blue), var(--green));
+      opacity: 0.9;
+    }
+
+    .game-card .badge {
+      display: inline-block;
+      margin-bottom: 18px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(126, 233, 255, 0.08);
+      border: 1px solid rgba(126, 233, 255, 0.28);
+      color: var(--cyan);
+      letter-spacing: 1.2px;
       text-transform: uppercase;
-      box-shadow: 0 0 18px rgba(118, 192, 255, 0.22);
-      transition: transform 0.12s ease, box-shadow 0.12s ease;
+      font-size: 10px;
+      font-weight: 700;
     }
 
-    button:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 0 20px rgba(118, 192, 255, 0.32);
+    .game-card h2 {
+      margin: 0 0 10px;
+      font-size: clamp(20px, 2vw, 28px);
+      letter-spacing: 1px;
     }
 
-    .controls {
-      margin-top: 16px;
-      display: flex;
-      justify-content: center;
-      gap: 12px;
-      flex-wrap: wrap;
-      font-size: 11px;
+    .game-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
       letter-spacing: 1.1px;
       text-transform: uppercase;
-      color: rgba(234, 250, 255, 0.78);
+    }
+
+    .play {
+      margin-top: 20px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--cyan);
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      font-size: 11px;
+    }
+
+    .play::after {
+      content: "→";
+      font-size: 16px;
     }
   </style>
 </head>
 <body>
-  <div id="gameWrap">
-    <div id="hud">
-      <div id="scoreTag" class="tag">Score: 0</div>
-      <div id="livesTag" class="tag">Lives: 3</div>
+  <div class="shell">
+    <div class="topbar">
+      <div class="brand">Game Hub</div>
+      <div class="count" id="gameCount">0 Games</div>
     </div>
 
-    <canvas id="gameCanvas" width="1000" height="700"></canvas>
-
-    <div id="startOverlay">
-      <div class="panel">
-        <h1>Galatrix</h1>
-        <div class="subtitle">Orbit Defense</div>
-        <button id="startBtn">Start Game</button>
-        <div class="controls">
-          <span>Move: A / D / ← →</span>
-          <span>Fire: Space</span>
-        </div>
-      </div>
+    <div class="hero">
+      <h1>Pick a game</h1>
+      <p class="subtitle">Choose your challenge</p>
     </div>
+
+    <div class="grid" id="gameGrid"></div>
   </div>
 
   <script>
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
+    const games = [
+      { name: 'Galatrix', file: 'galatrix.html', genre: 'Orbit Defense' },
+      { name: 'Brick Breaker', file: 'brickbreaker.html', genre: 'Arcade' },
+      { name: 'Snake', file: 'snake.html', genre: 'Classic' },
+      { name: 'Space Shooter', file: 'spaceshooter.html', genre: 'Shooter' },
+      { name: 'Pacman', file: 'pacman.html', genre: 'Classic' },
+      { name: '2048 Merge', file: '2048-merge.html', genre: 'Puzzle' },
+      { name: 'Flappy Duck', file: 'flappy-duck.html', genre: 'Arcade' },
+      { name: 'Tic Tac Toe', file: 'tictactoe.html', genre: 'Puzzle' },
+      { name: 'Reaction Rush', file: 'reaction-rush.html', genre: 'Reflex' },
+      { name: 'Memory Match', file: 'memorymatch.html', genre: 'Memory' },
+      { name: 'Minesweeper', file: 'minesweeper.html', genre: 'Logic' },
+      { name: 'Word Scramble', file: 'word-scramble.html', genre: 'Word' }
+    ];
 
-    const scoreTag = document.getElementById("scoreTag");
-    const livesTag = document.getElementById("livesTag");
-    const startOverlay = document.getElementById("startOverlay");
-    const startBtn = document.getElementById("startBtn");
+    const grid = document.getElementById('gameGrid');
+    const count = document.getElementById('gameCount');
 
-    const keys = {};
-    let gameRunning = false;
-    let rafId = null;
-    let lastTime = 0;
-
-    const rand = (min, max) => Math.random() * (max - min) + min;
-    const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
-
-    const state = {
-      score: 0,
-      lives: 3,
-      gameTime: 0,
-      spawnTimer: 0.8,
-      player: {
-        x: canvas.width / 2,
-        y: canvas.height - 70,
-        w: 30,
-        h: 22,
-        speed: 430,
-        cooldown: 0,
-        vx: 0
-      },
-      bullets: [],
-      enemies: [],
-      particles: [],
-      stars: []
-    };
-
-    function makeStars() {
-      state.stars = [];
-      for (let i = 0; i < 160; i++) {
-        state.stars.push({
-          x: Math.random() * canvas.width,
-          y: Math.random() * canvas.height,
-          r: rand(0.8, 2.1),
-          speed: rand(25, 120),
-          alpha: rand(0.35, 1)
-        });
-      }
-    }
-
-    function resetGame() {
-      state.score = 0;
-      state.lives = 3;
-      state.gameTime = 0;
-      state.spawnTimer = 0.8;
-
-      state.player.x = canvas.width / 2;
-      state.player.y = canvas.height - 70;
-      state.player.vx = 0;
-      state.player.cooldown = 0;
-
-      state.bullets = [];
-      state.enemies = [];
-      state.particles = [];
-      scoreTag.textContent = `Score: ${state.score}`;
-      livesTag.textContent = `Lives: ${state.lives}`;
-      makeStars();
-    }
-
-    function showStartPanel(title = "Galatrix", subtitle = "Orbit Defense", buttonText = "Start Game") {
-      const titleEl = document.querySelector("#startOverlay h1");
-      const subtitleEl = document.querySelector("#startOverlay .subtitle");
-      const btn = document.querySelector("#startOverlay button");
-
-      titleEl.textContent = title;
-      subtitleEl.textContent = subtitle;
-      btn.textContent = buttonText;
-      startOverlay.style.display = "flex";
-    }
-
-    function hideStartPanel() {
-      startOverlay.style.display = "none";
-    }
-
-    function startGame() {
-      resetGame();
-      gameRunning = true;
-      hideStartPanel();
-      if (rafId) cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(loop);
-    }
-
-    function endGame() {
-      gameRunning = false;
-      showStartPanel("Game Over", `Final Score: ${state.score}`, "Play Again");
-    }
-
-    function shootBullet(enemyShot = false) {
-      if (enemyShot) {
-        state.bullets.push({
-          x: state.player.x,
-          y: state.player.y + 10,
-          radius: 5,
-          speed: 360,
-          enemy: true
-        });
-        return;
-      }
-
-      const bullet = {
-        x: state.player.x,
-        y: state.player.y - 18,
-        radius: 4,
-        speed: 650,
-        enemy: false
-      };
-      state.bullets.push(bullet);
-    }
-
-    function createEnemy() {
-      const size = rand(18, 34);
-      const heavy = Math.random() < 0.22;
-      state.enemies.push({
-        x: rand(30, canvas.width - 30),
-        y: -30,
-        radius: size,
-        heavy,
-        speed: heavy ? rand(110, 150) : rand(150, 210),
-        drift: rand(-1.5, 1.5),
-        hp: heavy ? 2 : 1,
-        shootCooldown: rand(0.5, 1.7)
-      });
-    }
-
-    function spawnParticles(x, y, color, count = 12) {
-      for (let i = 0; i < count; i++) {
-        state.particles.push({
-          x,
-          y,
-          vx: rand(-140, 140),
-          vy: rand(-140, 140),
-          radius: rand(2, 5),
-          life: rand(0.3, 0.9),
-          color
-        });
-      }
-    }
-
-    function update(dt) {
-      state.gameTime += dt;
-      state.player.cooldown = Math.max(0, state.player.cooldown - dt);
-
-      const moveDir = (keys["ArrowLeft"] || keys["a"] || keys["A"] ? -1 : 0) + (keys["ArrowRight"] || keys["d"] || keys["D"] ? 1 : 0);
-      state.player.vx = moveDir * state.player.speed;
-      state.player.x += state.player.vx * dt;
-      state.player.x = clamp(state.player.x, 18, canvas.width - 18);
-
-      if (keys[" "] || keys["Space"] || keys["space"]) {
-        if (state.player.cooldown <= 0) {
-          shootBullet(false);
-          state.player.cooldown = 0.15;
-        }
-      }
-
-      state.spawnTimer -= dt;
-      if (state.spawnTimer <= 0) {
-        createEnemy();
-        state.spawnTimer = Math.max(0.45, 1.15 - state.score * 0.0065);
-      }
-
-      // update bullets
-      for (let i = state.bullets.length - 1; i >= 0; i--) {
-        const b = state.bullets[i];
-        b.y += b.enemy ? 300 * dt : -650 * dt;
-
-        if (b.y < -30 || b.y > canvas.height + 30) {
-          state.bullets.splice(i, 1);
-        }
-      }
-
-      // update enemies
-      for (let i = state.enemies.length - 1; i >= 0; i--) {
-        const e = state.enemies[i];
-        e.y += e.speed * dt;
-        e.x += Math.sin((state.gameTime + e.y) * 1.8) * e.drift * 75 * dt;
-
-        e.shootCooldown -= dt;
-        if (e.shootCooldown <= 0 && e.y > 30) {
-          state.bullets.push({
-            x: e.x,
-            y: e.y + e.radius + 6,
-            radius: 5,
-            speed: 320,
-            enemy: true
-          });
-          e.shootCooldown = e.heavy ? rand(1.2, 2.2) : rand(1.5, 2.7);
-        }
-
-        // player collision
-        const dx = e.x - state.player.x;
-        const dy = e.y - state.player.y;
-        const dist = Math.hypot(dx, dy);
-        if (dist < e.radius + 18) {
-          state.enemies.splice(i, 1);
-          state.lives -= 1;
-          spawnParticles(e.x, e.y, "#ff5c77", 18);
-          livesTag.textContent = `Lives: ${state.lives}`;
-
-          if (state.lives <= 0) {
-            endGame();
-            return;
-          }
-          continue;
-        }
-
-        // enemy bullet collision with player
-        for (let j = state.bullets.length - 1; j >= 0; j--) {
-          const b = state.bullets[j];
-          if (!b.enemy) continue;
-
-          const hitDist = Math.hypot(b.x - state.player.x, b.y - state.player.y);
-          if (hitDist < b.radius + 15) {
-            state.bullets.splice(j, 1);
-            state.lives -= 1;
-            spawnParticles(b.x, b.y, "#ff5c77", 12);
-            livesTag.textContent = `Lives: ${state.lives}`;
-
-            if (state.lives <= 0) {
-              endGame();
-              return;
-            }
-          }
-        }
-
-        // player bullets hitting enemies
-        for (let j = state.bullets.length - 1; j >= 0; j--) {
-          const b = state.bullets[j];
-          if (b.enemy) continue;
-
-          const hit = Math.hypot(b.x - e.x, b.y - e.y) < b.radius + e.radius;
-          if (hit) {
-            state.bullets.splice(j, 1);
-            e.hp -= 1;
-            spawnParticles(b.x, b.y, "#77ecff", 8);
-
-            if (e.hp <= 0) {
-              state.enemies.splice(i, 1);
-              state.score += e.heavy ? 25 : 10;
-              scoreTag.textContent = `Score: ${state.score}`;
-              spawnParticles(e.x, e.y, e.heavy ? "#ffb45f" : "#7ef7b1", e.heavy ? 24 : 18);
-              break;
-            }
-          }
-        }
-      }
-
-      // particles
-      for (let i = state.particles.length - 1; i >= 0; i--) {
-        const p = state.particles[i];
-        p.x += p.vx * dt;
-        p.y += p.vy * dt;
-        p.life -= dt;
-        if (p.life <= 0) state.particles.splice(i, 1);
-      }
-
-      // stars
-      for (const s of state.stars) {
-        s.y += s.speed * dt;
-        if (s.y > canvas.height) {
-          s.y = -8;
-          s.x = Math.random() * canvas.width;
-        }
-      }
-    }
-
-    function drawGrid() {
-      ctx.strokeStyle = "rgba(117, 184, 255, 0.08)";
-      ctx.lineWidth = 1;
-
-      for (let x = 0; x < canvas.width; x += 42) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, canvas.height);
-        ctx.stroke();
-      }
-
-      for (let y = 0; y < canvas.height; y += 42) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(canvas.width, y);
-        ctx.stroke();
-      }
-    }
-
-    function drawStars() {
-      for (const s of state.stars) {
-        ctx.beginPath();
-        ctx.fillStyle = `rgba(255, 255, 255, ${s.alpha})`;
-        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-
-    function drawPlayer() {
-      const x = state.player.x;
-      const y = state.player.y;
-
-      ctx.save();
-      ctx.translate(x, y);
-
-      // engine glow
-      ctx.fillStyle = "rgba(119, 236, 255, 0.35)";
-      ctx.beginPath();
-      ctx.moveTo(0, 18);
-      ctx.lineTo(-10, 10);
-      ctx.lineTo(0, 12);
-      ctx.lineTo(10, 10);
-      ctx.closePath();
-      ctx.fill();
-
-      // ship body
-      ctx.fillStyle = "#79d6ff";
-      ctx.beginPath();
-      ctx.moveTo(0, -18);
-      ctx.lineTo(16, 18);
-      ctx.lineTo(0, 12);
-      ctx.lineTo(-16, 18);
-      ctx.closePath();
-      ctx.fill();
-
-      // cockpit
-      ctx.fillStyle = "#eafaff";
-      ctx.fillRect(-3, -4, 6, 12);
-
-      ctx.restore();
-    }
-
-    function drawBullets() {
-      for (const b of state.bullets) {
-        ctx.beginPath();
-        ctx.fillStyle = b.enemy ? "#ff7a7a" : "#77ecff";
-        ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-
-    function drawEnemies() {
-      for (const e of state.enemies) {
-        ctx.save();
-        ctx.translate(e.x, e.y);
-
-        if (e.heavy) {
-          ctx.fillStyle = "#ffb45f";
-          ctx.beginPath();
-          ctx.moveTo(0, -e.radius);
-          ctx.lineTo(e.radius, 0);
-          ctx.lineTo(0, e.radius);
-          ctx.lineTo(-e.radius, 0);
-          ctx.closePath();
-          ctx.fill();
-
-          ctx.fillStyle = "rgba(60, 20, 0, 0.55)";
-          ctx.fillRect(-7, -9, 14, 8);
-        } else {
-          ctx.fillStyle = "#7ef7b1";
-          ctx.beginPath();
-          ctx.arc(0, 0, e.radius, 0, Math.PI * 2);
-          ctx.fill();
-
-          ctx.fillStyle = "#113a2c";
-          ctx.fillRect(-5, -2, 10, 4);
-        }
-
-        ctx.restore();
-      }
-    }
-
-    function drawParticles() {
-      for (const p of state.particles) {
-        ctx.save();
-        ctx.globalAlpha = clamp(p.life * 1.7, 0, 1);
-        ctx.fillStyle = p.color;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      }
-    }
-
-    function render() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawGrid();
-      drawStars();
-      drawBullets();
-      drawEnemies();
-      drawParticles();
-      drawPlayer();
-
-      // scanlines
-      ctx.strokeStyle = "rgba(255,255,255,0.03)";
-      for (let y = 0; y < canvas.height; y += 4) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(canvas.width, y);
-        ctx.stroke();
-      }
-    }
-
-    function loop(timestamp) {
-      if (!gameRunning) return;
-
-      const dt = Math.min(0.033, (timestamp - lastTime) / 1000 || 0.016);
-      lastTime = timestamp;
-
-      update(dt);
-      render();
-
-      rafId = requestAnimationFrame(loop);
-    }
-
-    document.addEventListener("keydown", (e) => {
-      keys[e.key] = true;
-
-      if (e.key === " " || e.code === "Space") {
-        e.preventDefault();
-      }
+    games.forEach((game, index) => {
+      const card = document.createElement('a');
+      card.href = game.file;
+      card.className = 'game-card';
+      card.setAttribute('aria-label', `Play ${game.name}`);
+      card.innerHTML = `
+        <div class="badge">${game.genre}</div>
+        <h2>${game.name}</h2>
+        <p>Level ${index + 1}</p>
+        <div class="play">Play now</div>
+      `;
+      grid.appendChild(card);
     });
 
-    document.addEventListener("keyup", (e) => {
-      keys[e.key] = false;
-    });
-
-    startBtn.addEventListener("click", startGame);
-
-    makeStars();
-    render();
+    count.textContent = `${games.length} Games`;
   </script>
 </body>
 </html>
