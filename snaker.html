@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Playing Snaker.io | Unblocked Arcade Hub</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background-color: #0b0c10; color: #c5c6c7; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 30px 20px; overflow-x: hidden; }
+    
+    /* Navigation Bar */
+    .nav-bar { width: 100%; max-width: 900px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .back-btn { text-decoration: none; color: #66fcf1; font-weight: 600; padding: 8px 16px; border: 1px solid #66fcf1; border-radius: 6px; transition: 0.2s; }
+    .back-btn:hover { background: #66fcf1; color: #0b0c10; box-shadow: 0 0 10px rgba(102, 252, 241, 0.3); }
+    h1 { font-size: 1.8rem; color: #fff; font-weight: 700; }
+    
+    /* Game Box Configuration */
+    .game-container { position: relative; width: 100%; max-width: 900px; aspect-ratio: 16 / 9; background-color: #12141c; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.6); border: 2px solid #1f2833; }
+    canvas { width: 100%; height: 100%; display: block; background: #151b26; }
+    
+    .score-ui { position: absolute; top: 15px; left: 20px; font-size: 1.3rem; font-weight: bold; color: #66fcf1; pointer-events: none; text-shadow: 0 2px 4px rgba(0,0,0,0.6); }
+    .controls-hint { position: absolute; bottom: 15px; width: 100%; text-align: center; color: #858688; font-size: 0.9rem; pointer-events: none; }
+  </style>
+</head>
+<body>
+
+  <div class="nav-bar">
+    <a href="index.html" class="back-btn">⬅ Back to Home</a>
+    <h1>Snaker.io Arena</h1>
+    <div style="width: 110px;"></div>
+  </div>
+
+  <div class="game-container">
+    <div class="score-ui">Length: <span id="lengthDisplay">5</span></div>
+    <canvas id="snakeCanvas"></canvas>
+    <div class="controls-hint">Use your Mouse / Finger to guide your snake. Consume glowing pellets to grow!</div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("snakeCanvas");
+    const ctx = canvas.getContext("2d");
+
+    function resize() {
+      canvas.width = canvas.parentElement.clientWidth;
+      canvas.height = canvas.parentElement.clientHeight;
+    }
+    resize();
+
+    // Game variables
+    let score = 5;
+    let gameOver = false;
+    
+    const mouse = { x: canvas.width / 2, y: canvas.height / 2 };
+    
+    // Player structure configuration
+    const player = {
+      segments: [],
+      x: canvas.width / 2,
+      y: canvas.height / 2,
+      speed: 3.5,
+      radius: 12,
+      color: "#66fcf1"
+    };
+
+    // Initialize base starting segments
+    for(let i = 0; i < score; i++) {
+      player.segments.push({ x: player.x, y: player.y });
+    }
+
+    // Generate food array elements
+    let pellets =;
+    function spawnPellet() {
+      return {
+        x: Math.random() * (canvas.width - 40) + 20,
+        y: Math.random() * (canvas.height - 40) + 20,
+        radius: Math.random() * 4 + 4,
+        color: `hsl(${Math.random() * 360}, 100%, 65%)`
+      };
+    }
+    for(let i = 0; i < 30; i++) pellets.push(spawnPellet());
+
+    // Enemy bots definition array
+    let bots = [
+      { x: 100, y: 100, targetX: 200, targetY: 200, color: "#ff4d6d", segments: [], radius: 10 },
+      { x: 500, y: 100, targetX: 400, targetY: 300, color: "#ffd166", segments: [], radius: 10 }
+    ];
+    bots.forEach(bot => {
+      for(let i = 0; i < 8; i++) bot.segments.push({ x: bot.x, y: bot.y });
+    });
+
+    // Control hooks
+    window.addEventListener("mousemove", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      mouse.x = (e.clientX - rect.left) * (canvas.width / rect.width);
+      mouse.y = (e.clientY - rect.top) * (canvas.height / rect.height);
+    });
+
+    window.addEventListener("touchmove", (e) => {
+      if(e.touches.length > 0) {
+        const rect = canvas.getBoundingClientRect();
+        mouse.x = (e.touches[0].clientX - rect.left) * (canvas.width / rect.width);
+        mouse.y = (e.touches[0].clientY - rect.top) * (canvas.height / rect.height);
+      }
+    });
+
+    function update() {
+      if (gameOver) return;
+
+      // 1. Calculate player motion angles
+      let dx = mouse.x - player.x;
+      let dy = mouse.y - player.y;
+      let distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance > 5) {
+        player.x += (dx / distance) * player.speed;
+        player.y += (dy / distance) * player.speed;
+      }
+
+      // Constrain inside bounds
+      player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
+      player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
+
+      // Drag segments along behind the head actor
+      player.segments.unshift({ x: player.x, y: player.y });
+      if (player.segments.length > score) player.segments.pop();
+
+      // 2. Process automated loop configurations for Enemy Bots
+      bots.forEach(bot => {
+        if(Math.random() < 0.02 || Math.abs(bot.x - bot.targetX) < 20) {
+          bot.targetX = Math.random() * canvas.width;
+          bot.targetY = Math.random() * canvas.height;
+        }
+        let bdx = bot.targetX - bot.x;
+        let bdy = bot.targetY - bot.y;
+        let bDist = Math.sqrt(bdx * bdx + bdy * bdy);
+        if(bDist > 2) {
+          bot.x += (bdx / bDist) * 2;
+          bot.y += (bdy / bDist) * 2;
+        }
+        bot.segments.unshift({ x: bot.x, y: bot.y });
+        if(bot.segments.length > 12) bot.segments.pop();
+      });
+
+      // 3. Collision testing with pellets
+      pellets.forEach((pellet, index) => {
+        let pDx = player.x - pellet.x;
+        let pDy = player.y - pellet.y;
+        if (Math.sqrt(pDx * pDx + pDy * pDy) < player.radius + pellet.radius) {
+          score++;
+          document.getElementById("lengthDisplay").innerText = score;
+          pellets[index] = spawnPellet();
+        }
+      });
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Grid background effect lines
+      ctx.strokeStyle = "#1f2833";
+      ctx.lineWidth = 1;
+      for (let x = 0; x < canvas.width; x += 40) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+      }
+      for (let y = 0; y < canvas.height; y += 40) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+      }
+
+      // Draw shiny pellets
+      pellets.forEach(pellet => {
+        ctx.fillStyle = pellet.color;
+        ctx.beginPath();
+        ctx.arc(pellet.x, pellet.y, pellet.radius, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Draw Bot Snakes
+      bots.forEach(bot => {
+        ctx.fillStyle = bot.color;
+        for(let i = bot.segments.length - 1; i >= 0; i--) {
+          ctx.beginPath();
+          ctx.arc(bot.segments[i].x, bot.segments[i].y, bot.radius - (i * 0.3), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+
+      // Draw Main Player Snake
+      ctx.fillStyle = player.color;
+      for (let i = player.segments.length - 1; i >= 0; i--) {
+        ctx.beginPath();
+        // Slightly taper down tail size for smooth styling lines
+        let r = player.radius - (i * 0.15);
+        ctx.arc(player.segments[i].x, player.segments[i].y, Math.max(r, 4), 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    gameLoop();
+    window.addEventListener("resize", resize);
+  </script>
+</body>
+</html>
