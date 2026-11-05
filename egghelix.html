@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Playing | Arcade</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #121214; color: #fff; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 30px 20px; }
+    
+    /* Navigation Bar */
+    .nav-bar { width: 100%; max-width: 900px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .back-btn { text-decoration: none; color: #00f2fe; font-weight: 600; padding: 8px 16px; border: 1px solid #00f2fe; border-radius: 6px; transition: 0.2s; }
+    .back-btn:hover { background: #00f2fe; color: #121214; }
+    h1 { font-size: 1.8rem; }
+
+    /* Game Window Container */
+    .game-container { position: relative; width: 100%; max-width: 900px; aspect-ratio: 16 / 9; background-color: #000; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #2a2a30; }
+    .game-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
+    
+    .error-msg { text-align: center; margin-top: 50px; color: #ff4a4a; }
+  </style>
+</head>
+<body>
+
+  <div class="nav-bar">
+    <a href="index.html" class="back-btn">⬅ Back to Home</a>
+    <h1 id="gameTitle">Loading Game...</h1>
+    <div style="width: 108px;"></div> <!-- Visual spacer to balance the back button layout -->
+  </div>
+
+  <div class="game-container" id="playerContainer">
+    <iframe id="gamePlayer" src="" scrolling="no" frameborder="0" allowfullscreen></iframe>
+  </div>
+
+  <script>
+    // Copy-paste the identical game database here so this page can reference it
+    const gameIndex = [
+      {
+        id: "egg-helix",
+        title: "Egg Helix",
+        url: "https://amazonaws.com",
+        category: "Arcade"
+      },
+      {
+        id: "cluster-rush",
+        title: "Cluster Rush",
+        url: "https://amazonaws.com",
+        category: "Skill / 3D"
+      }
+    ];
+
+    // 1. Read the parameters out of the URL bar
+    const urlParams = new URLSearchParams(window.location.search);
+    const selectedGameId = urlParams.get('game');
+
+    // 2. Find the exact matching game item inside our data index
+    const matchingGame = gameIndex.find(game => game.id === selectedGameId);
+
+    // 3. Mount data or show an error state if someone types an invalid ID
+    if (matchingGame) {
+      document.getElementById('gameTitle').innerText = matchingGame.title;
+      document.getElementById('gamePlayer').src = matchingGame.url;
+      document.title = `Playing ${matchingGame.title} | Unblocked Arcade`;
+    } else {
+      document.getElementById('gameTitle').innerText = "Game Not Found";
+      document.getElementById('playerContainer').innerHTML = `<div class="error-msg"><h3>Error: The requested game code could not be verified or found in the system index.</h3></div>`;
+    }
+  </script>
+
+</body>
+</html>
