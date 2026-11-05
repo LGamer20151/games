@@ -1,268 +1,74 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Game Hub</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Unblocked Games Site</title>
   <style>
-    :root {
-      --bg: #030914;
-      --line: rgba(128, 217, 255, 0.45);
-      --cyan: #7ee9ff;
-      --blue: #77a9ff;
-      --green: #9ef7c8;
-      --text: #ebf7ff;
-      --muted: rgba(235, 247, 255, 0.7);
-      --shadow: rgba(94, 156, 255, 0.16);
-    }
-    * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    body {
-      margin: 0;
-      min-height: 100vh;
-      font-family: Arial, Helvetica, sans-serif;
-      color: var(--text);
-      background: radial-gradient(circle at top, rgba(76, 126, 214, 0.28), transparent 34%), linear-gradient(180deg, var(--bg) 0%, #050b17 100%);
-    }
-    .layout { display: flex; min-height: 100vh; }
-    .sidebar {
-      width: 250px;
-      background: rgba(9, 16, 27, 0.9);
-      border-right: 1px solid var(--line);
-      padding: 24px 18px;
-      position: sticky;
-      top: 0;
-      height: 100vh;
-    }
-    .brand { font-size: 24px; letter-spacing: 4px; text-transform: uppercase; color: var(--cyan); font-weight: 700; margin-bottom: 18px; text-align: center; }
-    .search-wrap { margin-bottom: 18px; }
-    .search-wrap input {
-      width: 100%; background: rgba(13, 22, 37, 0.9); border: 1px solid var(--line); color: var(--text);
-      border-radius: 12px; padding: 11px 12px; font-size: 13px; outline: none;
-    }
-    .search-wrap input:focus { border-color: rgba(126, 233, 255, 0.75); box-shadow: 0 0 18px rgba(118, 192, 255, 0.18); }
-    .search-wrap input::placeholder { color: rgba(235, 247, 255, 0.5); }
-    .nav-group { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
-    .nav-btn {
-      width: 100%; border: 1px solid var(--line); background: rgba(15, 25, 41, 0.7); color: var(--text);
-      font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; border-radius: 12px; padding: 12px 14px;
-      cursor: pointer; transition: all 0.15s ease; text-align: left;
-    }
-    .nav-btn:hover, .nav-btn.active {
-      background: linear-gradient(180deg, rgba(104, 169, 255, 0.22), rgba(70, 109, 204, 0.18));
-      border-color: rgba(126, 233, 255, 0.7); box-shadow: 0 0 18px rgba(118, 192, 255, 0.18);
-      color: var(--cyan); transform: translateX(2px);
-    }
-    .content { flex: 1; padding: 40px 28px 70px; }
-    .hero { text-align: center; margin-bottom: 28px; }
-    h1 { margin: 0 0 12px; font-size: clamp(36px, 5vw, 72px); letter-spacing: 5px; text-transform: uppercase; color: var(--cyan); }
-    .subtitle { margin: 0; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; font-size: 12px; }
-    .count { font-size: 12px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--muted); margin: 10px 0; text-align: center; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
-    .game-card {
-      display: block; position: relative; min-height: 240px; padding: 0; border-radius: 18px; text-decoration: none;
-      color: var(--text); background: linear-gradient(180deg, rgba(18, 31, 51, 0.95), rgba(9, 18, 30, 0.9));
-      border: 1px solid var(--line); box-shadow: 0 0 18px var(--shadow);
-      transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease; overflow: hidden;
-    }
-    .game-card:hover { transform: translateY(-4px); box-shadow: 0 0 24px rgba(126, 233, 255, 0.18); border-color: rgba(126, 233, 255, 0.75); }
-    .game-card::before {
-      content: ""; position: absolute; inset: 0 0 auto; height: 5px;
-      background: linear-gradient(90deg, var(--cyan), var(--blue), var(--green)); z-index: 3;
-    }
-    .game-thumb {
-      position: relative; height: 150px; overflow: hidden; background: radial-gradient(circle at 70% 30%, #365c86, #111b31 70%);
-      border-bottom: 1px solid rgba(126, 233, 255, 0.18);
-    }
-    .game-thumb iframe {
-      position: absolute; inset: 0; width: 100%; height: 100%; border: 0; pointer-events: none;
-      background: transparent;
-    }
-    .game-thumb::after {
-      content: ""; position: absolute; inset: 0; pointer-events: none;
-      background: linear-gradient(180deg, rgba(4, 8, 14, 0.04), rgba(5, 7, 14, 0.48));
-    }
-    .game-thumb-label {
-      position: absolute; z-index: 2; left: 14px; bottom: 12px; color: white; font-size: 15px; font-weight: 800;
-      text-shadow: 0 2px 10px #000; letter-spacing: 0.5px;
-    }
-    .game-card-content { position: relative; padding: 16px 18px; }
-    .game-card .badge {
-      display: inline-block; margin-bottom: 12px; padding: 6px 10px; border-radius: 999px;
-      background: rgba(126, 233, 255, 0.08); border: 1px solid rgba(126, 233, 255, 0.28);
-      color: var(--cyan); letter-spacing: 1.2px; text-transform: uppercase; font-size: 10px; font-weight: 700;
-    }
-    .game-card h2 { margin: 0 0 10px; font-size: clamp(20px, 2vw, 28px); letter-spacing: 1px; }
-    .game-card p { margin: 0; color: var(--muted); font-size: 12px; letter-spacing: 1.1px; text-transform: uppercase; }
-    .play { margin-top: 20px; display: inline-flex; align-items: center; gap: 8px; color: var(--cyan); font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; font-size: 11px; }
-    .play::after { content: "→"; font-size: 16px; }
-    .empty-state {
-      grid-column: 1 / -1; text-align: center; padding: 30px 12px; color: var(--muted); border: 1px dashed var(--line);
-      border-radius: 16px; background: rgba(9, 16, 27, 0.48); letter-spacing: 1.2px; text-transform: uppercase; font-size: 12px;
-    }
-    @media (max-width: 900px) {
-      .layout { flex-direction: column; }
-      .sidebar { width: 100%; height: auto; position: relative; border-right: none; border-bottom: 1px solid var(--line); }
-      .nav-group { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #121214; color: #fff; padding: 40px 20px; }
+    header { max-width: 1200px; margin: 0 auto 40px auto; text-align: center; }
+    h1 { font-size: 2.5rem; color: #00f2fe; margin-bottom: 10px; }
+    p { color: #aaa; }
+    
+    /* Responsive Game Grid */
+    .game-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 25px; max-width: 1200px; margin: 0 auto; }
+    
+    /* Game Card Styling */
+    .game-card { background: #1a1a1e; border-radius: 12px; overflow: hidden; text-decoration: none; color: #fff; transition: transform 0.2s, box-shadow 0.2s; border: 1px solid #2a2a30; display: block; }
+    .game-card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0, 242, 254, 0.2); border-color: #00f2fe; }
+    .thumbnail { width: 100%; aspect-ratio: 16/10; background: #25252b; display: flex; align-items: center; justify-content: center; font-size: 3rem; }
+    .info { padding: 15px; }
+    .title { font-size: 1.1rem; font-weight: bold; margin-bottom: 5px; }
+    .category { font-size: 0.8rem; color: #00f2fe; text-transform: uppercase; letter-spacing: 0.5px; }
   </style>
 </head>
 <body>
-  <div class="layout">
-    <aside class="sidebar">
-      <div class="brand">Game Hub</div>
-      <div class="search-wrap"><input id="searchInput" type="text" placeholder="Search games..." aria-label="Search games" /></div>
-      <div class="nav-group" id="navGroup"></div>
-    </aside>
-    <main class="content">
-      <div class="hero"><h1>Pick a game</h1><p class="subtitle">Choose your challenge</p></div>
-      <div class="count" id="gameCount">0 Games</div>
-      <div class="grid" id="gameGrid"></div>
-    </main>
-  </div>
+
+  <header>
+    <h1>Unblocked Arcade</h1>
+    <p>Select a game to start playing instantly</p>
+  </header>
+
+  <!-- The container where JavaScript will inject your games -->
+  <main class="game-grid" id="gameGrid"></main>
+
   <script>
-    const games = [
-      { name: "Galatrix", file: "galatrix.html", genre: "Shooter" },
-      { name: "2048 Merge", file: "2048-merge.html", genre: "Puzzle" },
-      { name: "AI Escape", file: "ai-escape.html", genre: "AI" },
-      { name: "Arua", file: "arua.html", genre: "Action" },
-      { name: "Balance Beam", file: "balance-beam.html", genre: "Skill" },
-      { name: "Bowling Burst", file: "bowling-burst.html", genre: "Arcade" },
-      { name: "Brick Breaker", file: "brickbreaker.html", genre: "Arcade" },
-      { name: "Bubble Pop", file: "bubble-pop.html", genre: "Arcade" },
-      { name: "Catapult", file: "catapult.html", genre: "Skill" },
-      { name: "Chess", file: "chess.html", genre: "Strategy" },
-      { name: "Chrome Chicken", file: "chromechicken.html", genre: "Arcade" },
-      { name: "Color Switch", file: "color-switch.html", genre: "Reflex" },
-      { name: "Comet Catch", file: "comet-catch.html", genre: "Arcade" },
-      { name: "Dodge Grid", file: "dodge-grid.html", genre: "Avoid" },
-      { name: "Drift Boss", file: "drift-boss.html", genre: "Racing" },
-      { name: "Escape", file: "escape.html", genre: "Adventure" },
-      { name: "Flappy Duck", file: "flappy-duck.html", genre: "Arcade" },
-      { name: "Geometry Dash", file: "geometrydash.html", genre: "Rhythm" },
-      { name: "Gravity Drop", file: "gravity-drop.html", genre: "Physics" },
-      { name: "Gravity Sandbox", file: "gravity-sandbox.html", genre: "Physics" },
-      { name: "Hill Climb", file: "hillclimb.html", genre: "Driving" },
-      { name: "Hoop Hustle", file: "hoop-hustle.html", genre: "Sports" },
-      { name: "Lights Out", file: "lights-out.html", genre: "Puzzle" },
-      { name: "Line Slicer", file: "line-slicer.html", genre: "Arcade" },
-      { name: "Memory Match", file: "memorymatch.html", genre: "Memory" },
-      { name: "Minesweeper", file: "minesweeper.html", genre: "Logic" },
-      { name: "Motorcycle Rave", file: "motorcyclerave.html", genre: "Racing" },
-      { name: "Number Rush", file: "number-rush.html", genre: "Speed" },
-      { name: "Obby", file: "obby.html", genre: "Platformer" },
-      { name: "Orbit Catcher", file: "orbit-catcher.html", genre: "Arcade" },
-      { name: "Pacman", file: "pacman.html", genre: "Classic" },
-      { name: "Parking", file: "parking.html", genre: "Driving" },
-      { name: "Pattern Lock", file: "pattern-lock.html", genre: "Puzzle" },
-      { name: "Plinko", file: "plinko.html", genre: "Chance" },
-      { name: "Precision Aim", file: "precision-aim.html", genre: "Shooter" },
-      { name: "Quick Draw", file: "https://quickdraw.withgoogle.com/", genre: "Drawing" },
-      { name: "Ragdoll Sim", file: "ragdollsim.html", genre: "Simulation" },
-      { name: "Reaction Rush", file: "reaction-rush.html", genre: "Reflex" },
-      { name: "Rhythm Rush", file: "rhythm-rush.html", genre: "Rhythm" },
-      { name: "Simon Says", file: "simonsays.html", genre: "Memory" },
-      { name: "Skate Sprint", file: "skate-sprint.html", genre: "Sports" },
-      { name: "Sliding Puzzle", file: "slidingpuzzle.html", genre: "Puzzle" },
-      { name: "Snake.io", file: "snake.io.html", genre: "Classic" },
-      { name: "Soccer Swoop", file: "soccer-swoop.html", genre: "Sports" },
-      { name: "Space Shooter", file: "spaceshooter.html", genre: "Shooter" },
-      { name: "Spot the Difference", file: "spotthedifference.html", genre: "Puzzle" },
-      { name: "Star Dodge", file: "star-dodge.html", genre: "Avoid" },
-      { name: "Target Trick", file: "target-trick.html", genre: "Shooter" },
-      { name: "Tic Tac Toe", file: "tictactoe.html", genre: "Puzzle" },
-      { name: "Tile Hop", file: "tile-hop.html", genre: "Rhythm" },
-      { name: "Treasure Hunt", file: "treasure-hunt.html", genre: "Adventure" },
-      { name: "Whack a Mole", file: "whackamole.html", genre: "Arcade" },
-      { name: "Word Scramble", file: "word-scramble.html", genre: "Word" },
-      { name: "Wordle Infinite", file: "wordleinfinite.html", genre: "Word" }
+    // 🗂️ CENTRAL GAME INDEX: Add or edit games here
+    const gameIndex = [
+      {
+        id: "egg-helix",
+        title: "Egg Helix",
+        url: "https://amazonaws.com",
+        emoji: "🥚", // Fallback icon if you don't have a thumbnail image file yet
+        category: "Arcade"
+      },
+      {
+        id: "cluster-rush",
+        title: "Cluster Rush",
+        url: "https://amazonaws.com", // Example placeholder link
+        emoji: "🚚",
+        category: "Skill / 3D"
+      }
     ];
 
-    const gameGrid = document.getElementById("gameGrid");
-    const navGroup = document.getElementById("navGroup");
-    const gameCount = document.getElementById("gameCount");
-    const searchInput = document.getElementById("searchInput");
-    let activeCategory = "all";
-    const categories = ["all", ...Array.from(new Set(games.map(game => game.genre)))];
-
-    function renderNav() {
-      navGroup.innerHTML = "";
-      categories.forEach(category => {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = `nav-btn ${activeCategory === category ? "active" : ""}`;
-        btn.textContent = category === "all" ? "Home" : category;
-        btn.addEventListener("click", () => {
-          activeCategory = category;
-          renderNav();
-          renderGames();
-        });
-        navGroup.appendChild(btn);
-      });
+    // Function to render the game cards to the homepage grid
+    function loadGames() {
+      const grid = document.getElementById('gameGrid');
+      grid.innerHTML = gameIndex.map(game => `
+        <a href="egghelix.html?game=${game.id}" class="game-card">
+          <div class="thumbnail">${game.emoji}</div>
+          <div class="info">
+            <div class="category">${game.category}</div>
+            <div class="title">${game.title}</div>
+          </div>
+        </a>
+      `).join('');
     }
 
-    function getFilteredGames() {
-      const searchTerm = searchInput.value.trim().toLowerCase();
-      return games.filter(game => {
-        const matchesCategory = activeCategory === "all" || game.genre === activeCategory;
-        const matchesSearch = !searchTerm || game.name.toLowerCase().includes(searchTerm) || game.genre.toLowerCase().includes(searchTerm);
-        return matchesCategory && matchesSearch;
-      });
-    }
-
-    function renderGames() {
-      const filtered = getFilteredGames();
-      gameGrid.innerHTML = "";
-      if (!filtered.length) {
-        const empty = document.createElement("div");
-        empty.className = "empty-state";
-        empty.textContent = "No games match your search";
-        gameGrid.appendChild(empty);
-        gameCount.textContent = "0 Games";
-        return;
-      }
-
-      filtered.forEach((game, index) => {
-        const card = document.createElement("a");
-        card.href = game.file;
-        card.className = "game-card";
-        card.setAttribute("aria-label", `Play ${game.name}`);
-        if (game.file.startsWith("http")) {
-          card.target = "_blank";
-          card.rel = "noopener noreferrer";
-        }
-        const thumb = document.createElement("div");
-        thumb.className = "game-thumb";
-        const preview = document.createElement("iframe");
-        preview.src = game.file;
-        preview.loading = "lazy";
-        preview.title = `${game.name} gameplay preview`;
-        preview.tabIndex = -1;
-        preview.setAttribute("aria-hidden", "true");
-        thumb.appendChild(preview);
-        const label = document.createElement("span");
-        label.className = "game-thumb-label";
-        label.textContent = game.name;
-        thumb.appendChild(label);
-        card.appendChild(thumb);
-
-        const content = document.createElement("div");
-        content.className = "game-card-content";
-        content.innerHTML = `
-          <div class="badge">${game.genre}</div>
-          <h2>${game.name}</h2>
-          <p>${activeCategory === "all" ? `Game ${index + 1}` : game.genre}</p>
-          <div class="play">Play now</div>
-        `;
-        card.appendChild(content);
-        gameGrid.appendChild(card);
-      });
-      gameCount.textContent = `${filtered.length} Games`;
-    }
-
-    searchInput.addEventListener("input", renderGames);
-    renderNav();
-    renderGames();
+    // Run the loop when the page opens
+    window.onload = loadGames;
   </script>
+
 </body>
 </html>
