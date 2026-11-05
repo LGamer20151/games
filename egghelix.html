@@ -18,7 +18,7 @@
     
     .score-container { position: absolute; top: 15px; right: 20px; font-weight: 800; font-size: 1.8rem; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.4); pointer-events: none; display: flex; align-items: center; gap: 5px; }
     .score-container span { color: #ffd166; }
-    .level-container { position: absolute; bottom: 20px; display: flex; align-items: center; gap: 15px; font-weight: bold; background: rgba(0,0,0,0.3); padding: 5px 20px; border-radius: 20px; font-size: 1.1rem; pointer-events: none; }
+    .level-container { position: absolute; bottom: 20px; display: flex; align-items: center; gap: 15px; font-weight: bold; background: rgba(0,0,0,0.3); padding: 5px 20px; border-radius: 20px; font-size: 1.1rem; pointer-events: none; z-index: 5; }
     .level-bubble { width: 28px; height: 28px; border-radius: 50%; background: #fff; color: #2a6f97; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
     .level-line { width: 100px; height: 4px; background: rgba(255,255,255,0.4); position: relative; border-radius: 2px; }
     .level-progress { position: absolute; top: 0; left: 0; height: 100%; width: 0%; background: #ffd166; border-radius: 2px; transition: width 0.3s; }
@@ -36,7 +36,6 @@
     <div class="score-container">Score: <span id="scoreDisplay">0</span></div>
     <canvas id="helixCanvas"></canvas>
     
-    <!-- Level Bar Footer mirroring the screenshot -->
     <div class="level-container">
       <div class="level-bubble" id="currentLevelBubble">1</div>
       <div class="level-line"><div class="level-progress" id="progressBar"></div></div>
@@ -54,18 +53,17 @@
     }
     resizeCanvas();
 
-    // Core Physics & System State 
     let currentLevel = 1;
     let score = 0;
     let towerRotation = 0;
     let targetRotation = 0;
     let cameraY = 0;
     let targetCameraY = 0;
-    let perfectPasses = 0; // Tracks multi-floor drops for bonus points
+    let perfectPasses = 0;
 
     const egg = {
       x: 0,
-      y: 120, // Starts high up on the tower
+      y: 120,
       radius: 11,
       vy: 0,
       gravity: 0.35,
@@ -91,9 +89,8 @@
       for (let i = 0; i < floorsPerLevel; i++) {
         let pY = 250 + (i * platformSpacing);
         let gapAngle = Math.random() * Math.PI * 2;
-        let gapSize = 0.9; // Size of the drop window
+        let gapSize = 0.9;
 
-        // Generate sliced segments for this specific platform ring
         let segments = [];
         let numSegments = 8;
         let step = (Math.PI * 2) / numSegments;
@@ -102,13 +99,11 @@
           let start = s * step;
           let end = start + step;
 
-          // Check if this segment overlaps with the generated drop gap
           let middle = (start + end) / 2;
           let diff = Math.abs(middle - gapAngle);
           if (diff > Math.PI) diff = Math.PI * 2 - diff;
 
           if (diff > gapSize / 2) {
-            // Randomly turn 1 slice into a red danger zone obstacle (except on first platform)
             let isDangerous = i > 0 && Math.random() < 0.18;
             segments.push({ start, end, isDangerous });
           }
@@ -129,7 +124,6 @@
       document.getElementById("progressBar").style.width = `${Math.min(pct, 100)}%`;
     }
 
-    // Input Control Tracker
     window.addEventListener("mousemove", (e) => {
       const rect = canvas.getBoundingClientRect();
       const relativeX = e.clientX - rect.left;
@@ -139,28 +133,24 @@
     window.addEventListener("touchmove", (e) => {
       if(e.touches.length > 0) {
         const rect = canvas.getBoundingClientRect();
-        const relativeX = e.touches[0].clientX - rect.left;
+        const relativeX = e.touches.clientX - rect.left;
         targetRotation = ((relativeX / canvas.width) - 0.5) * Math.PI * 3.5;
       }
     });
 
     function update() {
-      // Rotation smoothing
       towerRotation += (targetRotation - towerRotation) * 0.2;
 
-      // Kinematics acceleration
       egg.vy += egg.gravity;
       egg.y += egg.vy;
 
       const cx = canvas.width / 2;
 
-      // Check hits and passes against platforms
       platforms.forEach((platform) => {
-        // 1. Check passing clear through the gaps
         if (egg.y > platform.y && !platform.passed) {
           platform.passed = true;
           perfectPasses++;
-          score += 10 * perfectPasses; // Score multipliers for deep dives
+          score += 10 * perfectPasses;
           document.getElementById("scoreDisplay").innerText = score;
           updateProgressBar();
 
@@ -170,9 +160,7 @@
           }
         }
 
-        // 2. Check surface bounce bounds
         if (Math.abs(egg.y - platform.y) < 10 && egg.vy > 0) {
-          // Normalize rotation to test layout angle overlaps
           let relativeAngle = (-towerRotation) % (Math.PI * 2);
           if (relativeAngle < 0) relativeAngle += Math.PI * 2;
 
@@ -182,21 +170,18 @@
 
           if (hitSegment) {
             if (hitSegment.isDangerous && perfectPasses < 3) {
-              // Hit obstacle zone -> Reset level
               score = Math.max(0, score - 50);
               document.getElementById("scoreDisplay").innerText = score;
               generateLevel();
             } else {
-              // Normal landing bounce
               egg.vy = egg.jumpStrength;
               egg.y = platform.y - 4;
-              perfectPasses = 0; // Reset streak
+              perfectPasses = 0;
             }
           }
         }
       });
 
-      // Smooth modern viewport follow tracker 
       targetCameraY = egg.y - 160;
       cameraY += (targetCameraY - cameraY) * 0.15;
     }
@@ -206,29 +191,25 @@
       const cx = canvas.width / 2;
 
       ctx.save();
-      ctx.translate(0, -cameraY); // Apply camera offset transformation
+      ctx.translate(0, -cameraY);
 
-      // 1. Draw central core pillar cylinder matching image colors
       ctx.fillStyle = "#a2d2ff";
       ctx.fillRect(cx - 24, cameraY - 100, 48, canvas.height + 400);
       ctx.fillStyle = "#81b1df";
-      ctx.fillRect(cx - 24, cameraY - 100, 12, canvas.height + 400); // Shading line
+      ctx.fillRect(cx - 24, cameraY - 100, 12, canvas.height + 400);
 
-      // 2. Draw active platform rings
       platforms.forEach((platform) => {
-        // Optimize rendering by skipping out-of-screen rings
         if (platform.y < cameraY - 100 || platform.y > cameraY + canvas.height + 100) return;
 
         ctx.save();
         ctx.translate(cx, platform.y);
-        ctx.scale(1, 0.28); // Flatten to create a isometric 3D perspective
+        ctx.scale(1, 0.28);
 
         platform.segments.forEach((seg) => {
           ctx.beginPath();
           ctx.lineWidth = 26;
-          // Set platform slice colors
           if (platform.isFinishLine) {
-            ctx.strokeStyle = "#ffd166"; // Gold wrap for victory base
+            ctx.strokeStyle = "#ffd166";
           } else {
             ctx.strokeStyle = seg.isDangerous ? "#ff4d6d" : "#eaeef1";
           }
@@ -240,16 +221,14 @@
         ctx.restore();
       });
 
-      // 3. Draw the bouncing egg
       ctx.save();
-      ctx.fillStyle = "#fcd5a1"; // Warm egg tone from screenshot
+      ctx.fillStyle = "#fcd5a1";
       ctx.strokeStyle = "#e7a971";
       ctx.lineWidth = 2;
       ctx.shadowBlur = 10;
       ctx.shadowColor = "rgba(0,0,0,0.15)";
       
       ctx.beginPath();
-      // Render precise 3D oval configuration
       ctx.ellipse(cx, egg.y, egg.radius, egg.radius * 1.35, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
@@ -261,3 +240,13 @@
     function gameLoop() {
       update();
       draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    generateLevel();
+    gameLoop();
+
+    window.addEventListener("resize", resizeCanvas);
+  </script>
+</body>
+</html>
