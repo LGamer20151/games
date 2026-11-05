@@ -31,7 +31,7 @@
   <div class="game-container">
     <div class="ui-layer">Stage Checkpoint: <span id="stageDisplay">1</span> / 6</div>
     <canvas id="obbyCanvas"></canvas>
-    <div class="controls-hint">WASD / Arrow Keys to Move Player | SPACE to Jump | Move mouse to orbit camera look angle</div>
+    <div class="controls-hint">WASD / Arrow Keys to Move Player | SPACE to Jump | Move mouse left/right to look around</div>
   </div>
 
   <script>
@@ -46,7 +46,7 @@
 
     // Movement tracking state machine 
     const keys = { w: false, a: false, s: false, d: false, " ": false };
-    let mouseYaw = 0; // Camera orbit angle rotation metric
+    let mouseYaw = 0; 
 
     window.addEventListener("keydown", (e) => {
       let k = e.key.toLowerCase();
@@ -71,7 +71,6 @@
       mouseYaw = ((e.clientX - rect.left) / rect.width - 0.5) * Math.PI;
     });
 
-    // 3D Obby Platform configuration map database arrays
     const platforms = [
       { x: 0,   z: 100,  w: 60, d: 80,  h: 0,    color: "#ff4d6d", label: "Spawn" },
       { x: -40, z: 240,  w: 40, d: 40,  h: 15,   color: "#ffd166", label: "Step 1" },
@@ -85,7 +84,7 @@
 
     const player = {
       x: 0,
-      y: 10, // vertical coordinate
+      y: 10,
       z: 100,
       vX: 0,
       vY: 0,
@@ -106,7 +105,6 @@
     }
 
     function update() {
-      // 1. Process directional relative keyboard vectors 
       let forwardX = Math.sin(mouseYaw);
       let forwardZ = Math.cos(mouseYaw);
       let rightX = Math.cos(mouseYaw);
@@ -120,34 +118,28 @@
       if (keys.a) { moveX -= rightX; moveZ -= rightZ; }
       if (keys.d) { moveX += rightX; moveZ += rightZ; }
 
-      // Normalize speed forces vectors
       let mag = Math.hypot(moveX, moveZ);
       if (mag > 0) {
         player.x += (moveX / mag) * player.speed;
         player.z += (moveZ / mag) * player.speed;
       }
 
-      // 2. Vertical kinetic loops
       player.vY -= player.gravity;
       player.y += player.vY;
 
-      // 3. 3D Platform contact intersection solver
       player.isGrounded = false;
       platforms.forEach((pad, idx) => {
         let hHalfW = pad.w / 2;
         let hHalfD = pad.d / 2;
 
-        // Checking boundaries bounding box overlaps
         if (player.x >= pad.x - hHalfW && player.x <= pad.x + hHalfW &&
             player.z >= pad.z - hHalfD && player.z <= pad.z + hHalfD) {
           
-          // Landing floor altitude match checks
           if (player.y - player.radius <= pad.h && player.y + player.vY - player.radius >= pad.h - 10 && player.vY <= 0) {
             player.y = pad.h + player.radius;
             player.vY = 0;
             player.isGrounded = true;
 
-            // Register checkpoint progress updates
             if (idx > checkpointIdx) {
               checkpointIdx = idx;
               document.getElementById("stageDisplay").innerText = checkpointIdx + 1;
@@ -156,13 +148,11 @@
         }
       });
 
-      // Jump activation sequence trigger configuration parameters
       if (keys[" "] && player.isGrounded) {
         player.vY = 7.5;
         player.isGrounded = false;
       }
 
-      // Death void falling cutoff calculations
       if (player.y < -120) {
         respawn();
       }
@@ -171,7 +161,6 @@
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Render gradient background sky box
       let skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
       skyGrad.addColorStop(0, "#020205");
       skyGrad.addColorStop(0.6, "#0d1117");
@@ -181,17 +170,14 @@
 
       const cx = canvas.width / 2;
       const cy = canvas.height / 2;
-      const fov = 280; // Widescreen focal depth scale projection index 
+      const fov = 280; 
 
-      // 3rd Person camera matrix projection vectors offsets values
       let camYaw = mouseYaw;
       let camX = player.x - Math.sin(camYaw) * 120;
       let camZ = player.z - Math.cos(camYaw) * 120;
       let camY = player.y + 55;
 
-      // Sort pads depth buffer layout positions (Painter's algorithm sorting rendering pipeline)
       let renderedPads = platforms.map((pad, idx) => {
-        // Calculate relative local viewport position rotation transformations angles matrix
         let dx = pad.x - camX;
         let dz = pad.z - camZ;
         
@@ -202,12 +188,10 @@
         return { pad, rotX, rotY, rotZ, idx };
       });
 
-      // Sort indices further away to closer visibility depth thresholds
       renderedPads.sort((a, b) => b.rotZ - a.rotZ);
 
-      // Render 3D Boxes components
       renderedPads.forEach(item => {
-        if (item.rotZ <= 15) return; // Clip away meshes directly out of line of sight views
+        if (item.rotZ <= 15) return; 
 
         let scale = fov / item.rotZ;
         let projX = cx + item.rotX * scale;
@@ -221,11 +205,9 @@
         ctx.strokeStyle = "rgba(255,255,255,0.2)";
         ctx.lineWidth = 1.5;
 
-        // Shadow block outlines tracking geometry matrices configurations
         ctx.fillRect(projX - boxW / 2, projY, boxW, boxD * 0.4);
         ctx.strokeRect(projX - boxW / 2, projY, boxW, boxD * 0.4);
 
-        // Highlight marker textures labeling text
         ctx.fillStyle = "rgba(255,255,255,0.7)";
         ctx.font = `${Math.max(10, 14 * scale)}px monospace`;
         ctx.textAlign = "center";
@@ -234,7 +216,6 @@
         ctx.restore();
       });
 
-      // 4. Draw the 3rd Person Player character box components overlays
       let pDx = player.x - camX;
       let pDz = player.z - camZ;
       let pRotX = pDx * Math.cos(-camYaw) - pDz * Math.sin(-camYaw);
@@ -248,7 +229,6 @@
         let pRadius = player.radius * pScale;
 
         ctx.save();
-        // Glow trail shadow styling configs elements
         ctx.shadowBlur = 15;
         ctx.shadowColor = "#66fcf1";
         ctx.fillStyle = "#66fcf1";
@@ -266,3 +246,13 @@
     function gameLoop() {
       update();
       draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    respawn();
+    gameLoop();
+
+    window.addEventListener("resize", resize);
+  </script>
+</body>
+</html>
