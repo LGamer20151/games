@@ -3,219 +3,261 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Playing Egg Helix | Custom Edition</title>
+  <title>Playing Egg Helix | True Drop Edition</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Segoe UI', system-ui, sans-serif; background-color: #0b0c10; color: #c5c6c7; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background-color: #1a1c23; color: #fff; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; overflow-x: hidden; }
     
-    .nav-bar { width: 100%; max-width: 800px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-    .back-btn { text-decoration: none; color: #66fcf1; font-weight: 600; padding: 8px 16px; border: 1px solid #66fcf1; border-radius: 6px; transition: 0.2s; }
-    .back-btn:hover { background: #66fcf1; color: #0b0c10; box-shadow: 0 0 10px rgba(102, 252, 241, 0.3); }
+    .nav-bar { width: 100%; max-width: 800px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; z-index: 10; }
+    .back-btn { text-decoration: none; color: #5bc0be; font-weight: 600; padding: 8px 16px; border: 1px solid #5bc0be; border-radius: 6px; transition: 0.2s; }
+    .back-btn:hover { background: #5bc0be; color: #1c2541; box-shadow: 0 0 10px rgba(91, 192, 190, 0.4); }
     h1 { font-size: 1.6rem; color: #fff; font-weight: 700; }
     
-    /* Dedicated Custom Game Box Layout */
-    .game-container { position: relative; width: 100%; max-width: 800px; aspect-ratio: 16 / 9; background-color: #12141c; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.7); border: 2px solid #1f2833; display: flex; justify-content: center; align-items: center; }
-    canvas { background: radial-gradient(circle, #1a1d29 0%, #0d0f14 100%); width: 100%; height: 100%; display: block; }
+    .game-container { position: relative; width: 100%; max-width: 800px; aspect-ratio: 16 / 9; background: radial-gradient(circle at center, #468faf 0%, #2a6f97 100%); border-radius: 12px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.6); border: 3px solid #014f86; display: flex; justify-content: center; align-items: center; }
+    canvas { width: 100%; height: 100%; display: block; }
     
-    .ui-overlay { position: absolute; top: 15px; left: 20px; font-weight: bold; font-size: 1.2rem; color: #66fcf1; pointer-events: none; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
-    .instructions { position: absolute; bottom: 15px; text-align: center; width: 100%; color: #858688; font-size: 0.9rem; pointer-events: none; }
+    .score-container { position: absolute; top: 15px; right: 20px; font-weight: 800; font-size: 1.8rem; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.4); pointer-events: none; display: flex; align-items: center; gap: 5px; }
+    .score-container span { color: #ffd166; }
+    .level-container { position: absolute; bottom: 20px; display: flex; align-items: center; gap: 15px; font-weight: bold; background: rgba(0,0,0,0.3); padding: 5px 20px; border-radius: 20px; font-size: 1.1rem; pointer-events: none; }
+    .level-bubble { width: 28px; height: 28px; border-radius: 50%; background: #fff; color: #2a6f97; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
+    .level-line { width: 100px; height: 4px; background: rgba(255,255,255,0.4); position: relative; border-radius: 2px; }
+    .level-progress { position: absolute; top: 0; left: 0; height: 100%; width: 0%; background: #ffd166; border-radius: 2px; transition: width 0.3s; }
   </style>
 </head>
 <body>
 
   <div class="nav-bar">
     <a href="index.html" class="back-btn">⬅ Back to Home</a>
-    <h1>Egg Helix: Custom Forge</h1>
+    <h1>Egg Helix: Drop Arena</h1>
     <div style="width: 110px;"></div>
   </div>
 
   <div class="game-container">
-    <div class="ui-overlay" id="scoreBoard">LEVEL: 1</div>
+    <div class="score-container">Score: <span id="scoreDisplay">0</span></div>
     <canvas id="helixCanvas"></canvas>
-    <div class="instructions">Move mouse left / right to rotate tower. Catch the jumping egg in the green nests!</div>
+    
+    <!-- Level Bar Footer mirroring the screenshot -->
+    <div class="level-container">
+      <div class="level-bubble" id="currentLevelBubble">1</div>
+      <div class="level-line"><div class="level-progress" id="progressBar"></div></div>
+      <div class="level-bubble" id="nextLevelBubble" style="background:#ffd166; color:#000;">2</div>
+    </div>
   </div>
 
   <script>
     const canvas = document.getElementById("helixCanvas");
     const ctx = canvas.getContext("2d");
 
-    // Dynamic resolution scaling
     function resizeCanvas() {
       canvas.width = canvas.parentElement.clientWidth;
       canvas.height = canvas.parentElement.clientHeight;
     }
     resizeCanvas();
 
-    // Game Core State Variables
+    // Core Physics & System State 
     let currentLevel = 1;
+    let score = 0;
     let towerRotation = 0;
     let targetRotation = 0;
-    let gameActive = true;
-    
-    // Physical attributes of the game elements
+    let cameraY = 0;
+    let targetCameraY = 0;
+    let perfectPasses = 0; // Tracks multi-floor drops for bonus points
+
     const egg = {
       x: 0,
-      y: 0,
-      radius: 12,
+      y: 120, // Starts high up on the tower
+      radius: 11,
       vy: 0,
-      gravity: 0.3,
-      jumpStrength: -7.5,
-      baseY: 0
+      gravity: 0.35,
+      jumpStrength: -7.5
     };
 
     let platforms = [];
-    const totalPlatforms = 6;
+    const platformSpacing = 160; 
+    const floorsPerLevel = 12;
 
-    // Build fresh level platforms with gate openings
     function generateLevel() {
       platforms = [];
-      egg.y = canvas.height - 100;
-      egg.vy = egg.jumpStrength;
-      egg.baseY = canvas.height - 100;
+      egg.y = 120;
+      egg.vy = 0;
+      cameraY = 0;
+      targetCameraY = 0;
+      perfectPasses = 0;
       
-      for (let i = 0; i < totalPlatforms; i++) {
-        // Space columns vertically up the screen
-        let pY = (canvas.height - 120) - (i * 75);
-        // Randomize the safety gate angle for each floor
-        let openGateAngle = Math.random() * Math.PI * 2;
-        
+      document.getElementById("currentLevelBubble").innerText = currentLevel;
+      document.getElementById("nextLevelBubble").innerText = currentLevel + 1;
+      updateProgressBar();
+
+      for (let i = 0; i < floorsPerLevel; i++) {
+        let pY = 250 + (i * platformSpacing);
+        let gapAngle = Math.random() * Math.PI * 2;
+        let gapSize = 0.9; // Size of the drop window
+
+        // Generate sliced segments for this specific platform ring
+        let segments = [];
+        let numSegments = 8;
+        let step = (Math.PI * 2) / numSegments;
+
+        for (let s = 0; s < numSegments; s++) {
+          let start = s * step;
+          let end = start + step;
+
+          // Check if this segment overlaps with the generated drop gap
+          let middle = (start + end) / 2;
+          let diff = Math.abs(middle - gapAngle);
+          if (diff > Math.PI) diff = Math.PI * 2 - diff;
+
+          if (diff > gapSize / 2) {
+            // Randomly turn 1 slice into a red danger zone obstacle (except on first platform)
+            let isDangerous = i > 0 && Math.random() < 0.18;
+            segments.push({ start, end, isDangerous });
+          }
+        }
+
         platforms.push({
           y: pY,
-          gateAngle: openGateAngle,
-          gateWidth: 1.1, // Size of safe landing gap zone
-          color: i === totalPlatforms - 1 ? "#ff007f" : "#00ffcc" // Pink crown for the top floor
+          segments: segments,
+          passed: false,
+          isFinishLine: i === floorsPerLevel - 1
         });
       }
-      document.getElementById("scoreBoard").innerText = `LEVEL: ${currentLevel}`;
     }
 
-    // Capture user interface mouse tracks
+    function updateProgressBar() {
+      let passedCount = platforms.filter(p => p.passed).length;
+      let pct = (passedCount / (floorsPerLevel - 1)) * 100;
+      document.getElementById("progressBar").style.width = `${Math.min(pct, 100)}%`;
+    }
+
+    // Input Control Tracker
     window.addEventListener("mousemove", (e) => {
       const rect = canvas.getBoundingClientRect();
       const relativeX = e.clientX - rect.left;
-      // Convert canvas width coordinates into a full circle mapping value
-      targetRotation = ((relativeX / canvas.width) - 0.5) * Math.PI * 3;
+      targetRotation = ((relativeX / canvas.width) - 0.5) * Math.PI * 3.5;
     });
 
-    // Mobile touch screen support
     window.addEventListener("touchmove", (e) => {
       if(e.touches.length > 0) {
         const rect = canvas.getBoundingClientRect();
         const relativeX = e.touches[0].clientX - rect.left;
-        targetRotation = ((relativeX / canvas.width) - 0.5) * Math.PI * 3;
+        targetRotation = ((relativeX / canvas.width) - 0.5) * Math.PI * 3.5;
       }
     });
 
-    // Update positions and handle geometric collisions
     function update() {
-      if (!gameActive) return;
+      // Rotation smoothing
+      towerRotation += (targetRotation - towerRotation) * 0.2;
 
-      // Smooth camera rotation damping
-      towerRotation += (targetRotation - towerRotation) * 0.15;
-
-      // Apply standard physical kinematic loops to the egg
+      // Kinematics acceleration
       egg.vy += egg.gravity;
       egg.y += egg.vy;
 
-      const towerCenterX = canvas.width / 2;
+      const cx = canvas.width / 2;
 
-      // Handle floor landing conditions
-      platforms.forEach((platform, index) => {
-        // Check if egg crosses a floor line moving downward
-        if (egg.vy > 0 && Math.abs(egg.y - platform.y) < 8) {
-          
-          // Calculate the relative angle under the central cursor line
+      // Check hits and passes against platforms
+      platforms.forEach((platform) => {
+        // 1. Check passing clear through the gaps
+        if (egg.y > platform.y && !platform.passed) {
+          platform.passed = true;
+          perfectPasses++;
+          score += 10 * perfectPasses; // Score multipliers for deep dives
+          document.getElementById("scoreDisplay").innerText = score;
+          updateProgressBar();
+
+          if (platform.isFinishLine) {
+            currentLevel++;
+            generateLevel();
+          }
+        }
+
+        // 2. Check surface bounce bounds
+        if (Math.abs(egg.y - platform.y) < 10 && egg.vy > 0) {
+          // Normalize rotation to test layout angle overlaps
           let relativeAngle = (-towerRotation) % (Math.PI * 2);
           if (relativeAngle < 0) relativeAngle += Math.PI * 2;
 
-          let diff = Math.abs(relativeAngle - platform.gateAngle);
-          // Standardize wrapped radial values
-          if (diff > Math.PI) diff = Math.PI * 2 - diff;
+          let hitSegment = platform.segments.find(seg => {
+            return relativeAngle >= seg.start && relativeAngle <= seg.end;
+          });
 
-          // If inside the gate boundary, bounce safe!
-          if (diff < platform.gateWidth / 2) {
-            egg.vy = egg.jumpStrength;
-            egg.y = platform.y - 5; // Prevent stickiness
-            
-            // Check win condition if hitting top platform
-            if (index === totalPlatforms - 1) {
-              currentLevel++;
+          if (hitSegment) {
+            if (hitSegment.isDangerous && perfectPasses < 3) {
+              // Hit obstacle zone -> Reset level
+              score = Math.max(0, score - 50);
+              document.getElementById("scoreDisplay").innerText = score;
               generateLevel();
+            } else {
+              // Normal landing bounce
+              egg.vy = egg.jumpStrength;
+              egg.y = platform.y - 4;
+              perfectPasses = 0; // Reset streak
             }
           }
         }
       });
 
-      // Fail condition: falling off the bottom edge
-      if (egg.y > canvas.height + 50) {
-        // Quick automatic reset loop
-        generateLevel();
-      }
+      // Smooth modern viewport follow tracker 
+      targetCameraY = egg.y - 160;
+      cameraY += (targetCameraY - cameraY) * 0.15;
     }
 
-    // Render loop engine graphics
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const cx = canvas.width / 2;
 
-      // 1. Draw Core Center Spindle Axis Column
-      ctx.fillStyle = "#1f2833";
-      ctx.fillRect(cx - 20, 40, 40, canvas.height - 80);
-      ctx.strokeStyle = "#45f3ff";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(cx - 20, 40, 40, canvas.height - 80);
+      ctx.save();
+      ctx.translate(0, -cameraY); // Apply camera offset transformation
 
-      // 2. Draw Rotating Helix Platforms
+      // 1. Draw central core pillar cylinder matching image colors
+      ctx.fillStyle = "#a2d2ff";
+      ctx.fillRect(cx - 24, cameraY - 100, 48, canvas.height + 400);
+      ctx.fillStyle = "#81b1df";
+      ctx.fillRect(cx - 24, cameraY - 100, 12, canvas.height + 400); // Shading line
+
+      // 2. Draw active platform rings
       platforms.forEach((platform) => {
+        // Optimize rendering by skipping out-of-screen rings
+        if (platform.y < cameraY - 100 || platform.y > cameraY + canvas.height + 100) return;
+
         ctx.save();
         ctx.translate(cx, platform.y);
-        
-        // Dynamic pseudo-3D flattened elliptical render
-        ctx.scale(1, 0.25); 
+        ctx.scale(1, 0.28); // Flatten to create a isometric 3D perspective
 
-        // Draw solid landing platform sections
-        ctx.strokeStyle = platform.color;
-        ctx.lineWidth = 30;
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = platform.color;
+        platform.segments.forEach((seg) => {
+          ctx.beginPath();
+          ctx.lineWidth = 26;
+          // Set platform slice colors
+          if (platform.isFinishLine) {
+            ctx.strokeStyle = "#ffd166"; // Gold wrap for victory base
+          } else {
+            ctx.strokeStyle = seg.isDangerous ? "#ff4d6d" : "#eaeef1";
+          }
+          
+          ctx.arc(0, 0, 110, seg.start + towerRotation, seg.end + towerRotation);
+          ctx.stroke();
+        });
 
-        ctx.beginPath();
-        // Start arcs outside the safety gate boundaries
-        let startArc = platform.gateAngle + (platform.gateWidth / 2) + towerRotation;
-        let endArc = platform.gateAngle - (platform.gateWidth / 2) + towerRotation + (Math.PI * 2);
-        ctx.arc(0, 0, 140, startArc, endArc);
-        ctx.stroke();
-        
         ctx.restore();
       });
 
-      // 3. Draw the Egg Creature
+      // 3. Draw the bouncing egg
       ctx.save();
-      ctx.shadowBlur = 20;
-      ctx.shadowColor = "#ffffff";
-      ctx.fillStyle = "#ffffff";
+      ctx.fillStyle = "#fcd5a1"; // Warm egg tone from screenshot
+      ctx.strokeStyle = "#e7a971";
+      ctx.lineWidth = 2;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = "rgba(0,0,0,0.15)";
       
       ctx.beginPath();
-      // Draw standard clean structural egg geometry loop
-      ctx.ellipse(cx, egg.y, egg.radius, egg.radius * 1.3, 0, 0, Math.PI * 2);
+      // Render precise 3D oval configuration
+      ctx.ellipse(cx, egg.y, egg.radius, egg.radius * 1.35, 0, 0, Math.PI * 2);
       ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+
       ctx.restore();
     }
 
-    // Main Game Loop Engine Hook
     function gameLoop() {
       update();
       draw();
-      requestAnimationFrame(gameLoop);
-    }
-
-    // Boot level generator and spin up loops
-    generateLevel();
-    gameLoop();
-
-    // Auto-recalculate aspect adjustments on window stretch
-    window.addEventListener("resize", resizeCanvas);
-  </script>
-
-</body>
-</html>
