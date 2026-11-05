@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Playing 3D Obby Arena | Custom Platformer Edition</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background-color: #0b0c10; color: #c5c6c7; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; overflow-x: hidden; }
+    
+    .nav-bar { width: 100%; max-width: 900px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; z-index: 10; }
+    .back-btn { text-decoration: none; color: #66fcf1; font-weight: 600; padding: 8px 16px; border: 1px solid #66fcf1; border-radius: 6px; transition: 0.2s; }
+    .back-btn:hover { background: #66fcf1; color: #0b0c10; box-shadow: 0 0 10px rgba(102, 252, 241, 0.3); }
+    h1 { font-size: 1.6rem; color: #fff; font-weight: 700; }
+    
+    .game-container { position: relative; width: 100%; max-width: 900px; aspect-ratio: 16 / 9; background-color: #000; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.6); border: 2px solid #1f2833; }
+    canvas { width: 100%; height: 100%; display: block; }
+    
+    .ui-layer { position: absolute; top: 15px; left: 20px; font-weight: bold; font-size: 1.4rem; color: #66fcf1; text-shadow: 0 2px 4px rgba(0,0,0,0.6); z-index: 5; }
+    .controls-hint { position: absolute; bottom: 15px; width: 100%; text-align: center; color: #858688; font-size: 0.9rem; pointer-events: none; z-index: 5; }
+  </style>
+</head>
+<body>
+
+  <div class="nav-bar">
+    <a href="index.html" class="back-btn">⬅ Back to Home</a>
+    <h1>3D Obby Arena</h1>
+    <div style="width: 110px;"></div>
+  </div>
+
+  <div class="game-container">
+    <div class="ui-layer">Stage Checkpoint: <span id="stageDisplay">1</span> / 6</div>
+    <canvas id="obbyCanvas"></canvas>
+    <div class="controls-hint">WASD / Arrow Keys to Move Player | SPACE to Jump | Move mouse to orbit camera look angle</div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("obbyCanvas");
+    const ctx = canvas.getContext("2d");
+
+    function resize() {
+      canvas.width = canvas.parentElement.clientWidth;
+      canvas.height = canvas.parentElement.clientHeight;
+    }
+    resize();
+
+    // Movement tracking state machine 
+    const keys = { w: false, a: false, s: false, d: false, " ": false };
+    let mouseYaw = 0; // Camera orbit angle rotation metric
+
+    window.addEventListener("keydown", (e) => {
+      let k = e.key.toLowerCase();
+      if (k in keys) keys[k] = true;
+      if (e.key === "ArrowUp") keys.w = true;
+      if (e.key === "ArrowDown") keys.s = true;
+      if (e.key === "ArrowLeft") keys.a = true;
+      if (e.key === "ArrowRight") keys.d = true;
+    });
+
+    window.addEventListener("keyup", (e) => {
+      let k = e.key.toLowerCase();
+      if (k in keys) keys[k] = false;
+      if (e.key === "ArrowUp") keys.w = false;
+      if (e.key === "ArrowDown") keys.s = false;
+      if (e.key === "ArrowLeft") keys.a = false;
+      if (e.key === "ArrowRight") keys.d = false;
+    });
+
+    canvas.addEventListener("mousemove", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      mouseYaw = ((e.clientX - rect.left) / rect.width - 0.5) * Math.PI;
+    });
+
+    // 3D Obby Platform configuration map database arrays
+    const platforms = [
+      { x: 0,   z: 100,  w: 60, d: 80,  h: 0,    color: "#ff4d6d", label: "Spawn" },
+      { x: -40, z: 240,  w: 40, d: 40,  h: 15,   color: "#ffd166", label: "Step 1" },
+      { x: 40,  z: 360,  w: 45, d: 45,  h: 30,   color: "#06d6a0", label: "Step 2" },
+      { x: -20, z: 500,  w: 35, d: 35,  h: 40,   color: "#118ab2", label: "Step 3" },
+      { x: 50,  z: 640,  w: 40, d: 40,  h: 55,   color: "#8338ec", label: "Step 4" },
+      { x: 0,   z: 800,  w: 80, d: 100, h: 70,   color: "#66fcf1", label: "Goal Pad" }
+    ];
+
+    let checkpointIdx = 0;
+
+    const player = {
+      x: 0,
+      y: 10, // vertical coordinate
+      z: 100,
+      vX: 0,
+      vY: 0,
+      vZ: 0,
+      speed: 2.2,
+      gravity: 0.38,
+      isGrounded: false,
+      radius: 12
+    };
+
+    function respawn() {
+      const currentPad = platforms[checkpointIdx];
+      player.x = currentPad.x;
+      player.z = currentPad.z;
+      player.y = currentPad.h + 20;
+      player.vX = 0; player.vY = 0; player.vZ = 0;
+      document.getElementById("stageDisplay").innerText = checkpointIdx + 1;
+    }
+
+    function update() {
+      // 1. Process directional relative keyboard vectors 
+      let forwardX = Math.sin(mouseYaw);
+      let forwardZ = Math.cos(mouseYaw);
+      let rightX = Math.cos(mouseYaw);
+      let rightZ = -Math.sin(mouseYaw);
+
+      let moveX = 0;
+      let moveZ = 0;
+
+      if (keys.w) { moveX += forwardX; moveZ += forwardZ; }
+      if (keys.s) { moveX -= forwardX; moveZ -= forwardZ; }
+      if (keys.a) { moveX -= rightX; moveZ -= rightZ; }
+      if (keys.d) { moveX += rightX; moveZ += rightZ; }
+
+      // Normalize speed forces vectors
+      let mag = Math.hypot(moveX, moveZ);
+      if (mag > 0) {
+        player.x += (moveX / mag) * player.speed;
+        player.z += (moveZ / mag) * player.speed;
+      }
+
+      // 2. Vertical kinetic loops
+      player.vY -= player.gravity;
+      player.y += player.vY;
+
+      // 3. 3D Platform contact intersection solver
+      player.isGrounded = false;
+      platforms.forEach((pad, idx) => {
+        let hHalfW = pad.w / 2;
+        let hHalfD = pad.d / 2;
+
+        // Checking boundaries bounding box overlaps
+        if (player.x >= pad.x - hHalfW && player.x <= pad.x + hHalfW &&
+            player.z >= pad.z - hHalfD && player.z <= pad.z + hHalfD) {
+          
+          // Landing floor altitude match checks
+          if (player.y - player.radius <= pad.h && player.y + player.vY - player.radius >= pad.h - 10 && player.vY <= 0) {
+            player.y = pad.h + player.radius;
+            player.vY = 0;
+            player.isGrounded = true;
+
+            // Register checkpoint progress updates
+            if (idx > checkpointIdx) {
+              checkpointIdx = idx;
+              document.getElementById("stageDisplay").innerText = checkpointIdx + 1;
+            }
+          }
+        }
+      });
+
+      // Jump activation sequence trigger configuration parameters
+      if (keys[" "] && player.isGrounded) {
+        player.vY = 7.5;
+        player.isGrounded = false;
+      }
+
+      // Death void falling cutoff calculations
+      if (player.y < -120) {
+        respawn();
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Render gradient background sky box
+      let skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      skyGrad.addColorStop(0, "#020205");
+      skyGrad.addColorStop(0.6, "#0d1117");
+      skyGrad.addColorStop(1, "#161b22");
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      const fov = 280; // Widescreen focal depth scale projection index 
+
+      // 3rd Person camera matrix projection vectors offsets values
+      let camYaw = mouseYaw;
+      let camX = player.x - Math.sin(camYaw) * 120;
+      let camZ = player.z - Math.cos(camYaw) * 120;
+      let camY = player.y + 55;
+
+      // Sort pads depth buffer layout positions (Painter's algorithm sorting rendering pipeline)
+      let renderedPads = platforms.map((pad, idx) => {
+        // Calculate relative local viewport position rotation transformations angles matrix
+        let dx = pad.x - camX;
+        let dz = pad.z - camZ;
+        
+        let rotX = dx * Math.cos(-camYaw) - dz * Math.sin(-camYaw);
+        let rotZ = dx * Math.sin(-camYaw) + dz * Math.cos(-camYaw);
+        let rotY = pad.h - camY;
+
+        return { pad, rotX, rotY, rotZ, idx };
+      });
+
+      // Sort indices further away to closer visibility depth thresholds
+      renderedPads.sort((a, b) => b.rotZ - a.rotZ);
+
+      // Render 3D Boxes components
+      renderedPads.forEach(item => {
+        if (item.rotZ <= 15) return; // Clip away meshes directly out of line of sight views
+
+        let scale = fov / item.rotZ;
+        let projX = cx + item.rotX * scale;
+        let projY = cy - item.rotY * scale;
+
+        let boxW = item.pad.w * scale;
+        let boxD = item.pad.d * scale;
+
+        ctx.save();
+        ctx.fillStyle = item.pad.color;
+        ctx.strokeStyle = "rgba(255,255,255,0.2)";
+        ctx.lineWidth = 1.5;
+
+        // Shadow block outlines tracking geometry matrices configurations
+        ctx.fillRect(projX - boxW / 2, projY, boxW, boxD * 0.4);
+        ctx.strokeRect(projX - boxW / 2, projY, boxW, boxD * 0.4);
+
+        // Highlight marker textures labeling text
+        ctx.fillStyle = "rgba(255,255,255,0.7)";
+        ctx.font = `${Math.max(10, 14 * scale)}px monospace`;
+        ctx.textAlign = "center";
+        ctx.fillText(item.pad.label, projX, projY - 6);
+
+        ctx.restore();
+      });
+
+      // 4. Draw the 3rd Person Player character box components overlays
+      let pDx = player.x - camX;
+      let pDz = player.z - camZ;
+      let pRotX = pDx * Math.cos(-camYaw) - pDz * Math.sin(-camYaw);
+      let pRotZ = pDx * Math.sin(-camYaw) + pDz * Math.cos(-camYaw);
+      let pRotY = player.y - camY;
+
+      if (pRotZ > 5) {
+        let pScale = fov / pRotZ;
+        let pProjX = cx + pRotX * pScale;
+        let pProjY = cy - pRotY * pScale;
+        let pRadius = player.radius * pScale;
+
+        ctx.save();
+        // Glow trail shadow styling configs elements
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = "#66fcf1";
+        ctx.fillStyle = "#66fcf1";
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 2;
+
+        ctx.beginPath();
+        ctx.arc(pProjX, pProjY, pRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    function gameLoop() {
+      update();
+      draw();
