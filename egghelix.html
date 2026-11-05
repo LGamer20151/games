@@ -3,45 +3,218 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Playing Egg Helix | Unblocked Arcade Hub</title>
+  <title>Playing Egg Helix | Custom Edition</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Segoe UI', system-ui, sans-serif; background-color: #0b0c10; color: #c5c6c7; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 30px 20px; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background-color: #0b0c10; color: #c5c6c7; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; }
     
-    /* Navigation Bar */
-    .nav-bar { width: 100%; max-width: 900px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .nav-bar { width: 100%; max-width: 800px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
     .back-btn { text-decoration: none; color: #66fcf1; font-weight: 600; padding: 8px 16px; border: 1px solid #66fcf1; border-radius: 6px; transition: 0.2s; }
     .back-btn:hover { background: #66fcf1; color: #0b0c10; box-shadow: 0 0 10px rgba(102, 252, 241, 0.3); }
-    h1 { font-size: 1.8rem; color: #fff; font-weight: 700; }
-    .fullscreen-btn { background: #66fcf1; color: #0b0c10; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; }
-    .fullscreen-btn:hover { opacity: 0.9; box-shadow: 0 0 10px rgba(102, 252, 241, 0.4); }
-
-    /* Game Wrapper & Responsive Scaling */
-    .game-container { position: relative; width: 100%; max-width: 900px; aspect-ratio: 16 / 9; background-color: #000; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.6); border: 1px solid #1f2833; }
-    .game-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
+    h1 { font-size: 1.6rem; color: #fff; font-weight: 700; }
+    
+    /* Dedicated Custom Game Box Layout */
+    .game-container { position: relative; width: 100%; max-width: 800px; aspect-ratio: 16 / 9; background-color: #12141c; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.7); border: 2px solid #1f2833; display: flex; justify-content: center; align-items: center; }
+    canvas { background: radial-gradient(circle, #1a1d29 0%, #0d0f14 100%); width: 100%; height: 100%; display: block; }
+    
+    .ui-overlay { position: absolute; top: 15px; left: 20px; font-weight: bold; font-size: 1.2rem; color: #66fcf1; pointer-events: none; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+    .instructions { position: absolute; bottom: 15px; text-align: center; width: 100%; color: #858688; font-size: 0.9rem; pointer-events: none; }
   </style>
 </head>
 <body>
 
   <div class="nav-bar">
     <a href="index.html" class="back-btn">⬅ Back to Home</a>
-    <h1>Egg Helix</h1>
-    <button class="fullscreen-btn" onclick="triggerFullscreen()">Fullscreen 🖥️</button>
+    <h1>Egg Helix: Custom Forge</h1>
+    <div style="width: 110px;"></div>
   </div>
 
-  <!-- Game Arena Section -->
-  <div class="game-container" id="fullscreenArena">
-    <iframe id="gamePlayer" src="https://amazonaws.com" scrolling="no" frameborder="0" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true"></iframe>
+  <div class="game-container">
+    <div class="ui-overlay" id="scoreBoard">LEVEL: 1</div>
+    <canvas id="helixCanvas"></canvas>
+    <div class="instructions">Move mouse left / right to rotate tower. Catch the jumping egg in the green nests!</div>
   </div>
 
   <script>
-    // Handles cross-browser desktop fullscreen scaling
-    function triggerFullscreen() {
-      const arena = document.getElementById('fullscreenArena');
-      if (arena.requestFullscreen) { arena.requestFullscreen(); } 
-      else if (arena.webkitRequestFullscreen) { arena.webkitRequestFullscreen(); } 
-      else if (arena.msRequestFullscreen) { arena.msRequestFullscreen(); }
+    const canvas = document.getElementById("helixCanvas");
+    const ctx = canvas.getContext("2d");
+
+    // Dynamic resolution scaling
+    function resizeCanvas() {
+      canvas.width = canvas.parentElement.clientWidth;
+      canvas.height = canvas.parentElement.clientHeight;
     }
+    resizeCanvas();
+
+    // Game Core State Variables
+    let currentLevel = 1;
+    let towerRotation = 0;
+    let targetRotation = 0;
+    let gameActive = true;
+    
+    // Physical attributes of the game elements
+    const egg = {
+      x: 0,
+      y: 0,
+      radius: 12,
+      vy: 0,
+      gravity: 0.3,
+      jumpStrength: -7.5,
+      baseY: 0
+    };
+
+    let platforms = [];
+    const totalPlatforms = 6;
+
+    // Build fresh level platforms with gate openings
+    function generateLevel() {
+      platforms = [];
+      egg.y = canvas.height - 100;
+      egg.vy = egg.jumpStrength;
+      egg.baseY = canvas.height - 100;
+      
+      for (let i = 0; i < totalPlatforms; i++) {
+        // Space columns vertically up the screen
+        let pY = (canvas.height - 120) - (i * 75);
+        // Randomize the safety gate angle for each floor
+        let openGateAngle = Math.random() * Math.PI * 2;
+        
+        platforms.push({
+          y: pY,
+          gateAngle: openGateAngle,
+          gateWidth: 1.1, // Size of safe landing gap zone
+          color: i === totalPlatforms - 1 ? "#ff007f" : "#00ffcc" // Pink crown for the top floor
+        });
+      }
+      document.getElementById("scoreBoard").innerText = `LEVEL: ${currentLevel}`;
+    }
+
+    // Capture user interface mouse tracks
+    window.addEventListener("mousemove", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const relativeX = e.clientX - rect.left;
+      // Convert canvas width coordinates into a full circle mapping value
+      targetRotation = ((relativeX / canvas.width) - 0.5) * Math.PI * 3;
+    });
+
+    // Mobile touch screen support
+    window.addEventListener("touchmove", (e) => {
+      if(e.touches.length > 0) {
+        const rect = canvas.getBoundingClientRect();
+        const relativeX = e.touches[0].clientX - rect.left;
+        targetRotation = ((relativeX / canvas.width) - 0.5) * Math.PI * 3;
+      }
+    });
+
+    // Update positions and handle geometric collisions
+    function update() {
+      if (!gameActive) return;
+
+      // Smooth camera rotation damping
+      towerRotation += (targetRotation - towerRotation) * 0.15;
+
+      // Apply standard physical kinematic loops to the egg
+      egg.vy += egg.gravity;
+      egg.y += egg.vy;
+
+      const towerCenterX = canvas.width / 2;
+
+      // Handle floor landing conditions
+      platforms.forEach((platform, index) => {
+        // Check if egg crosses a floor line moving downward
+        if (egg.vy > 0 && Math.abs(egg.y - platform.y) < 8) {
+          
+          // Calculate the relative angle under the central cursor line
+          let relativeAngle = (-towerRotation) % (Math.PI * 2);
+          if (relativeAngle < 0) relativeAngle += Math.PI * 2;
+
+          let diff = Math.abs(relativeAngle - platform.gateAngle);
+          // Standardize wrapped radial values
+          if (diff > Math.PI) diff = Math.PI * 2 - diff;
+
+          // If inside the gate boundary, bounce safe!
+          if (diff < platform.gateWidth / 2) {
+            egg.vy = egg.jumpStrength;
+            egg.y = platform.y - 5; // Prevent stickiness
+            
+            // Check win condition if hitting top platform
+            if (index === totalPlatforms - 1) {
+              currentLevel++;
+              generateLevel();
+            }
+          }
+        }
+      });
+
+      // Fail condition: falling off the bottom edge
+      if (egg.y > canvas.height + 50) {
+        // Quick automatic reset loop
+        generateLevel();
+      }
+    }
+
+    // Render loop engine graphics
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const cx = canvas.width / 2;
+
+      // 1. Draw Core Center Spindle Axis Column
+      ctx.fillStyle = "#1f2833";
+      ctx.fillRect(cx - 20, 40, 40, canvas.height - 80);
+      ctx.strokeStyle = "#45f3ff";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(cx - 20, 40, 40, canvas.height - 80);
+
+      // 2. Draw Rotating Helix Platforms
+      platforms.forEach((platform) => {
+        ctx.save();
+        ctx.translate(cx, platform.y);
+        
+        // Dynamic pseudo-3D flattened elliptical render
+        ctx.scale(1, 0.25); 
+
+        // Draw solid landing platform sections
+        ctx.strokeStyle = platform.color;
+        ctx.lineWidth = 30;
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = platform.color;
+
+        ctx.beginPath();
+        // Start arcs outside the safety gate boundaries
+        let startArc = platform.gateAngle + (platform.gateWidth / 2) + towerRotation;
+        let endArc = platform.gateAngle - (platform.gateWidth / 2) + towerRotation + (Math.PI * 2);
+        ctx.arc(0, 0, 140, startArc, endArc);
+        ctx.stroke();
+        
+        ctx.restore();
+      });
+
+      // 3. Draw the Egg Creature
+      ctx.save();
+      ctx.shadowBlur = 20;
+      ctx.shadowColor = "#ffffff";
+      ctx.fillStyle = "#ffffff";
+      
+      ctx.beginPath();
+      // Draw standard clean structural egg geometry loop
+      ctx.ellipse(cx, egg.y, egg.radius, egg.radius * 1.3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Main Game Loop Engine Hook
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    // Boot level generator and spin up loops
+    generateLevel();
+    gameLoop();
+
+    // Auto-recalculate aspect adjustments on window stretch
+    window.addEventListener("resize", resizeCanvas);
   </script>
 
 </body>
