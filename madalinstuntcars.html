@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Playing Madalin Stunt Cars Pro | Custom Edition</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background-color: #0b0c10; color: #c5c6c7; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; overflow-x: hidden; }
+    
+    .nav-bar { width: 100%; max-width: 900px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; z-index: 10; }
+    .back-btn { text-decoration: none; color: #66fcf1; font-weight: 600; padding: 8px 16px; border: 1px solid #66fcf1; border-radius: 6px; transition: 0.2s; }
+    .back-btn:hover { background: #66fcf1; color: #0b0c10; box-shadow: 0 0 10px rgba(102, 252, 241, 0.3); }
+    h1 { font-size: 1.6rem; color: #fff; font-weight: 700; }
+    
+    .game-container { position: relative; width: 100%; max-width: 900px; aspect-ratio: 16 / 9; background-color: #1f2833; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.6); border: 3px solid #45f3ff33; }
+    canvas { width: 100%; height: 100%; display: block; }
+    
+    .dashboard { position: absolute; bottom: 20px; right: 20px; background: rgba(11, 12, 16, 0.85); padding: 12px 20px; border-radius: 8px; border: 1px solid #66fcf1; color: #fff; pointer-events: none; font-family: monospace; font-size: 1.1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+    .dashboard span { color: #66fcf1; font-weight: bold; }
+    .controls-hint { position: absolute; top: 15px; left: 20px; color: #858688; font-size: 0.9rem; pointer-events: none; background: rgba(0,0,0,0.4); padding: 5px 15px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+  <div class="nav-bar">
+    <a href="index.html" class="back-btn">⬅ Back to Home</a>
+    <h1>Madalin Stunt Cars Pro</h1>
+    <div style="width: 110px;"></div>
+  </div>
+
+  <div class="game-container">
+    <div class="controls-hint">WASD / Arrows to Drive | SPACE to Handbrake | SHIFT for Nitro</div>
+    <canvas id="stuntCanvas"></canvas>
+    <div class="dashboard">
+      SPEED: <span id="speedVal">0</span> KM/H<br>
+      NITRO: <span id="nitroVal">100</span>%
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("stuntCanvas");
+    const ctx = canvas.getContext("2d");
+
+    function resize() {
+      canvas.width = canvas.parentElement.clientWidth;
+      canvas.height = canvas.parentElement.clientHeight;
+    }
+    resize();
+
+    // Keyboard Input Management States
+    const keys = { w: false, a: false, s: false, d: false, Shift: false, " ": false };
+    
+    window.addEventListener("keydown", (e) => { 
+      let k = e.key.toLowerCase();
+      if(keys.hasOwnProperty(k)) keys[k] = true;
+      if(e.key === "Shift" || e.key === " ") keys[e.key] = true;
+    });
+    window.addEventListener("keyup", (e) => { 
+      let k = e.key.toLowerCase();
+      if(keys.hasOwnProperty(k)) keys[k] = false;
+      if(e.key === "Shift" || e.key === " ") keys[e.key] = false;
+    });
+
+    // Custom Physics Car Configuration Object
+    const car = {
+      x: 0,
+      y: 0,
+      angle: -Math.PI / 2,
+      speed: 0,
+      maxSpeed: 8,
+      accel: 0.12,
+      decel: 0.05,
+      handling: 0.04,
+      nitro: 100,
+      width: 24,
+      length: 44
+    };
+
+    // Environment Props (Ramps and Rings)
+    const stunts = [
+      { x: -150, y: -300, w: 80, h: 120, type: "ramp", color: "#66fcf1" },
+      { x: 200, y: -500, w: 100, h: 60, type: "ramp", color: "#ff4d6d" },
+      { x: 0, y: -800, radius: 45, type: "ring", color: "#ffd166" }
+    ];
+
+    function update() {
+      // 1. Handling Steering Angles
+      let turnRadius = car.handling;
+      if (keys.w || keys.s || Math.abs(car.speed) > 1) {
+        let directionMultiplier = car.speed >= 0 ? 1 : -1;
+        if (keys.a || keys.arrowleft) car.angle -= turnRadius * directionMultiplier;
+        if (keys.d || keys.arrowright) car.angle += turnRadius * directionMultiplier;
+      }
+
+      // 2. Acceleration / Gas / Braking Loops
+      let currentMaxSpeed = car.maxSpeed;
+      if (keys.Shift && car.nitro > 0 && (keys.w || keys.arrowup)) {
+        currentMaxSpeed *= 1.6;
+        car.speed += car.accel * 1.8;
+        car.nitro = Math.max(0, car.nitro - 0.6);
+      } else {
+        car.nitro = Math.min(100, car.nitro + 0.1);
+      }
+
+      if (keys.w || keys.arrowup) {
+        if (car.speed < currentMaxSpeed) car.speed += car.accel;
+      } else if (keys.s || keys.arrowdown) {
+        if (car.speed > -currentMaxSpeed / 2) car.speed -= car.accel * 0.8;
+      } else {
+        // Friction slowing down calculation
+        if (car.speed > 0) car.speed = Math.max(0, car.speed - car.decel);
+        if (car.speed < 0) car.speed = Math.min(0, car.speed + car.decel);
+      }
+
+      // Handbrake trigger
+      if (keys[" "]) {
+        car.speed *= 0.90;
+      }
+
+      // 3. Apply position vectors
+      car.x += Math.cos(car.angle) * car.speed;
+      car.y += Math.sin(car.angle) * car.speed;
+
+      // Update HUD Values
+      let speedDisplay = Math.round(Math.abs(car.speed) * 32);
+      document.getElementById("speedVal").innerText = speedDisplay;
+      document.getElementById("nitroVal").innerText = Math.round(car.nitro);
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+
+      ctx.save();
+      // Translate scene around our camera coordinates
+      ctx.translate(cx, cy);
+      
+      // Calculate active camera tracking transformation values
+      ctx.rotate(-car.angle - Math.PI / 2);
+      ctx.translate(-car.x, -car.y);
+
+      // Draw Horizon Grid ground boundaries
+      ctx.strokeStyle = "#1f2833";
+      ctx.lineWidth = 1;
+      let gridSpacing = 80;
+      let range = 2000;
+      
+      let startX = Math.floor((car.x - range) / gridSpacing) * gridSpacing;
+      let endX = Math.floor((car.x + range) / gridSpacing) * gridSpacing;
+      let startY = Math.floor((car.y - range) / gridSpacing) * gridSpacing;
+      let endY = Math.floor((car.y + range) / gridSpacing) * gridSpacing;
+
+      for (let x = startX; x <= endX; x += gridSpacing) {
+        ctx.beginPath(); ctx.moveTo(x, startY); ctx.lineTo(x, endY); ctx.stroke();
+      }
+      for (let y = startY; y <= endY; y += gridSpacing) {
+        ctx.beginPath(); ctx.moveTo(startX, y); ctx.lineTo(endX, y); ctx.stroke();
+      }
+
+      // Draw interactive stunts arena zones
+      stunts.forEach(stunt => {
+        ctx.save();
+        ctx.fillStyle = stunt.color;
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 2;
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = stunt.color;
+
+        if (stunt.type === "ramp") {
+          ctx.fillRect(stunt.x, stunt.y, stunt.w, stunt.h);
+          ctx.strokeRect(stunt.x, stunt.y, stunt.w, stunt.h);
+          // Drawing slope lines across ramp assets
+          ctx.fillStyle = "rgba(0,0,0,0.2)";
+          ctx.fillRect(stunt.x, stunt.y + stunt.h - 20, stunt.w, 20);
+        } else if (stunt.type === "ring") {
+          ctx.beginPath();
+          ctx.arc(stunt.x, stunt.y, stunt.radius, 0, Math.PI * 2);
+          ctx.arc(stunt.x, stunt.y, stunt.radius - 12, 0, Math.PI * 2, true);
+          ctx.fill();
+          ctx.stroke();
+        }
+        ctx.restore();
+      });
+
+      // Draw Supercar Chassis Actor Model Box
+      ctx.save();
+      ctx.translate(car.x, car.y);
+      ctx.rotate(car.angle);
+
+      // Shadow overlay
+      ctx.fillStyle = "rgba(0,0,0,0.3)";
+      ctx.fillRect(-car.length/2 + 4, -car.width/2 + 4, car.length, car.width);
+
+      // Body Paint
+      ctx.fillStyle = "#ff4d6d"; // Premium red paint
+      ctx.fillRect(-car.length / 2, -car.width / 2, car.length, car.width);
+
+      // Racing Stripes lines config
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(-car.length / 2, -4, car.length, 2);
+      ctx.fillRect(-car.length / 2, 2, car.length, 2);
+
+      // Windshield & glass plates
+      ctx.fillStyle = "#111";
+      ctx.fillRect(-4, -car.width/2 + 3, 14, car.width - 6);
+
+      // Headlights glow effect mesh
+      ctx.fillStyle = "#ffd166";
+      ctx.fillRect(car.length / 2 - 4, -car.width / 2 + 2, 4, 4);
+      ctx.fillRect(car.length / 2 - 4, car.width / 2 - 6, 4, 4);
+
+      // Brake Tail Lights
+      ctx.fillStyle = car.speed < 0 || keys.s ? "#ff0000" : "#7a0010";
+      ctx.fillRect(-car.length / 2, -car.width / 2 + 2, 3, 4);
+      ctx.fillRect(-car.length / 2, car.width / 2 - 6, 3, 4);
+
+      // Visual particles if using nitro fuels boost
+      if (keys.Shift && car.nitro > 0 && car.speed > 1) {
+        ctx.fillStyle = "#66fcf1";
+        ctx.fillRect(-car.length / 2 - 12, -6, 12, 4);
+        ctx.fillRect(-car.length / 2 - 12, 2, 12, 4);
+      }
+
+      ctx.restore();
+      ctx.restore();
+    }
+
+    function loop() {
+      update();
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    loop();
+    window.addEventListener("resize", resize);
+  </script>
+</body>
+</html>
