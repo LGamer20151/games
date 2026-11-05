@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Playing Stickman Ragdoll | Custom Edition</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background-color: #0b0c10; color: #c5c6c7; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; overflow-x: hidden; }
+    
+    .nav-bar { width: 100%; max-width: 900px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; z-index: 10; }
+    .back-btn { text-decoration: none; color: #66fcf1; font-weight: 600; padding: 8px 16px; border: 1px solid #66fcf1; border-radius: 6px; transition: 0.2s; }
+    .back-btn:hover { background: #66fcf1; color: #0b0c10; box-shadow: 0 0 10px rgba(102, 252, 241, 0.3); }
+    h1 { font-size: 1.6rem; color: #fff; font-weight: 700; }
+    
+    .game-container { position: relative; width: 100%; max-width: 900px; aspect-ratio: 16 / 9; background-color: #12141c; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.6); border: 2px solid #1f2833; }
+    canvas { width: 100%; height: 100%; display: block; background: radial-gradient(circle, #1a233a 0%, #0d111d 100%); }
+    
+    .score-ui { position: absolute; top: 15px; left: 20px; font-size: 1.4rem; font-weight: bold; color: #66fcf1; pointer-events: none; text-shadow: 0 2px 4px rgba(0,0,0,0.6); }
+    .score-ui span { color: #fff; }
+    .controls-hint { position: absolute; bottom: 15px; width: 100%; text-align: center; color: #858688; font-size: 0.9rem; pointer-events: none; }
+  </style>
+</head>
+<body>
+
+  <div class="nav-bar">
+    <a href="index.html" class="back-btn">⬅ Back to Home</a>
+    <h1>Stickman Ragdoll</h1>
+    <div style="width: 110px;"></div>
+  </div>
+
+  <div class="game-container">
+    <div class="score-ui">Impact Score: <span id="scoreDisplay">0</span></div>
+    <canvas id="ragdollCanvas"></canvas>
+    <div class="controls-hint">Click / Tap anywhere to fire a new ragdoll and cause maximum impact chaos!</div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("ragdollCanvas");
+    const ctx = canvas.getContext("2d");
+
+    function resize() {
+      canvas.width = canvas.parentElement.clientWidth;
+      canvas.height = canvas.parentElement.clientHeight;
+    }
+    resize();
+
+    let score = 0;
+    let physicsObjects =;
+    let constraints =;
+
+    // Static environmental pegs/obstacles to crash against
+    const pegs = [
+      { x: 200, y: 220, r: 24, color: "#1f2833" },
+      { x: 450, y: 160, r: 35, color: "#1f2833" },
+      { x: 700, y: 240, r: 24, color: "#1f2833" },
+      { x: 320, y: 340, r: 18, color: "#ff4d6d" }, // Bouncy red bumper
+      { x: 580, y: 320, r: 18, color: "#ff4d6d" }
+    ];
+
+    class Point {
+      constructor(x, y, radius = 5, isStatic = false) {
+        this.x = x;
+        this.y = y;
+        this.oldX = x;
+        this.oldY = y;
+        this.radius = radius;
+        this.isStatic = isStatic;
+      }
+    }
+
+    class DistanceConstraint {
+      constructor(p1, p2, length = null) {
+        this.p1 = p1;
+        this.p2 = p2;
+        this.length = length !== null ? length : Math.hypot(p1.x - p2.x, p1.y - p2.y);
+      }
+      
+      solve() {
+        let dx = this.p2.x - this.p1.x;
+        let dy = this.p2.y - this.p1.y;
+        let dist = Math.hypot(dx, dy) || 0.1;
+        let diff = this.length - dist;
+        let percent = (diff / dist) / 2;
+        let offsetX = dx * percent;
+        let offsetY = dy * percent;
+
+        if (!this.p1.isStatic) { this.p1.x -= offsetX; this.p1.y -= offsetY; }
+        if (!this.p2.isStatic) { this.p2.x += offsetX; this.p2.y += offsetY; }
+      }
+    }
+
+    function spawnRagdoll(startX, startY) {
+      // Clear previous ragdoll points out to maximize frame rendering efficiency
+      physicsObjects =;
+      constraints =;
+
+      // Define structural skeleton joints mapping tracking vectors
+      let head = new Point(startX, startY - 35, 12);
+      let chest = new Point(startX, startY - 10, 6);
+      let pelvis = new Point(startX, startY + 15, 6);
+      
+      let leftHand = new Point(startX - 25, startY - 15, 4);
+      let rightHand = new Point(startX + 25, startY - 15, 4);
+      let leftFoot = new Point(startX - 15, startY + 45, 4);
+      let rightFoot = new Point(startX + 15, startY + 45, 4);
+
+      // Randomize starting velocity pushes to trigger immediate floppy rotation trajectories
+      let randVX = (Math.random() - 0.5) * 18;
+      let randVY = -Math.random() * 8 - 4;
+
+      let allPoints = [head, chest, pelvis, leftHand, rightHand, leftFoot, rightFoot];
+      allPoints.forEach(p => {
+        p.oldX -= randVX;
+        p.oldY -= randVY;
+        physicsObjects.push(p);
+      });
+
+      // Rigid link structural configuration equations
+      constraints.push(new DistanceConstraint(head, chest, 25));
+      constraints.push(new DistanceConstraint(chest, pelvis, 25));
+      constraints.push(new DistanceConstraint(chest, leftHand, 25));
+      constraints.push(new DistanceConstraint(chest, rightHand, 25));
+      constraints.push(new DistanceConstraint(pelvis, leftFoot, 30));
+      constraints.push(new DistanceConstraint(pelvis, rightFoot, 30));
+    }
+
+    window.addEventListener("mousedown", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      let clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
+      let clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
+      spawnRagdoll(clickX, clickY);
+    });
+
+    window.addEventListener("touchstart", (e) => {
+      if(e.touches.length > 0) {
+        const rect = canvas.getBoundingClientRect();
+        let clickX = (e.touches[0].clientX - rect.left) * (canvas.width / rect.width);
+        let clickY = (e.touches[0].clientY - rect.top) * (canvas.height / rect.height);
+        spawnRagdoll(clickX, clickY);
+      }
+    });
+
+    function update() {
+      const gravity = 0.38;
+      const friction = 0.99;
+
+      // 1. Verlet Integration movement solver loop
+      physicsObjects.forEach(p => {
+        if (p.isStatic) return;
+        let vx = (p.x - p.oldX) * friction;
+        let vy = (p.y - p.oldY) * friction;
+
+        p.oldX = p.x;
+        p.oldY = p.y;
+
+        p.x += vx;
+        p.y += vy + gravity;
+
+        // Collision bounds check limits against walls
+        if (p.x < p.radius) { p.x = p.radius; p.oldX = p.x + vx * 0.5; }
+        if (p.x > canvas.width - p.radius) { p.x = canvas.width - p.radius; p.oldX = p.x + vx * 0.5; }
+        if (p.y > canvas.height - p.radius - 20) { // Ground line buffer offset 
+          p.y = canvas.height - p.radius - 20; 
+          p.oldY = p.y + vy * 0.4; 
+        }
+      });
+
+      // 2. Solve structural skeleton constraints
+      for (let i = 0; i < 6; i++) {
+        constraints.forEach(c => c.solve());
+      }
+
+      // 3. Collision testing with obstacle buffers
+      physicsObjects.forEach(p => {
+        pegs.forEach(peg => {
+          let dx = p.x - peg.x;
+          let dy = p.y - peg.y;
+          let dist = Math.hypot(dx, dy);
+          let minDist = p.radius + peg.r;
+
+          if (dist < minDist) {
+            let overlap = minDist - dist;
+            let nx = dx / dist;
+            let ny = dy / dist;
+
+            // Push object away from peg geometry center point
+            p.x += nx * overlap;
+            p.y += ny * overlap;
+
+            // Trigger score modifications based on crash velocity forces
+            let speed = Math.hypot(p.x - p.oldX, p.y - p.oldY);
+            if (speed > 1.5) {
+              let addedPoints = Math.round(speed * 5);
+              score += addedPoints;
+              document.getElementById("scoreDisplay").innerText = score;
+
+              // If hitting an active colored bumper, add extra spring force
+              if (peg.color === "#ff4d6d") {
+                p.oldX -= nx * speed * 1.5;
+                p.oldY -= ny * speed * 1.5;
+              }
+            }
+          }
+        });
+      });
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw horizontal ground platform lines
+      ctx.fillStyle = "#1f2833";
+      ctx.fillRect(0, canvas.height - 20, canvas.width, 20);
+
+      // Draw obstacle pins structures
+      pegs.forEach(peg => {
+        ctx.save();
+        ctx.fillStyle = peg.color;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = peg.color;
+        ctx.beginPath();
+        ctx.arc(peg.x, peg.y, peg.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+
+      if (physicsObjects.length === 0) return;
+
+      // Draw skeletal linking lines components
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 4;
+      ctx.lineCap = "round";
+      constraints.forEach(c => {
+        ctx.beginPath();
+        ctx.moveTo(c.p1.x, c.p1.y);
+        ctx.lineTo(c.p2.x, c.p2.y);
+        ctx.stroke();
+      });
+
+      // Draw Head element explicitly as circle geometry structure
+      let headNode = physicsObjects[0];
+      ctx.fillStyle = "#66fcf1";
+      ctx.beginPath();
+      ctx.arc(headNode.x, headNode.y, headNode.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#fff";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    // Default configuration spawn point positioning setup parameters
+    spawnRagdoll(450, 60);
+    gameLoop();
+
+    window.addEventListener("resize", resize);
+  </script>
+</body>
+</html>
