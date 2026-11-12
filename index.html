@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cyber Moto Stunt</title>
+  <title>Sunset Moto Trials – 5 Levels</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      background: #060a14;
-      color: #f8fafc;
+      background: #120813;
+      color: #fff7ed;
       font-family: 'Segoe UI', system-ui, sans-serif;
       height: 100vh;
       display: flex;
@@ -17,133 +17,267 @@
       justify-content: center;
       overflow: hidden;
     }
-    canvas {
-      background: radial-gradient(circle at 50% 20%, #111c36 0%, #060a14 85%);
-      border: 2px solid #1e293b;
-      border-radius: 12px;
-      box-shadow: 0 0 40px rgba(0, 212, 255, 0.15);
+    .top-bar {
+      width: 920px;
       max-width: 96vw;
-      max-height: 88vh;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .level-pills { display: flex; gap: 6px; }
+    .lvl-btn {
+      background: #27132a;
+      color: #fdba74;
+      border: 1px solid #581c4f;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    .lvl-btn.active {
+      background: linear-gradient(135deg, #f97316, #ec4899);
+      color: #fff;
+      border-color: #fb923c;
+    }
+    canvas {
+      background: #1a0b1c;
+      border: 2px solid #581c4f;
+      border-radius: 14px;
+      box-shadow: 0 0 45px rgba(249, 115, 22, 0.22);
+      max-width: 96vw;
+      max-height: 82vh;
     }
     .controls {
-      margin-top: 12px;
+      margin-top: 10px;
       font-size: 0.85rem;
-      color: #94a3b8;
-      letter-spacing: 0.3px;
+      color: #cbd5e1;
     }
-    span { color: #00d4ff; font-weight: 700; }
+    .controls span { color: #fb923c; font-weight: 700; }
   </style>
 </head>
 <body>
 
-  <canvas id="game" width="900" height="500"></canvas>
+  <div class="top-bar">
+    <div style="font-weight:800; font-size:1.1rem; color:#fb923c;">🔥 SUNSET MOTO TRIALS</div>
+    <div class="level-pills" id="levelBar"></div>
+  </div>
+
+  <canvas id="game" width="920" height="500"></canvas>
+
   <div class="controls">
     <span>W / UP</span> Gas &nbsp;•&nbsp;
     <span>S / DOWN</span> Brake &nbsp;•&nbsp;
     <span>A / D</span> or <span>LEFT / RIGHT</span> Mid-Air Flips &nbsp;•&nbsp;
-    <span>SHIFT</span> Nitro Boost
+    <span>SHIFT</span> Nitro &nbsp;•&nbsp;
+    <span>R</span> Quick Restart
   </div>
 
   <script>
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
 
+    const LEVELS = [
+      {
+        name: '1. Canyon Sunset',
+        length: 4200,
+        skyTop: '#1e1b4b', skyBot: '#be185d', sunColor: '#fde047',
+        groundFill: '#2e1026', groundLine: '#f97316',
+        amp1: 65, amp2: 28, hazards: 4, ramps: 3
+      },
+      {
+        name: '2. Red Rock Dunes',
+        length: 5200,
+        skyTop: '#2c0b0e', skyBot: '#c2410c', sunColor: '#fb923c',
+        groundFill: '#3b120e', groundLine: '#facc15',
+        amp1: 82, amp2: 36, hazards: 7, ramps: 5
+      },
+      {
+        name: '3. Lava Caldera',
+        length: 6200,
+        skyTop: '#18060a', skyBot: '#991b1b', sunColor: '#ef4444',
+        groundFill: '#24090d', groundLine: '#fb7185',
+        amp1: 92, amp2: 44, hazards: 10, ramps: 6
+      },
+      {
+        name: '4. Twilight Ridge',
+        length: 7200,
+        skyTop: '#0f172a', skyBot: '#6d28d9', sunColor: '#c084fc',
+        groundFill: '#1e1b4b', groundLine: '#38bdf8',
+        amp1: 102, amp2: 48, hazards: 13, ramps: 8
+      },
+      {
+        name: '5. Inferno Gauntlet',
+        length: 8500,
+        skyTop: '#09090b', skyBot: '#b91c1c', sunColor: '#fef08a',
+        groundFill: '#1f070a', groundLine: '#f59e0b',
+        amp1: 112, amp2: 52, hazards: 17, ramps: 10
+      }
+    ];
+
+    let currentLevelIdx = 0;
     let dist = 0;
-    let speed = 6;
-    let bikeY = 280;
+    let speed = 0;
+    let bikeY = 200;
     let vy = 0;
     let angle = 0;
-    let airRotation = 0;
+    let airRot = 0;
     let flips = 0;
     let score = 0;
-    let bestScore = Number(localStorage.getItem('cyber_moto_best') || 0);
     let nitro = 100;
-    let gameOver = false;
-    let crashMsg = '';
-    let particles = [];
+    let startTime = 0;
+    let elapsedTime = 0;
+    let state = 'PLAYING'; // PLAYING, CRASHED, WON
+    let statusMsg = '';
+
+    let barrels = [];
+    let ramps = [];
     let coins = [];
+    let particles = [];
 
     const keys = {};
     window.addEventListener('keydown', e => {
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
       keys[e.code] = true;
-      if (gameOver && e.code === 'Space') resetGame();
+      if (e.code === 'KeyR') loadLevel(currentLevelIdx);
+      if (e.code === 'Space') {
+        if (state === 'CRASHED') loadLevel(currentLevelIdx);
+        else if (state === 'WON') loadLevel((currentLevelIdx + 1) % LEVELS.length);
+      }
     });
     window.addEventListener('keyup', e => keys[e.code] = false);
-    canvas.addEventListener('click', () => { if (gameOver) resetGame(); });
+    canvas.addEventListener('click', () => {
+      if (state === 'CRASHED') loadLevel(currentLevelIdx);
+      else if (state === 'WON') loadLevel((currentLevelIdx + 1) % LEVELS.length);
+    });
 
-    function terrainY(x) {
-      return 355
-        - Math.sin(x * 0.0055) * 75
-        - Math.cos(x * 0.013) * 38
-        - Math.sin(x * 0.024) * 14;
+    function buildLevelButtons() {
+      const bar = document.getElementById('levelBar');
+      bar.innerHTML = '';
+      LEVELS.forEach((lvl, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'lvl-btn' + (idx === currentLevelIdx ? ' active' : '');
+        btn.textContent = lvl.name;
+        btn.onclick = () => loadLevel(idx);
+        bar.appendChild(btn);
+      });
     }
 
-    function spawnCoinCluster(startX) {
-      for (let i = 0; i < 4; i++) {
-        const cx = startX + i * 42;
+    function terrainY(x) {
+      const lvl = LEVELS[currentLevelIdx];
+      // Flat starting platform for first 350px
+      if (x < 350) return 340;
+      const t = x - 350;
+      return 340
+        - Math.sin(t * 0.0052) * lvl.amp1
+        - Math.cos(t * 0.0125) * lvl.amp2;
+    }
+
+    function loadLevel(idx) {
+      currentLevelIdx = idx;
+      buildLevelButtons();
+      const lvl = LEVELS[idx];
+
+      dist = 0;
+      speed = 0;
+      bikeY = terrainY(220) - 18;
+      vy = 0;
+      angle = 0;
+      airRot = 0;
+      flips = 0;
+      score = 0;
+      nitro = 100;
+      startTime = performance.now();
+      elapsedTime = 0;
+      state = 'PLAYING';
+      statusMsg = '';
+      particles = [];
+
+      // Place Boost Ramps
+      ramps = [];
+      const rampStep = (lvl.length - 900) / Math.max(1, lvl.ramps);
+      for (let i = 0; i < lvl.ramps; i++) {
+        const rx = 650 + i * rampStep;
+        ramps.push({ x: rx, y: terrainY(rx) });
+      }
+
+      // Place Explosive Barrels (away from ramps and start/finish)
+      barrels = [];
+      const hazStep = (lvl.length - 1000) / Math.max(1, lvl.hazards);
+      for (let i = 0; i < lvl.hazards; i++) {
+        const hx = 880 + i * hazStep;
+        // Skip if too close to a ramp
+        if (!ramps.some(r => Math.abs(r.x - hx) < 170)) {
+          barrels.push({ x: hx, y: terrainY(hx), exploded: false });
+        }
+      }
+
+      // Place Gold Coins
+      coins = [];
+      for (let cx = 500; cx < lvl.length - 200; cx += 260) {
         coins.push({ x: cx, y: terrainY(cx) - 42, collected: false });
       }
     }
 
-    function resetGame() {
-      dist = 0;
-      speed = 6;
-      bikeY = terrainY(220) - 18;
-      vy = 0;
-      angle = 0;
-      airRotation = 0;
-      flips = 0;
-      score = 0;
-      nitro = 100;
-      gameOver = false;
-      crashMsg = '';
-      particles = [];
-      coins = [];
-      for (let x = 700; x < 3500; x += 650) spawnCoinCluster(x);
-    }
-
-    function addExhaust(x, y, isNitro) {
-      particles.push({
-        x, y,
-        vx: -2 - Math.random() * 2,
-        vy: (Math.random() - 0.5) * 1.5,
-        life: 1,
-        color: isNitro ? '#00d4ff' : '#64748b',
-        size: isNitro ? 6 : 4
-      });
+    function spawnExplosion(x, y, color) {
+      for (let i = 0; i < 22; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const spd = 2 + Math.random() * 6;
+        particles.push({
+          x, y,
+          vx: Math.cos(a) * spd,
+          vy: Math.sin(a) * spd - 2,
+          life: 1,
+          color,
+          size: 4 + Math.random() * 5
+        });
+      }
     }
 
     function update() {
-      if (gameOver) return;
+      // Update particles always
+      particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += 0.15; p.life -= 0.03; });
+      particles = particles.filter(p => p.life > 0);
 
+      if (state !== 'PLAYING') return;
+
+      const lvl = LEVELS[currentLevelIdx];
       const bx = 220;
+      elapsedTime = (performance.now() - startTime) / 1000;
+
       const boosting = (keys['ShiftLeft'] || keys['ShiftRight']) && nitro > 1;
+      const gas = keys['ArrowUp'] || keys['KeyW'];
+      const brake = keys['ArrowDown'] || keys['KeyS'];
 
       if (boosting) {
         nitro = Math.max(0, nitro - 0.55);
-        speed = Math.min(14.5, speed + 0.25);
+        speed = Math.min(15.5, speed + 0.3);
       } else {
-        nitro = Math.min(100, nitro + 0.14);
-        if (keys['ArrowUp'] || keys['KeyW']) speed = Math.min(10.5, speed + 0.15);
-        else if (keys['ArrowDown'] || keys['KeyS']) speed = Math.max(3, speed - 0.22);
-        else speed = Math.max(6, speed - 0.04);
+        nitro = Math.min(100, nitro + 0.15);
+        if (gas) speed = Math.min(11.5, speed + 0.22);
+        else if (brake) speed = Math.max(0, speed - 0.3);
+        else speed = Math.max(0, speed - 0.07);
       }
 
       dist += speed;
-      score += speed * (boosting ? 0.12 : 0.06);
+      score += speed * 0.05;
 
-      // Spawn future coins
-      if (coins.length < 16) {
-        const lastX = coins.length ? coins[coins.length - 1].x : dist + 800;
-        spawnCoinCluster(lastX + 550 + Math.random() * 300);
+      // Check Finish Line
+      if (dist + bx >= lvl.length) {
+        state = 'WON';
+        score += Math.max(0, Math.floor((60 - elapsedTime) * 20));
+        spawnExplosion(bx, bikeY, '#fde047');
+        return;
       }
 
       const groundY = terrainY(dist + bx);
       const nextGroundY = terrainY(dist + bx + 12);
       const slope = Math.atan2(nextGroundY - groundY, 12);
 
-      vy += 0.46;
+      vy += 0.48;
       bikeY += vy;
 
       const onGround = bikeY >= groundY - 17;
@@ -152,177 +286,50 @@
         let normAngle = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
         if (normAngle > Math.PI) normAngle -= Math.PI * 2;
 
-        if (Math.abs(normAngle - slope) > 1.15) {
-          gameOver = true;
-          crashMsg = 'Wipeout! Land with your tires aligned to the slope.';
-          if (Math.floor(score) > bestScore) {
-            bestScore = Math.floor(score);
-            localStorage.setItem('cyber_moto_best', bestScore);
-          }
+        if (Math.abs(normAngle - slope) > 1.18) {
+          state = 'CRASHED';
+          statusMsg = 'Bad Landing! Keep your wheels aligned with the ground.';
+          spawnExplosion(bx, bikeY, '#f97316');
           return;
         }
 
         if (flips > 0) {
-          score += flips * 250;
-          nitro = Math.min(100, nitro + flips * 35);
+          score += flips * 300;
+          nitro = Math.min(100, nitro + flips * 40);
           flips = 0;
         }
 
         bikeY = groundY - 17;
         vy = (nextGroundY - groundY) * (speed / 12);
         angle = slope;
-        airRotation = 0;
+        airRot = 0;
 
-        if (Math.random() < 0.65) addExhaust(bx - 22, bikeY + 8, boosting);
+        if (speed > 2 && Math.random() < 0.5) {
+          particles.push({
+            x: bx - 20, y: bikeY + 12,
+            vx: -2 - Math.random() * 2, vy: -0.5,
+            life: 0.8, color: boosting ? '#38bdf8' : '#fb923c', size: boosting ? 6 : 3.5
+          });
+        }
       } else {
-        if (keys['ArrowLeft'] || keys['KeyA']) { angle -= 0.095; airRotation -= 0.095; }
-        if (keys['ArrowRight'] || keys['KeyD']) { angle += 0.095; airRotation += 0.095; }
-
-        if (Math.abs(airRotation) >= Math.PI * 1.8) {
+        if (keys['ArrowLeft'] || keys['KeyA']) { angle -= 0.095; airRot -= 0.095; }
+        if (keys['ArrowRight'] || keys['KeyD']) { angle += 0.095; airRot += 0.095; }
+        if (Math.abs(airRot) >= Math.PI * 1.8) {
           flips++;
-          airRotation = 0;
+          airRot = 0;
         }
-        if (boosting) addExhaust(bx - 20, bikeY + 6, true);
       }
 
-      // Coin pickups
-      coins.forEach(c => {
-        const screenX = c.x - dist;
-        if (!c.collected && Math.hypot(screenX - bx, c.y - bikeY) < 34) {
-          c.collected = true;
-          score += 50;
-          nitro = Math.min(100, nitro + 12);
+      // Boost Ramps
+      ramps.forEach(r => {
+        const sx = r.x - dist;
+        if (Math.abs(sx - bx) < 28 && Math.abs(bikeY - (r.y - 18)) < 24) {
+          vy = -12.5;
+          speed = Math.max(speed, 11.5);
+          nitro = Math.min(100, nitro + 20);
         }
       });
-      coins = coins.filter(c => !c.collected && c.x - dist > -60);
 
-      // Exhaust particles
-      particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.life -= 0.04; });
-      particles = particles.filter(p => p.life > 0);
-    }
-
-    function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // Background grid lines
-      ctx.strokeStyle = 'rgba(30, 41, 59, 0.45)';
-      ctx.lineWidth = 1;
-      const gridOffset = dist % 60;
-      for (let gx = -gridOffset; gx < canvas.width; gx += 60) {
-        ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, canvas.height); ctx.stroke();
-      }
-
-      // Terrain fill
-      ctx.fillStyle = '#0f172a';
-      ctx.beginPath();
-      ctx.moveTo(0, canvas.height);
-      for (let sx = 0; sx <= canvas.width; sx += 8) ctx.lineTo(sx, terrainY(dist + sx));
-      ctx.lineTo(canvas.width, canvas.height);
-      ctx.closePath();
-      ctx.fill();
-
-      // Neon track surface
-      ctx.strokeStyle = '#00d4ff';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      for (let sx = 0; sx <= canvas.width; sx += 8) {
-        const sy = terrainY(dist + sx);
-        if (sx === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
-      }
-      ctx.stroke();
-
-      // Coins
-      coins.forEach(c => {
-        const sx = c.x - dist;
-        ctx.fillStyle = '#fde047';
-        ctx.beginPath(); ctx.arc(sx, c.y, 9, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = '#ca8a04';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-      });
-
-      // Exhaust particles
-      particles.forEach(p => {
-        ctx.globalAlpha = p.life;
-        ctx.fillStyle = p.color;
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
-      });
-      ctx.globalAlpha = 1;
-
-      // Motorcycle & Rider
-      const bx = 220;
-      ctx.save();
-      ctx.translate(bx, bikeY);
-      ctx.rotate(angle);
-
-      // Rear & Front Tires
-      ctx.fillStyle = '#060a14';
-      ctx.strokeStyle = '#f8fafc';
-      ctx.lineWidth = 3.5;
-      ctx.beginPath(); ctx.arc(-20, 11, 11, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      ctx.beginPath(); ctx.arc(20, 11, 11, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-
-      // Bike Frame
-      ctx.fillStyle = '#00d4ff';
-      ctx.beginPath();
-      ctx.moveTo(-22, 6);
-      ctx.lineTo(-6, -8);
-      ctx.lineTo(16, -6);
-      ctx.lineTo(22, 8);
-      ctx.closePath();
-      ctx.fill();
-
-      // Rider Torso & Helmet
-      ctx.strokeStyle = '#e2e8f0';
-      ctx.lineWidth = 4;
-      ctx.beginPath(); ctx.moveTo(-4, -6); ctx.lineTo(-8, -20); ctx.lineTo(8, -12); ctx.stroke();
-      ctx.fillStyle = '#f43f5e';
-      ctx.beginPath(); ctx.arc(-6, -26, 7.5, 0, Math.PI * 2); ctx.fill();
-
-      ctx.restore();
-
-      // HUD
-      ctx.fillStyle = '#f8fafc';
-      ctx.font = 'bold 20px sans-serif';
-      ctx.fillText(`SCORE: ${Math.floor(score)}`, 22, 34);
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = 'bold 15px sans-serif';
-      ctx.fillText(`BEST: ${Math.max(bestScore, Math.floor(score))}`, 22, 56);
-
-      // Nitro Bar
-      ctx.fillStyle = '#1e293b';
-      ctx.fillRect(canvas.width - 190, 20, 165, 16);
-      ctx.fillStyle = '#00d4ff';
-      ctx.fillRect(canvas.width - 190, 20, 165 * (nitro / 100), 16);
-      ctx.fillStyle = '#f8fafc';
-      ctx.font = 'bold 12px sans-serif';
-      ctx.fillText('NITRO', canvas.width - 190, 50);
-
-      if (flips > 0 && !gameOver) {
-        ctx.fillStyle = '#fde047';
-        ctx.font = 'bold 22px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(`FLIP x${flips} (+${flips * 250})`, canvas.width / 2, 55);
-        ctx.textAlign = 'left';
-      }
-
-      if (gameOver) {
-        ctx.fillStyle = 'rgba(6, 10, 20, 0.82)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 40px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('CRASHED!', canvas.width / 2, 215);
-        ctx.fillStyle = '#f43f5e';
-        ctx.font = '18px sans-serif';
-        ctx.fillText(crashMsg, canvas.width / 2, 252);
-        ctx.fillStyle = '#00d4ff';
-        ctx.font = 'bold 18px sans-serif';
-        ctx.fillText('Press SPACE or Click to Ride Again', canvas.width / 2, 295);
-        ctx.textAlign = 'left';
-      }
-    }
-
-    function loop() {
-      update();
-      draw();
+      // Explosive Barrels
+      barrels.forEach(b => {
+        const sx = b.x - dist;
