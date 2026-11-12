@@ -3,358 +3,326 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FreezeNova – Complete Moto & Dirt Bike Games Portal</title>
+  <title>Cyber Moto Stunt</title>
   <style>
-    :root {
-      --bg-dark: #090e1a;
-      --bg-panel: #111827;
-      --bg-card: #1a2336;
-      --bg-hover: #243049;
-      --accent: #00d4ff;
-      --accent-glow: rgba(0, 212, 255, 0.35);
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --border: #27344f;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
-
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      background-color: var(--bg-dark);
-      color: var(--text-main);
-      min-height: 100vh;
+      background: #060a14;
+      color: #f8fafc;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      height: 100vh;
       display: flex;
       flex-direction: column;
-    }
-
-    header {
-      background: var(--bg-panel);
-      border-bottom: 1px solid var(--border);
-      padding: 14px 24px;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 14px;
-    }
-
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 1.45rem;
-      font-weight: 800;
-      cursor: pointer;
-      color: var(--text-main);
-      text-decoration: none;
-    }
-
-    .logo span { color: var(--accent); text-shadow: 0 0 12px var(--accent-glow); }
-
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex: 1;
-      max-width: 640px;
-      justify-content: flex-end;
-    }
-
-    .search-box { flex: 1; max-width: 340px; }
-
-    .search-box input {
-      width: 100%;
-      padding: 9px 16px;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      background: var(--bg-dark);
-      color: var(--text-main);
-      font-size: 0.9rem;
-      outline: none;
-    }
-
-    .search-box input:focus { border-color: var(--accent); }
-
-    .garage-picker {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      background: var(--bg-card);
-      padding: 6px 12px;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      font-size: 0.8rem;
-      font-weight: 600;
-    }
-
-    .swatch {
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      cursor: pointer;
-      border: 2px solid transparent;
-    }
-
-    .swatch.active { border-color: #fff; transform: scale(1.15); }
-
-    .categories {
-      background: var(--bg-panel);
-      padding: 11px 24px;
-      display: flex;
-      gap: 10px;
-      overflow-x: auto;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .cat-btn {
-      background: var(--bg-card);
-      color: var(--text-muted);
-      border: 1px solid var(--border);
-      padding: 7px 16px;
-      border-radius: 999px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: all 0.2s;
-    }
-
-    .cat-btn:hover, .cat-btn.active {
-      background: var(--accent);
-      color: #05101f;
-      border-color: var(--accent);
-      box-shadow: 0 0 12px var(--accent-glow);
-    }
-
-    main {
-      max-width: 1400px;
-      width: 100%;
-      margin: 0 auto;
-      padding: 24px;
-      flex: 1;
-    }
-
-    .section-title {
-      font-size: 1.2rem;
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .section-title::before {
-      content: "";
-      width: 4px;
-      height: 20px;
-      background: var(--accent);
-      border-radius: 2px;
-    }
-
-    .game-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(205px, 1fr));
-      gap: 18px;
-    }
-
-    .game-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      overflow: hidden;
-      cursor: pointer;
-      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
-    }
-
-    .game-card:hover {
-      transform: translateY(-5px);
-      border-color: var(--accent);
-      box-shadow: 0 8px 24px rgba(0, 212, 255, 0.2);
-    }
-
-    .thumb {
-      height: 138px;
-      display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 3.1rem;
-      position: relative;
-    }
-
-    .badge {
-      position: absolute;
-      top: 8px;
-      left: 8px;
-      background: rgba(9, 14, 26, 0.85);
-      color: var(--accent);
-      font-size: 0.7rem;
-      font-weight: 700;
-      padding: 3px 8px;
-      border-radius: 6px;
-      border: 1px solid var(--accent);
-    }
-
-    .best-tag {
-      position: absolute;
-      bottom: 8px;
-      right: 8px;
-      background: rgba(9, 14, 26, 0.85);
-      color: #fde047;
-      font-size: 0.7rem;
-      font-weight: 700;
-      padding: 2px 7px;
-      border-radius: 6px;
-    }
-
-    .card-info { padding: 12px; }
-    .card-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 4px; }
-    .card-meta { font-size: 0.78rem; color: var(--text-muted); display: flex; justify-content: space-between; }
-
-    #player-view { display: none; }
-
-    .player-wrapper {
-      background: var(--bg-panel);
-      border: 1px solid var(--border);
-      border-radius: 16px;
       overflow: hidden;
-      margin-bottom: 24px;
     }
-
-    .canvas-stage {
-      width: 100%;
-      height: 500px;
-      background: #050912;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
     canvas {
-      background: #090f1e;
-      border: 2px solid var(--border);
-      border-radius: 8px;
-      max-width: 100%;
-      max-height: 100%;
-    }
-
-    .player-bar {
-      padding: 14px 20px;
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      border-top: 1px solid var(--border);
-    }
-
-    .player-controls { display: flex; gap: 10px; flex-wrap: wrap; }
-
-    .btn {
-      background: var(--bg-card);
-      color: var(--text-main);
-      border: 1px solid var(--border);
-      padding: 8px 14px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 0.85rem;
-    }
-
-    .btn:hover { border-color: var(--accent); color: var(--accent); }
-    .btn-primary { background: var(--accent); color: #05101f; border-color: var(--accent); }
-    .btn-primary:hover { color: #05101f; opacity: 0.9; }
-
-    .game-details {
-      padding: 20px;
-      background: var(--bg-card);
+      background: radial-gradient(circle at 50% 20%, #111c36 0%, #060a14 85%);
+      border: 2px solid #1e293b;
       border-radius: 12px;
-      line-height: 1.6;
+      box-shadow: 0 0 40px rgba(0, 212, 255, 0.15);
+      max-width: 96vw;
+      max-height: 88vh;
     }
-
-    footer {
-      text-align: center;
-      padding: 20px;
-      border-top: 1px solid var(--border);
-      color: var(--text-muted);
+    .controls {
+      margin-top: 12px;
       font-size: 0.85rem;
+      color: #94a3b8;
+      letter-spacing: 0.3px;
     }
+    span { color: #00d4ff; font-weight: 700; }
   </style>
 </head>
 <body>
 
-  <header>
-    <a class="logo" onclick="showHome()">🏍️ FREEZE<span>NOVA</span> MOTO</a>
-    <div class="header-actions">
-      <div class="garage-picker" title="Select Custom Bike Paint">
-        <span>Bike Paint:</span>
-        <div class="swatch active" style="background:#00d4ff" onclick="setBikeColor('#00d4ff', this)"></div>
-        <div class="swatch" style="background:#f43f5e" onclick="setBikeColor('#f43f5e', this)"></div>
-        <div class="swatch" style="background:#22c55e" onclick="setBikeColor('#22c55e', this)"></div>
-        <div class="swatch" style="background:#f59e0b" onclick="setBikeColor('#f59e0b', this)"></div>
-        <div class="swatch" style="background:#a855f7" onclick="setBikeColor('#a855f7', this)"></div>
-      </div>
-      <div class="search-box">
-        <input type="text" id="searchInput" placeholder="Search 12 moto games..." oninput="renderGrid()" />
-      </div>
-      <button class="btn btn-primary" onclick="playRandom()">🎲 Random</button>
-    </div>
-  </header>
-
-  <nav class="categories">
-    <button class="cat-btn active" onclick="setCategory('All', this)">All Moto Games (12)</button>
-    <button class="cat-btn" onclick="setCategory('Moto X3M & Trials', this)">Moto X3M & Trials</button>
-    <button class="cat-btn" onclick="setCategory('Traffic & Highway', this)">Traffic & Highway</button>
-    <button class="cat-btn" onclick="setCategory('Supercross & Dirt', this)">Supercross & Dirt</button>
-    <button class="cat-btn" onclick="setCategory('Wheelie & Stunt', this)">Wheelie & Balance</button>
-  </nav>
-
-  <main>
-    <section id="player-view">
-      <div class="player-wrapper">
-        <div class="canvas-stage" id="canvasStage">
-          <canvas id="gameCanvas" width="800" height="450"></canvas>
-        </div>
-        <div class="player-bar">
-          <div>
-            <h2 id="activeTitle">Moto Game</h2>
-            <small id="activeControls" style="color: var(--text-muted);">Controls</small>
-          </div>
-          <div class="player-controls">
-            <button class="btn" onclick="likeGame()">👍 <span id="likeCount">340</span></button>
-            <button class="btn" onclick="restartCurrent()">🔄 Restart</button>
-            <button class="btn btn-primary" onclick="toggleFullscreen()">⛶ Fullscreen</button>
-            <button class="btn" onclick="showHome()">✖ Back to Moto Catalog</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="game-details">
-        <h3>Game Instructions & Rules</h3>
-        <p id="activeDesc" style="color: var(--text-muted); margin-top: 6px;"></p>
-      </div>
-    </section>
-
-    <section id="catalog-view">
-      <h2 class="section-title" id="gridHeading">All Moto & Dirt Bike Games</h2>
-      <div class="game-grid" id="gameGrid"></div>
-    </section>
-  </main>
-
-  <footer>
-    FreezeNova Moto Collection • Complete Standalone HTML5 Portal with Saved High Scores
-  </footer>
+  <canvas id="game" width="900" height="500"></canvas>
+  <div class="controls">
+    <span>W / UP</span> Gas &nbsp;•&nbsp;
+    <span>S / DOWN</span> Brake &nbsp;•&nbsp;
+    <span>A / D</span> or <span>LEFT / RIGHT</span> Mid-Air Flips &nbsp;•&nbsp;
+    <span>SHIFT</span> Nitro Boost
+  </div>
 
   <script>
-    const MOTO_GAMES = [
-      {
-        id: 'moto-x3m-1',
-        title: 'Moto X3M Bike Race',
-        category: 'Moto X3M & Trials',
-        icon: '🏍️',
-        gradient: 'linear-gradient(135deg, #00d4ff, #0284c7)',
-        rating: '98%',
-        controls: 'Up/W: Gas • Down/S: Brake • Left/Right (A/D): Mid-Air Flip',
-        desc: 'Launch off steep ramps, execute full 360-degree backflips and frontflips in mid-air, and land flat on both tires.',
-        engine: 'trials',
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+
+    let dist = 0;
+    let speed = 6;
+    let bikeY = 280;
+    let vy = 0;
+    let angle = 0;
+    let airRotation = 0;
+    let flips = 0;
+    let score = 0;
+    let bestScore = Number(localStorage.getItem('cyber_moto_best') || 0);
+    let nitro = 100;
+    let gameOver = false;
+    let crashMsg = '';
+    let particles = [];
+    let coins = [];
+
+    const keys = {};
+    window.addEventListener('keydown', e => {
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
+      keys[e.code] = true;
+      if (gameOver && e.code === 'Space') resetGame();
+    });
+    window.addEventListener('keyup', e => keys[e.code] = false);
+    canvas.addEventListener('click', () => { if (gameOver) resetGame(); });
+
+    function terrainY(x) {
+      return 355
+        - Math.sin(x * 0.0055) * 75
+        - Math.cos(x * 0.013) * 38
+        - Math.sin(x * 0.024) * 14;
+    }
+
+    function spawnCoinCluster(startX) {
+      for (let i = 0; i < 4; i++) {
+        const cx = startX + i * 42;
+        coins.push({ x: cx, y: terrainY(cx) - 42, collected: false });
+      }
+    }
+
+    function resetGame() {
+      dist = 0;
+      speed = 6;
+      bikeY = terrainY(220) - 18;
+      vy = 0;
+      angle = 0;
+      airRotation = 0;
+      flips = 0;
+      score = 0;
+      nitro = 100;
+      gameOver = false;
+      crashMsg = '';
+      particles = [];
+      coins = [];
+      for (let x = 700; x < 3500; x += 650) spawnCoinCluster(x);
+    }
+
+    function addExhaust(x, y, isNitro) {
+      particles.push({
+        x, y,
+        vx: -2 - Math.random() * 2,
+        vy: (Math.random() - 0.5) * 1.5,
+        life: 1,
+        color: isNitro ? '#00d4ff' : '#64748b',
+        size: isNitro ? 6 : 4
+      });
+    }
+
+    function update() {
+      if (gameOver) return;
+
+      const bx = 220;
+      const boosting = (keys['ShiftLeft'] || keys['ShiftRight']) && nitro > 1;
+
+      if (boosting) {
+        nitro = Math.max(0, nitro - 0.55);
+        speed = Math.min(14.5, speed + 0.25);
+      } else {
+        nitro = Math.min(100, nitro + 0.14);
+        if (keys['ArrowUp'] || keys['KeyW']) speed = Math.min(10.5, speed + 0.15);
+        else if (keys['ArrowDown'] || keys['KeyS']) speed = Math.max(3, speed - 0.22);
+        else speed = Math.max(6, speed - 0.04);
+      }
+
+      dist += speed;
+      score += speed * (boosting ? 0.12 : 0.06);
+
+      // Spawn future coins
+      if (coins.length < 16) {
+        const lastX = coins.length ? coins[coins.length - 1].x : dist + 800;
+        spawnCoinCluster(lastX + 550 + Math.random() * 300);
+      }
+
+      const groundY = terrainY(dist + bx);
+      const nextGroundY = terrainY(dist + bx + 12);
+      const slope = Math.atan2(nextGroundY - groundY, 12);
+
+      vy += 0.46;
+      bikeY += vy;
+
+      const onGround = bikeY >= groundY - 17;
+
+      if (onGround) {
+        let normAngle = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+        if (normAngle > Math.PI) normAngle -= Math.PI * 2;
+
+        if (Math.abs(normAngle - slope) > 1.15) {
+          gameOver = true;
+          crashMsg = 'Wipeout! Land with your tires aligned to the slope.';
+          if (Math.floor(score) > bestScore) {
+            bestScore = Math.floor(score);
+            localStorage.setItem('cyber_moto_best', bestScore);
+          }
+          return;
+        }
+
+        if (flips > 0) {
+          score += flips * 250;
+          nitro = Math.min(100, nitro + flips * 35);
+          flips = 0;
+        }
+
+        bikeY = groundY - 17;
+        vy = (nextGroundY - groundY) * (speed / 12);
+        angle = slope;
+        airRotation = 0;
+
+        if (Math.random() < 0.65) addExhaust(bx - 22, bikeY + 8, boosting);
+      } else {
+        if (keys['ArrowLeft'] || keys['KeyA']) { angle -= 0.095; airRotation -= 0.095; }
+        if (keys['ArrowRight'] || keys['KeyD']) { angle += 0.095; airRotation += 0.095; }
+
+        if (Math.abs(airRotation) >= Math.PI * 1.8) {
+          flips++;
+          airRotation = 0;
+        }
+        if (boosting) addExhaust(bx - 20, bikeY + 6, true);
+      }
+
+      // Coin pickups
+      coins.forEach(c => {
+        const screenX = c.x - dist;
+        if (!c.collected && Math.hypot(screenX - bx, c.y - bikeY) < 34) {
+          c.collected = true;
+          score += 50;
+          nitro = Math.min(100, nitro + 12);
+        }
+      });
+      coins = coins.filter(c => !c.collected && c.x - dist > -60);
+
+      // Exhaust particles
+      particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.life -= 0.04; });
+      particles = particles.filter(p => p.life > 0);
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Background grid lines
+      ctx.strokeStyle = 'rgba(30, 41, 59, 0.45)';
+      ctx.lineWidth = 1;
+      const gridOffset = dist % 60;
+      for (let gx = -gridOffset; gx < canvas.width; gx += 60) {
+        ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, canvas.height); ctx.stroke();
+      }
+
+      // Terrain fill
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.moveTo(0, canvas.height);
+      for (let sx = 0; sx <= canvas.width; sx += 8) ctx.lineTo(sx, terrainY(dist + sx));
+      ctx.lineTo(canvas.width, canvas.height);
+      ctx.closePath();
+      ctx.fill();
+
+      // Neon track surface
+      ctx.strokeStyle = '#00d4ff';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      for (let sx = 0; sx <= canvas.width; sx += 8) {
+        const sy = terrainY(dist + sx);
+        if (sx === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+      }
+      ctx.stroke();
+
+      // Coins
+      coins.forEach(c => {
+        const sx = c.x - dist;
+        ctx.fillStyle = '#fde047';
+        ctx.beginPath(); ctx.arc(sx, c.y, 9, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#ca8a04';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      });
+
+      // Exhaust particles
+      particles.forEach(p => {
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = p.color;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+
+      // Motorcycle & Rider
+      const bx = 220;
+      ctx.save();
+      ctx.translate(bx, bikeY);
+      ctx.rotate(angle);
+
+      // Rear & Front Tires
+      ctx.fillStyle = '#060a14';
+      ctx.strokeStyle = '#f8fafc';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath(); ctx.arc(-20, 11, 11, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(20, 11, 11, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+      // Bike Frame
+      ctx.fillStyle = '#00d4ff';
+      ctx.beginPath();
+      ctx.moveTo(-22, 6);
+      ctx.lineTo(-6, -8);
+      ctx.lineTo(16, -6);
+      ctx.lineTo(22, 8);
+      ctx.closePath();
+      ctx.fill();
+
+      // Rider Torso & Helmet
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(-4, -6); ctx.lineTo(-8, -20); ctx.lineTo(8, -12); ctx.stroke();
+      ctx.fillStyle = '#f43f5e';
+      ctx.beginPath(); ctx.arc(-6, -26, 7.5, 0, Math.PI * 2); ctx.fill();
+
+      ctx.restore();
+
+      // HUD
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 20px sans-serif';
+      ctx.fillText(`SCORE: ${Math.floor(score)}`, 22, 34);
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = 'bold 15px sans-serif';
+      ctx.fillText(`BEST: ${Math.max(bestScore, Math.floor(score))}`, 22, 56);
+
+      // Nitro Bar
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(canvas.width - 190, 20, 165, 16);
+      ctx.fillStyle = '#00d4ff';
+      ctx.fillRect(canvas.width - 190, 20, 165 * (nitro / 100), 16);
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.fillText('NITRO', canvas.width - 190, 50);
+
+      if (flips > 0 && !gameOver) {
+        ctx.fillStyle = '#fde047';
+        ctx.font = 'bold 22px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`FLIP x${flips} (+${flips * 250})`, canvas.width / 2, 55);
+        ctx.textAlign = 'left';
+      }
+
+      if (gameOver) {
+        ctx.fillStyle = 'rgba(6, 10, 20, 0.82)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 40px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('CRASHED!', canvas.width / 2, 215);
+        ctx.fillStyle = '#f43f5e';
+        ctx.font = '18px sans-serif';
+        ctx.fillText(crashMsg, canvas.width / 2, 252);
+        ctx.fillStyle = '#00d4ff';
+        ctx.font = 'bold 18px sans-serif';
+        ctx.fillText('Press SPACE or Click to Ride Again', canvas.width / 2, 295);
+        ctx.textAlign = 'left';
+      }
+    }
+
+    function loop() {
+      update();
+      draw();
