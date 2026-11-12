@@ -1,293 +1,312 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CYBER MOTO TRIALS</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      background: #040711;
-      color: #e0f2fe;
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
+window.addEventListener("DOMContentLoaded", function () {
+  var canvas = document.getElementById("game");
+  var ctx = canvas.getContext("2d");
+
+  var LEVELS = [
+    { name: "01. Neon Grid", len: 4200, top: "#040711", bot: "#0f172a", orb: "#00f0ff", fill: "#081226", line: "#00f0ff", grid: "rgba(0, 240, 255, 0.12)", a1: 62, a2: 26, haz: 4, rmp: 3 },
+    { name: "02. Synth City", len: 5200, top: "#090418", bot: "#2e1065", orb: "#e879f9", fill: "#15082e", line: "#d946ef", grid: "rgba(217, 70, 239, 0.14)", a1: 78, a2: 34, haz: 7, rmp: 5 },
+    { name: "03. Matrix Core", len: 6200, top: "#02120a", bot: "#064e3b", orb: "#10b981", fill: "#041f14", line: "#00ff88", grid: "rgba(0, 255, 136, 0.13)", a1: 90, a2: 40, haz: 10, rmp: 6 },
+    { name: "04. Crimson Net", len: 7200, top: "#140308", bot: "#4c0519", orb: "#ff0055", fill: "#22060f", line: "#ff0055", grid: "rgba(255, 0, 85, 0.14)", a1: 100, a2: 45, haz: 13, rmp: 8 },
+    { name: "05. Omega Core", len: 8500, top: "#050510", bot: "#1e1b4b", orb: "#fde047", fill: "#0c0d24", line: "#38bdf8", grid: "rgba(56, 189, 248, 0.16)", a1: 110, a2: 50, haz: 16, rmp: 10 }
+  ];
+
+  var lvlIdx = 0, dist = 0, speed = 0, bikeY = 320, vy = 0, angle = 0;
+  var airRot = 0, flips = 0, score = 0, startTime = 0, elapsed = 0;
+  var state = "PLAYING", msg = "";
+  var hazards = [], ramps = [], orbs = [], parts = [], trail = [];
+  var keys = {};
+
+  window.addEventListener("keydown", function (e) {
+    if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].indexOf(e.code) !== -1) {
+      e.preventDefault();
     }
-    .top-bar {
-      width: 900px;
-      max-width: 96vw;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 10px;
-      gap: 8px;
-      flex-wrap: wrap;
+    keys[e.code] = true;
+    if (e.code === "KeyR") loadLevel(lvlIdx);
+    if (e.code === "Space") {
+      if (state === "CRASHED") loadLevel(lvlIdx);
+      else if (state === "WON") loadLevel((lvlIdx + 1) % LEVELS.length);
     }
-    .brand {
-      font-weight: 900;
-      font-size: 1.15rem;
-      letter-spacing: 1px;
-      color: #00f0ff;
-      text-shadow: 0 0 12px rgba(0, 240, 255, 0.55);
-    }
-    .level-pills { display: flex; gap: 6px; flex-wrap: wrap; }
-    .lvl-btn {
-      background: #0b132b;
-      color: #38bdf8;
-      border: 1px solid #1e3a8a;
-      padding: 6px 12px;
-      border-radius: 8px;
-      font-weight: 700;
-      font-size: 0.8rem;
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-    .lvl-btn.active {
-      background: #00f0ff;
-      color: #040711;
-      border-color: #00f0ff;
-      box-shadow: 0 0 14px rgba(0, 240, 255, 0.6);
-    }
-    canvas {
-      background: #060b19;
-      border: 2px solid #0284c7;
-      border-radius: 14px;
-      box-shadow: 0 0 45px rgba(0, 240, 255, 0.22);
-      max-width: 96vw;
-      max-height: 80vh;
-    }
-    .controls {
-      margin-top: 10px;
-      font-size: 0.85rem;
-      color: #94a3b8;
-    }
-    .controls span { color: #00f0ff; font-weight: 700; }
-  </style>
-</head>
-<body>
+  });
 
-  <div class="top-bar">
-    <div class="brand">⚡ CYBER MOTO TRIALS</div>
-    <div class="level-pills" id="levelBar"></div>
-  </div>
+  window.addEventListener("keyup", function (e) {
+    keys[e.code] = false;
+  });
 
-  <canvas id="game" width="900" height="480"></canvas>
+  canvas.addEventListener("click", function () {
+    if (state === "CRASHED") loadLevel(lvlIdx);
+    else if (state === "WON") loadLevel((lvlIdx + 1) % LEVELS.length);
+  });
 
-  <div class="controls">
-    <span>W / UP</span> Throttle &nbsp;•&nbsp;
-    <span>S / DOWN</span> Brake &nbsp;•&nbsp;
-    <span>A / D</span> or <span>LEFT / RIGHT</span> Mid-Air Flips &nbsp;•&nbsp;
-    <span>R</span> Reboot Sector
-  </div>
+  function terrainY(x) {
+    var L = LEVELS[lvlIdx];
+    if (x < 350) return 335;
+    var t = x - 350;
+    return 335 - Math.sin(t * 0.0052) * L.a1 - Math.cos(t * 0.0125) * L.a2;
+  }
 
-  <script>
-    window.onerror = function(message, source, lineno) {
-      const c = document.getElementById('game');
-      if (c) {
-        const x = c.getContext('2d');
-        x.fillStyle = '#ff0055';
-        x.font = 'bold 16px monospace';
-        x.fillText('Error on line ' + lineno + ': ' + message, 20, 40);
-      }
-    };
-
-    const canvas = document.getElementById('game');
-    const ctx = canvas.getContext('2d');
-
-    const LEVELS = [
-      { name: '01. Neon Grid',    len: 4200, top: '#040711', bot: '#0f172a', orb: '#00f0ff', fill: '#081226', line: '#00f0ff', grid: 'rgba(0, 240, 255, 0.12)', a1: 62, a2: 26, haz: 4, rmp: 3 },
-      { name: '02. Synth City',   len: 5200, top: '#090418', bot: '#2e1065', orb: '#e879f9', fill: '#15082e', line: '#d946ef', grid: 'rgba(217, 70, 239, 0.14)', a1: 78, a2: 34, haz: 7, rmp: 5 },
-      { name: '03. Matrix Core',  len: 6200, top: '#02120a', bot: '#064e3b', orb: '#10b981', fill: '#041f14', line: '#00ff88', grid: 'rgba(0, 255, 136, 0.13)', a1: 90, a2: 40, haz: 10, rmp: 6 },
-      { name: '04. Crimson Net',  len: 7200, top: '#140308', bot: '#4c0519', orb: '#ff0055', fill: '#22060f', line: '#ff0055', grid: 'rgba(255, 0, 85, 0.14)', a1: 100, a2: 45, haz: 13, rmp: 8 },
-      { name: '05. Omega Mainframe', len: 8500, top: '#050510', bot: '#1e1b4b', orb: '#fde047', fill: '#0c0d24', line: '#38bdf8', grid: 'rgba(56, 189, 248, 0.16)', a1: 110, a2: 50, haz: 16, rmp: 10 }
-    ];
-
-    let lvlIdx = 0, dist = 0, speed = 0, bikeY = 320, vy = 0, angle = 0;
-    let airRot = 0, flips = 0, score = 0, startTime = 0, elapsed = 0;
-    let state = 'PLAYING', msg = '';
-    let hazards = [], ramps = [], orbs = [], parts = [], trail = [];
-    const keys = {};
-
-    function lt(a, b) { return a - b < 0; }
-    function gt(a, b) { return a - b > 0; }
-
-    window.addEventListener('keydown', function(e) {
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
-      keys[e.code] = true;
-      if (e.code === 'KeyR') loadLevel(lvlIdx);
-      if (e.code === 'Space') {
-        if (state === 'CRASHED') loadLevel(lvlIdx);
-        else if (state === 'WON') loadLevel((lvlIdx + 1) % LEVELS.length);
-      }
-    });
-    window.addEventListener('keyup', function(e) { keys[e.code] = false; });
-    canvas.addEventListener('click', function() {
-      if (state === 'CRASHED') loadLevel(lvlIdx);
-      else if (state === 'WON') loadLevel((lvlIdx + 1) % LEVELS.length);
-    });
-
-    function terrainY(x) {
-      const L = LEVELS[lvlIdx];
-      if (lt(x, 350)) return 335;
-      const t = x - 350;
-      return 335 - Math.sin(t * 0.0052) * L.a1 - Math.cos(t * 0.0125) * L.a2;
-    }
-
-    function renderButtons() {
-      const bar = document.getElementById('levelBar');
-      bar.innerHTML = '';
-      LEVELS.forEach(function(L, i) {
-        const b = document.createElement('button');
-        b.className = 'lvl-btn' + (i === lvlIdx ? ' active' : '');
-        b.textContent = L.name;
-        b.onclick = function() { loadLevel(i); };
+  function renderButtons() {
+    var bar = document.getElementById("levelBar");
+    bar.innerHTML = "";
+    for (var i = 0; i < LEVELS.length; i++) {
+      (function (idx) {
+        var b = document.createElement("button");
+        b.className = "lvl-btn" + (idx === lvlIdx ? " active" : "");
+        b.textContent = LEVELS[idx].name;
+        b.onclick = function () { loadLevel(idx); };
         bar.appendChild(b);
-      });
+      })(i);
+    }
+  }
+
+  function loadLevel(i) {
+    lvlIdx = i;
+    renderButtons();
+    var L = LEVELS[i];
+    dist = 0;
+    speed = 0;
+    bikeY = terrainY(220) - 17;
+    vy = 0;
+    angle = 0;
+    airRot = 0;
+    flips = 0;
+    score = 0;
+    startTime = performance.now();
+    elapsed = 0;
+    state = "PLAYING";
+    msg = "";
+    parts = [];
+    trail = [];
+
+    ramps = [];
+    var rStep = (L.len - 900) / L.rmp;
+    for (var k = 0; k < L.rmp; k++) {
+      var rx = 650 + k * rStep;
+      ramps.push({ x: rx, y: terrainY(rx) });
     }
 
-    function loadLevel(i) {
-      lvlIdx = i;
-      renderButtons();
-      const L = LEVELS[i];
-      dist = 0; speed = 0; bikeY = terrainY(220) - 17; vy = 0; angle = 0;
-      airRot = 0; flips = 0; score = 0; startTime = performance.now(); elapsed = 0;
-      state = 'PLAYING'; msg = ''; parts = []; trail = [];
-
-      ramps = [];
-      const rStep = (L.len - 900) / L.rmp;
-      for (let k = 0; lt(k, L.rmp); k++) {
-        const rx = 650 + k * rStep;
-        ramps.push({ x: rx, y: terrainY(rx) });
+    hazards = [];
+    var hStep = (L.len - 1000) / L.haz;
+    for (var h = 0; h < L.haz; h++) {
+      var hx = 880 + h * hStep;
+      var tooClose = false;
+      for (var r = 0; r < ramps.length; r++) {
+        if (Math.abs(ramps[r].x - hx) < 170) tooClose = true;
       }
-
-      hazards = [];
-      const hStep = (L.len - 1000) / L.haz;
-      for (let k = 0; lt(k, L.haz); k++) {
-        const hx = 880 + k * hStep;
-        const nearRamp = ramps.some(function(r) { return lt(Math.abs(r.x - hx), 170); });
-        if (!nearRamp) {
-          hazards.push({ x: hx, y: terrainY(hx), dead: false });
-        }
-      }
-
-      orbs = [];
-      for (let cx = 500; lt(cx, L.len - 200); cx += 260) {
-        orbs.push({ x: cx, y: terrainY(cx) - 42, got: false });
+      if (!tooClose) {
+        hazards.push({ x: hx, y: terrainY(hx), dead: false });
       }
     }
 
-    function boom(x, y, col) {
-      for (let k = 0; lt(k, 24); k++) {
-        const a = Math.random() * Math.PI * 2;
-        const s = 2 + Math.random() * 6;
-        parts.push({ x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 2, life: 1, col: col, sz: 4.5 });
-      }
+    orbs = [];
+    for (var cx = 500; cx < L.len - 200; cx += 260) {
+      orbs.push({ x: cx, y: terrainY(cx) - 42, got: false });
+    }
+  }
+
+  function boom(x, y, col) {
+    for (var k = 0; k < 24; k++) {
+      var a = Math.random() * Math.PI * 2;
+      var s = 2 + Math.random() * 6;
+      parts.push({ x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 2, life: 1, col: col, sz: 4.5 });
+    }
+  }
+
+  function update() {
+    for (var i = parts.length - 1; i >= 0; i--) {
+      parts[i].x += parts[i].vx;
+      parts[i].y += parts[i].vy;
+      parts[i].vy += 0.15;
+      parts[i].life -= 0.03;
+      if (parts[i].life <= 0) parts.splice(i, 1);
     }
 
-    function update() {
-      parts.forEach(function(p) { p.x += p.vx; p.y += p.vy; p.vy += 0.15; p.life -= 0.03; });
-      parts = parts.filter(function(p) { return gt(p.life, 0); });
-      if (state !== 'PLAYING') return;
+    if (state !== "PLAYING") return;
 
-      const L = LEVELS[lvlIdx];
-      const bx = 220;
-      elapsed = (performance.now() - startTime) / 1000;
+    var L = LEVELS[lvlIdx];
+    var bx = 220;
+    elapsed = (performance.now() - startTime) / 1000;
 
-      if (keys['ArrowUp'] || keys['KeyW']) speed = Math.min(12, speed + 0.24);
-      else if (keys['ArrowDown'] || keys['KeyS']) speed = Math.max(0, speed - 0.3);
-      else speed = Math.max(0, speed - 0.07);
+    if (keys["ArrowUp"] || keys["KeyW"]) speed = Math.min(12, speed + 0.24);
+    else if (keys["ArrowDown"] || keys["KeyS"]) speed = Math.max(0, speed - 0.3);
+    else speed = Math.max(0, speed - 0.07);
 
-      dist += speed;
-      score += speed * 0.05;
+    dist += speed;
+    score += speed * 0.05;
 
-      // Lightcycle ribbon trail
-      trail.push({ worldX: dist + bx - 22, y: bikeY + 8 });
-      if (gt(trail.length, 28)) trail.shift();
+    trail.push({ worldX: dist + bx - 22, y: bikeY + 8 });
+    if (trail.length > 28) trail.shift();
 
-      if (!lt(dist + bx, L.len)) {
-        state = 'WON';
-        score += Math.max(0, Math.floor((60 - elapsed) * 20));
-        boom(bx, bikeY, '#00f0ff');
+    if (dist + bx >= L.len) {
+      state = "WON";
+      score += Math.max(0, Math.floor((60 - elapsed) * 20));
+      boom(bx, bikeY, "#00f0ff");
+      return;
+    }
+
+    var gy = terrainY(dist + bx);
+    var ngy = terrainY(dist + bx + 12);
+    var slope = Math.atan2(ngy - gy, 12);
+
+    vy += 0.48;
+    bikeY += vy;
+
+    if (bikeY >= gy - 17) {
+      var norm = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+      if (norm > Math.PI) norm -= Math.PI * 2;
+
+      if (Math.abs(norm - slope) > 1.18) {
+        state = "CRASHED";
+        msg = "SYSTEM DESYNC! Align tires with the grid on landing.";
+        boom(bx, bikeY, "#ff0055");
         return;
       }
-
-      const gy = terrainY(dist + bx);
-      const ngy = terrainY(dist + bx + 12);
-      const slope = Math.atan2(ngy - gy, 12);
-
-      vy += 0.48;
-      bikeY += vy;
-
-      if (!lt(bikeY, gy - 17)) {
-        let norm = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-        if (gt(norm, Math.PI)) norm -= Math.PI * 2;
-
-        if (gt(Math.abs(norm - slope), 1.18)) {
-          state = 'CRASHED';
-          msg = 'SYSTEM DESYNC! Align tires with the grid on landing.';
-          boom(bx, bikeY, '#ff0055');
-          return;
-        }
-        if (gt(flips, 0)) { score += flips * 300; flips = 0; }
-        bikeY = gy - 17;
-        vy = (ngy - gy) * (speed / 12);
-        angle = slope;
-        airRot = 0;
-      } else {
-        if (keys['ArrowLeft'] || keys['KeyA']) { angle -= 0.095; airRot -= 0.095; }
-        if (keys['ArrowRight'] || keys['KeyD']) { angle += 0.095; airRot += 0.095; }
-        if (!lt(Math.abs(airRot), Math.PI * 1.8)) { flips++; airRot = 0; }
+      if (flips > 0) {
+        score += flips * 300;
+        flips = 0;
       }
-
-      ramps.forEach(function(r) {
-        const sx = r.x - dist;
-        if (lt(Math.abs(sx - bx), 28) && lt(Math.abs(bikeY - (r.y - 18)), 24)) {
-          vy = -12.5;
-          speed = Math.max(speed, 11.5);
-        }
-      });
-
-      hazards.forEach(function(b) {
-        const sx = b.x - dist;
-        if (!b.dead && lt(Math.abs(sx - bx), 24) && lt(Math.abs(bikeY - (b.y - 16)), 24)) {
-          b.dead = true;
-          state = 'CRASHED';
-          msg = 'CRITICAL HIT! You collided with a plasma core.';
-          boom(bx, bikeY, '#ff0055');
-        }
-      });
-
-      orbs.forEach(function(c) {
-        const sx = c.x - dist;
-        if (!c.got && lt(Math.hypot(sx - bx, c.y - bikeY), 34)) {
-          c.got = true;
-          score += 50;
-        }
-      });
+      bikeY = gy - 17;
+      vy = (ngy - gy) * (speed / 12);
+      angle = slope;
+      airRot = 0;
+    } else {
+      if (keys["ArrowLeft"] || keys["KeyA"]) { angle -= 0.095; airRot -= 0.095; }
+      if (keys["ArrowRight"] || keys["KeyD"]) { angle += 0.095; airRot += 0.095; }
+      if (Math.abs(airRot) >= Math.PI * 1.8) {
+        flips++;
+        airRot = 0;
+      }
     }
 
-    function draw() {
-      const L = LEVELS[lvlIdx];
-      const g = ctx.createLinearGradient(0, 0, 0, canvas.height);
-      g.addColorStop(0, L.top);
-      g.addColorStop(1, L.bot);
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // Cyber Grid Lines
-      ctx.strokeStyle = L.grid;
-      ctx.lineWidth = 1;
-      const gOff = dist % 50;
-      for (let gx = -gOff; lt(gx, canvas.width); gx += 50) {
-        ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, canvas.height); ctx.stroke();
+    for (var r = 0; r < ramps.length; r++) {
+      var rsx = ramps[r].x - dist;
+      if (Math.abs(rsx - bx) < 28 && Math.abs(bikeY - (ramps[r].y - 18)) < 24) {
+        vy = -12.5;
+        speed = Math.max(speed, 11.5);
       }
-      for (let gy = 0; lt(gy, canvas.height); gy += 50) {
-        ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(canvas.width, gy); ctx.stroke();
-      }
+    }
 
-      // Holographic Cyber Sun
+    for (var b = 0; b < hazards.length; b++) {
+      var bsx = hazards[b].x - dist;
+      if (!hazards[b].dead && Math.abs(bsx - bx) < 24 && Math.abs(bikeY - (hazards[b].y - 16)) < 24) {
+        hazards[b].dead = true;
+        state = "CRASHED";
+        msg = "CRITICAL HIT! You collided with a plasma core.";
+        boom(bx, bikeY, "#ff0055");
+      }
+    }
+
+    for (var c = 0; c < orbs.length; c++) {
+      var csx = orbs[c].x - dist;
+      if (!orbs[c].got && Math.hypot(csx - bx, orbs[c].y - bikeY) < 34) {
+        orbs[c].got = true;
+        score += 50;
+      }
+    }
+  }
+
+  function draw() {
+    var L = LEVELS[lvlIdx];
+    var g = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    g.addColorStop(0, L.top);
+    g.addColorStop(1, L.bot);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.strokeStyle = L.grid;
+    ctx.lineWidth = 1;
+    var gOff = dist % 50;
+    for (var gx = -gOff; gx < canvas.width; gx += 50) {
+      ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, canvas.height); ctx.stroke();
+    }
+    for (var gy = 0; gy < canvas.height; gy += 50) {
+      ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(canvas.width, gy); ctx.stroke();
+    }
+
+    ctx.save();
+    ctx.shadowColor = L.orb;
+    ctx.shadowBlur = 28;
+    ctx.fillStyle = L.orb;
+    ctx.beginPath();
+    ctx.arc(690, 140, 58, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.fillStyle = "rgba(4, 7, 17, 0.55)";
+    for (var b = 0; b < 14; b++) {
+      var bxPos = ((b * 110 - dist * 0.2) % 1400 + 1400) % 1400 - 100;
+      var bh = 70 + ((b * 47) % 110);
+      ctx.fillRect(bxPos, 340 - bh, 68, bh + 140);
+    }
+
+    ctx.fillStyle = L.fill;
+    ctx.beginPath();
+    ctx.moveTo(0, canvas.height);
+    for (var sx = 0; sx <= canvas.width; sx += 8) {
+      ctx.lineTo(sx, terrainY(dist + sx));
+    }
+    ctx.lineTo(canvas.width, canvas.height);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.save();
+    ctx.shadowColor = L.line;
+    ctx.shadowBlur = 14;
+    ctx.strokeStyle = L.line;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    for (var lx = 0; lx <= canvas.width; lx += 8) {
+      var sy = terrainY(dist + lx);
+      if (lx === 0) ctx.moveTo(lx, sy); else ctx.lineTo(lx, sy);
+    }
+    ctx.stroke();
+    ctx.restore();
+
+    if (trail.length > 1) {
       ctx.save();
+      ctx.strokeStyle = L.line;
+      ctx.shadowColor = L.line;
+      ctx.shadowBlur = 12;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      for (var t = 0; t < trail.length; t++) {
+        var tx = trail[t].worldX - dist;
+        if (t === 0) ctx.moveTo(tx, trail[t].y); else ctx.lineTo(tx, trail[t].y);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    for (var r = 0; r < ramps.length; r++) {
+      var rsx = ramps[r].x - dist;
+      if (rsx < -60 || rsx > canvas.width + 60) continue;
+      ctx.fillStyle = "#00f0ff";
+      ctx.beginPath();
+      ctx.moveTo(rsx - 24, ramps[r].y);
+      ctx.lineTo(rsx + 24, ramps[r].y - 22);
+      ctx.lineTo(rsx + 24, ramps[r].y);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    for (var h = 0; h < hazards.length; h++) {
+      var hsx = hazards[h].x - dist;
+      if (hazards[h].dead || hsx < -50 || hsx > canvas.width + 50) continue;
+      ctx.fillStyle = "#ff0055";
+      ctx.fillRect(hsx - 11, hazards[h].y - 26, 22, 26);
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(hsx - 11, hazards[h].y - 16, 22, 4);
+    }
+
+    for (var c = 0; c < orbs.length; c++) {
+      var csx = orbs[c].x - dist;
+      if (orbs[c].got || csx < -30 || csx > canvas.width + 30) continue;
+      ctx.fillStyle = "#00f0ff";
+      ctx.beginPath(); ctx.arc(csx, orbs[c].y, 8, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.stroke();
+    }
+
+    var fx = L.len - dist;
+    if (fx < canvas.width + 100) {
+      var fy = terrainY(L.len);
+      ctx.fillStyle = "#00f0ff";
+      ctx.fillRect(fx - 4, fy - 125, 8, 125);
