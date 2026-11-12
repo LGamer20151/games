@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sunset Moto Trials – 5 Levels</title>
+  <title>Sunset Moto Trials</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       background: #120813;
       color: #fff7ed;
-      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-family: system-ui, -apple-system, sans-serif;
       height: 100vh;
       display: flex;
       flex-direction: column;
@@ -18,7 +18,7 @@
       overflow: hidden;
     }
     .top-bar {
-      width: 920px;
+      width: 900px;
       max-width: 96vw;
       display: flex;
       justify-content: space-between;
@@ -27,7 +27,7 @@
       gap: 8px;
       flex-wrap: wrap;
     }
-    .level-pills { display: flex; gap: 6px; }
+    .level-pills { display: flex; gap: 6px; flex-wrap: wrap; }
     .lvl-btn {
       background: #27132a;
       color: #fdba74;
@@ -39,7 +39,7 @@
       cursor: pointer;
     }
     .lvl-btn.active {
-      background: linear-gradient(135deg, #f97316, #ec4899);
+      background: #f97316;
       color: #fff;
       border-color: #fb923c;
     }
@@ -47,9 +47,9 @@
       background: #1a0b1c;
       border: 2px solid #581c4f;
       border-radius: 14px;
-      box-shadow: 0 0 45px rgba(249, 115, 22, 0.22);
+      box-shadow: 0 0 40px rgba(249, 115, 22, 0.25);
       max-width: 96vw;
-      max-height: 82vh;
+      max-height: 80vh;
     }
     .controls {
       margin-top: 10px;
@@ -66,7 +66,7 @@
     <div class="level-pills" id="levelBar"></div>
   </div>
 
-  <canvas id="game" width="920" height="500"></canvas>
+  <canvas id="game" width="900" height="480"></canvas>
 
   <div class="controls">
     <span>W / UP</span> Gas &nbsp;•&nbsp;
@@ -76,267 +76,222 @@
   </div>
 
   <script>
+    window.onerror = function(message, source, lineno) {
+      const c = document.getElementById('game');
+      if (c) {
+        const x = c.getContext('2d');
+        x.fillStyle = '#ef4444';
+        x.font = 'bold 16px monospace';
+        x.fillText('Error on line ' + lineno + ': ' + message, 20, 40);
+      }
+    };
+
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
 
     const LEVELS = [
-      {
-        name: '1. Canyon Sunset',
-        length: 4200,
-        skyTop: '#1e1b4b', skyBot: '#be185d', sunColor: '#fde047',
-        groundFill: '#2e1026', groundLine: '#f97316',
-        amp1: 65, amp2: 28, hazards: 4, ramps: 3
-      },
-      {
-        name: '2. Red Rock Dunes',
-        length: 5200,
-        skyTop: '#2c0b0e', skyBot: '#c2410c', sunColor: '#fb923c',
-        groundFill: '#3b120e', groundLine: '#facc15',
-        amp1: 82, amp2: 36, hazards: 7, ramps: 5
-      },
-      {
-        name: '3. Lava Caldera',
-        length: 6200,
-        skyTop: '#18060a', skyBot: '#991b1b', sunColor: '#ef4444',
-        groundFill: '#24090d', groundLine: '#fb7185',
-        amp1: 92, amp2: 44, hazards: 10, ramps: 6
-      },
-      {
-        name: '4. Twilight Ridge',
-        length: 7200,
-        skyTop: '#0f172a', skyBot: '#6d28d9', sunColor: '#c084fc',
-        groundFill: '#1e1b4b', groundLine: '#38bdf8',
-        amp1: 102, amp2: 48, hazards: 13, ramps: 8
-      },
-      {
-        name: '5. Inferno Gauntlet',
-        length: 8500,
-        skyTop: '#09090b', skyBot: '#b91c1c', sunColor: '#fef08a',
-        groundFill: '#1f070a', groundLine: '#f59e0b',
-        amp1: 112, amp2: 52, hazards: 17, ramps: 10
-      }
+      { name: '1. Canyon', len: 4200, top: '#1e1b4b', bot: '#be185d', sun: '#fde047', fill: '#2e1026', line: '#f97316', a1: 62, a2: 26, haz: 4, rmp: 3 },
+      { name: '2. Dunes',  len: 5200, top: '#2c0b0e', bot: '#c2410c', sun: '#fb923c', fill: '#3b120e', line: '#facc15', a1: 78, a2: 34, haz: 7, rmp: 5 },
+      { name: '3. Lava',   len: 6200, top: '#18060a', bot: '#991b1b', sun: '#ef4444', fill: '#24090d', line: '#fb7185', a1: 90, a2: 40, haz: 10, rmp: 6 },
+      { name: '4. Ridge',  len: 7200, top: '#0f172a', bot: '#6d28d9', sun: '#c084fc', fill: '#1e1b4b', line: '#38bdf8', a1: 100, a2: 45, haz: 13, rmp: 8 },
+      { name: '5. Inferno',len: 8500, top: '#09090b', bot: '#b91c1c', sun: '#fef08a', fill: '#1f070a', line: '#f59e0b', a1: 110, a2: 50, haz: 16, rmp: 10 }
     ];
 
-    let currentLevelIdx = 0;
-    let dist = 0;
-    let speed = 0;
-    let bikeY = 200;
-    let vy = 0;
-    let angle = 0;
-    let airRot = 0;
-    let flips = 0;
-    let score = 0;
-    let startTime = 0;
-    let elapsedTime = 0;
-    let state = 'PLAYING'; // PLAYING, CRASHED, WON
-    let statusMsg = '';
-
-    let barrels = [];
-    let ramps = [];
-    let coins = [];
-    let particles = [];
-
+    let lvlIdx = 0, dist = 0, speed = 0, bikeY = 320, vy = 0, angle = 0;
+    let airRot = 0, flips = 0, score = 0, startTime = 0, elapsed = 0;
+    let state = 'PLAYING', msg = '';
+    let barrels = [], ramps = [], coins = [], parts = [];
     const keys = {};
-    window.addEventListener('keydown', e => {
+
+    function lt(a, b) { return a - b < 0; }
+    function gt(a, b) { return a - b > 0; }
+
+    window.addEventListener('keydown', function(e) {
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
       keys[e.code] = true;
-      if (e.code === 'KeyR') loadLevel(currentLevelIdx);
+      if (e.code === 'KeyR') loadLevel(lvlIdx);
       if (e.code === 'Space') {
-        if (state === 'CRASHED') loadLevel(currentLevelIdx);
-        else if (state === 'WON') loadLevel((currentLevelIdx + 1) % LEVELS.length);
+        if (state === 'CRASHED') loadLevel(lvlIdx);
+        else if (state === 'WON') loadLevel((lvlIdx + 1) % LEVELS.length);
       }
     });
-    window.addEventListener('keyup', e => keys[e.code] = false);
-    canvas.addEventListener('click', () => {
-      if (state === 'CRASHED') loadLevel(currentLevelIdx);
-      else if (state === 'WON') loadLevel((currentLevelIdx + 1) % LEVELS.length);
+    window.addEventListener('keyup', function(e) { keys[e.code] = false; });
+    canvas.addEventListener('click', function() {
+      if (state === 'CRASHED') loadLevel(lvlIdx);
+      else if (state === 'WON') loadLevel((lvlIdx + 1) % LEVELS.length);
     });
 
-    function buildLevelButtons() {
+    function terrainY(x) {
+      const L = LEVELS[lvlIdx];
+      if (lt(x, 350)) return 335;
+      const t = x - 350;
+      return 335 - Math.sin(t * 0.0052) * L.a1 - Math.cos(t * 0.0125) * L.a2;
+    }
+
+    function renderButtons() {
       const bar = document.getElementById('levelBar');
       bar.innerHTML = '';
-      LEVELS.forEach((lvl, idx) => {
-        const btn = document.createElement('button');
-        btn.className = 'lvl-btn' + (idx === currentLevelIdx ? ' active' : '');
-        btn.textContent = lvl.name;
-        btn.onclick = () => loadLevel(idx);
-        bar.appendChild(btn);
+      LEVELS.forEach(function(L, i) {
+        const b = document.createElement('button');
+        b.className = 'lvl-btn' + (i === lvlIdx ? ' active' : '');
+        b.textContent = L.name;
+        b.onclick = function() { loadLevel(i); };
+        bar.appendChild(b);
       });
     }
 
-    function terrainY(x) {
-      const lvl = LEVELS[currentLevelIdx];
-      if (x < 350) return 340;
-      const t = x - 350;
-      return 340
-        - Math.sin(t * 0.0052) * lvl.amp1
-        - Math.cos(t * 0.0125) * lvl.amp2;
-    }
-
-    function loadLevel(idx) {
-      currentLevelIdx = idx;
-      buildLevelButtons();
-      const lvl = LEVELS[idx];
-
-      dist = 0;
-      speed = 0;
-      bikeY = terrainY(220) - 18;
-      vy = 0;
-      angle = 0;
-      airRot = 0;
-      flips = 0;
-      score = 0;
-      startTime = performance.now();
-      elapsedTime = 0;
-      state = 'PLAYING';
-      statusMsg = '';
-      particles = [];
+    function loadLevel(i) {
+      lvlIdx = i;
+      renderButtons();
+      const L = LEVELS[i];
+      dist = 0; speed = 0; bikeY = terrainY(220) - 17; vy = 0; angle = 0;
+      airRot = 0; flips = 0; score = 0; startTime = performance.now(); elapsed = 0;
+      state = 'PLAYING'; msg = ''; parts = [];
 
       ramps = [];
-      const rampStep = (lvl.length - 900) / Math.max(1, lvl.ramps);
-      for (let i = 0; i < lvl.ramps; i++) {
-        const rx = 650 + i * rampStep;
+      const rStep = (L.len - 900) / L.rmp;
+      for (let k = 0; lt(k, L.rmp); k++) {
+        const rx = 650 + k * rStep;
         ramps.push({ x: rx, y: terrainY(rx) });
       }
 
       barrels = [];
-      const hazStep = (lvl.length - 1000) / Math.max(1, lvl.hazards);
-      for (let i = 0; i < lvl.hazards; i++) {
-        const hx = 880 + i * hazStep;
-        if (!ramps.some(r => Math.abs(r.x - hx) < 170)) {
-          barrels.push({ x: hx, y: terrainY(hx), exploded: false });
+      const hStep = (L.len - 1000) / L.haz;
+      for (let k = 0; lt(k, L.haz); k++) {
+        const hx = 880 + k * hStep;
+        const nearRamp = ramps.some(function(r) { return lt(Math.abs(r.x - hx), 170); });
+        if (!nearRamp) {
+          barrels.push({ x: hx, y: terrainY(hx), dead: false });
         }
       }
 
       coins = [];
-      for (let cx = 500; cx < lvl.length - 200; cx += 260) {
-        coins.push({ x: cx, y: terrainY(cx) - 42, collected: false });
+      for (let cx = 500; lt(cx, L.len - 200); cx += 260) {
+        coins.push({ x: cx, y: terrainY(cx) - 42, got: false });
       }
     }
 
-    function spawnExplosion(x, y, color) {
-      for (let i = 0; i < 22; i++) {
+    function boom(x, y, col) {
+      for (let k = 0; lt(k, 20); k++) {
         const a = Math.random() * Math.PI * 2;
-        const spd = 2 + Math.random() * 6;
-        particles.push({
-          x, y,
-          vx: Math.cos(a) * spd,
-          vy: Math.sin(a) * spd - 2,
-          life: 1,
-          color,
-          size: 4 + Math.random() * 5
-        });
+        const s = 2 + Math.random() * 6;
+        parts.push({ x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 2, life: 1, col: col, sz: 5 });
       }
     }
 
     function update() {
-      particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += 0.15; p.life -= 0.03; });
-      particles = particles.filter(p => p.life > 0);
-
+      parts.forEach(function(p) { p.x += p.vx; p.y += p.vy; p.vy += 0.15; p.life -= 0.03; });
+      parts = parts.filter(function(p) { return gt(p.life, 0); });
       if (state !== 'PLAYING') return;
 
-      const lvl = LEVELS[currentLevelIdx];
+      const L = LEVELS[lvlIdx];
       const bx = 220;
-      elapsedTime = (performance.now() - startTime) / 1000;
+      elapsed = (performance.now() - startTime) / 1000;
 
-      const gas = keys['ArrowUp'] || keys['KeyW'];
-      const brake = keys['ArrowDown'] || keys['KeyS'];
-
-      if (gas) speed = Math.min(12, speed + 0.24);
-      else if (brake) speed = Math.max(0, speed - 0.3);
+      if (keys['ArrowUp'] || keys['KeyW']) speed = Math.min(12, speed + 0.24);
+      else if (keys['ArrowDown'] || keys['KeyS']) speed = Math.max(0, speed - 0.3);
       else speed = Math.max(0, speed - 0.07);
 
       dist += speed;
       score += speed * 0.05;
 
-      if (dist + bx >= lvl.length) {
+      if (!lt(dist + bx, L.len)) {
         state = 'WON';
-        score += Math.max(0, Math.floor((60 - elapsedTime) * 20));
-        spawnExplosion(bx, bikeY, '#fde047');
+        score += Math.max(0, Math.floor((60 - elapsed) * 20));
+        boom(bx, bikeY, '#fde047');
         return;
       }
 
-      const groundY = terrainY(dist + bx);
-      const nextGroundY = terrainY(dist + bx + 12);
-      const slope = Math.atan2(nextGroundY - groundY, 12);
+      const gy = terrainY(dist + bx);
+      const ngy = terrainY(dist + bx + 12);
+      const slope = Math.atan2(ngy - gy, 12);
 
       vy += 0.48;
       bikeY += vy;
 
-      const onGround = bikeY >= groundY - 17;
+      if (!lt(bikeY, gy - 17)) {
+        let norm = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+        if (gt(norm, Math.PI)) norm -= Math.PI * 2;
 
-      if (onGround) {
-        let normAngle = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-        if (normAngle > Math.PI) normAngle -= Math.PI * 2;
-
-        if (Math.abs(normAngle - slope) > 1.18) {
+        if (gt(Math.abs(norm - slope), 1.18)) {
           state = 'CRASHED';
-          statusMsg = 'Bad Landing! Keep your wheels aligned with the ground.';
-          spawnExplosion(bx, bikeY, '#f97316');
+          msg = 'Bad Landing! Keep your tires aligned with the ground.';
+          boom(bx, bikeY, '#f97316');
           return;
         }
-
-        if (flips > 0) {
-          score += flips * 300;
-          flips = 0;
-        }
-
-        bikeY = groundY - 17;
-        vy = (nextGroundY - groundY) * (speed / 12);
+        if (gt(flips, 0)) { score += flips * 300; flips = 0; }
+        bikeY = gy - 17;
+        vy = (ngy - gy) * (speed / 12);
         angle = slope;
         airRot = 0;
-
-        if (speed > 2 && Math.random() < 0.5) {
-          particles.push({
-            x: bx - 20, y: bikeY + 12,
-            vx: -2 - Math.random() * 2, vy: -0.5,
-            life: 0.8, color: '#fb923c', size: 3.5
-          });
+        if (gt(speed, 2) && lt(Math.random(), 0.5)) {
+          parts.push({ x: bx - 20, y: bikeY + 12, vx: -2.5, vy: -0.5, life: 0.7, col: '#fb923c', sz: 3.5 });
         }
       } else {
         if (keys['ArrowLeft'] || keys['KeyA']) { angle -= 0.095; airRot -= 0.095; }
         if (keys['ArrowRight'] || keys['KeyD']) { angle += 0.095; airRot += 0.095; }
-        if (Math.abs(airRot) >= Math.PI * 1.8) {
-          flips++;
-          airRot = 0;
-        }
+        if (!lt(Math.abs(airRot), Math.PI * 1.8)) { flips++; airRot = 0; }
       }
 
-      ramps.forEach(r => {
+      ramps.forEach(function(r) {
         const sx = r.x - dist;
-        if (Math.abs(sx - bx) < 28 && Math.abs(bikeY - (r.y - 18)) < 24) {
+        if (lt(Math.abs(sx - bx), 28) && lt(Math.abs(bikeY - (r.y - 18)), 24)) {
           vy = -12.5;
           speed = Math.max(speed, 11.5);
         }
       });
 
-      barrels.forEach(b => {
+      barrels.forEach(function(b) {
         const sx = b.x - dist;
-        if (!b.exploded && Math.abs(sx - bx) < 24 && Math.abs(bikeY - (b.y - 16)) < 24) {
-          b.exploded = true;
+        if (!b.dead && lt(Math.abs(sx - bx), 24) && lt(Math.abs(bikeY - (b.y - 16)), 24)) {
+          b.dead = true;
           state = 'CRASHED';
-          statusMsg = 'Boom! You hit an explosive fuel barrel.';
-          spawnExplosion(bx, bikeY, '#ef4444');
+          msg = 'Boom! You hit an explosive fuel barrel.';
+          boom(bx, bikeY, '#ef4444');
         }
       });
 
-      coins.forEach(c => {
+      coins.forEach(function(c) {
         const sx = c.x - dist;
-        if (!c.collected && Math.hypot(sx - bx, c.y - bikeY) < 34) {
-          c.collected = true;
+        if (!c.got && lt(Math.hypot(sx - bx, c.y - bikeY), 34)) {
+          c.got = true;
           score += 50;
         }
       });
     }
 
     function draw() {
-      const lvl = LEVELS[currentLevelIdx];
-
-      const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-      grad.addColorStop(0, lvl.skyTop);
-      grad.addColorStop(1, lvl.skyBot);
-      ctx.fillStyle = grad;
+      const L = LEVELS[lvlIdx];
+      const g = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      g.addColorStop(0, L.top);
+      g.addColorStop(1, L.bot);
+      ctx.fillStyle = g;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      ctx.fillStyle = lvl.sunColor;
+      ctx.fillStyle = L.sun;
       ctx.beginPath();
+      ctx.arc(680, 145, 65, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = L.fill;
+      ctx.beginPath();
+      ctx.moveTo(0, canvas.height);
+      for (let sx = 0; !gt(sx, canvas.width); sx += 8) ctx.lineTo(sx, terrainY(dist + sx));
+      ctx.lineTo(canvas.width, canvas.height);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = L.line;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      for (let sx = 0; !gt(sx, canvas.width); sx += 8) {
+        const sy = terrainY(dist + sx);
+        if (sx === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+      }
+      ctx.stroke();
+
+      ramps.forEach(function(r) {
+        const sx = r.x - dist;
+        if (lt(sx, -60) || gt(sx, canvas.width + 60)) return;
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
