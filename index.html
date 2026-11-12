@@ -1,85 +1,350 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Unblocked Arcade Hub</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FreezeNova – Moto & Stunt Bike Games</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Segoe UI', system-ui, sans-serif; background-color: #0b0c10; color: #c5c6c7; min-height: 100vh; padding: 40px 20px; }
-    header { max-width: 1200px; margin: 0 auto 40px auto; text-align: center; }
-    h1 { font-size: 2.5rem; color: #66fcf1; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
-    p { color: #858688; }
-    
-    /* Game Grid Layout */
-    .game-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 25px; max-width: 1200px; margin: 0 auto; }
-    
-    /* Game Card Styling */
-    .game-card { background: #1f2833; border-radius: 12px; overflow: hidden; text-decoration: none; color: #fff; transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s; border: 1px solid #2a3542; display: block; }
-    .game-card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(102, 252, 241, 0.2); border-color: #66fcf1; }
-    .thumbnail { width: 100%; aspect-ratio: 16/10; background: linear-gradient(135deg, #121824, #0b0c10); display: flex; align-items: center; justify-content: center; font-size: 3.5rem; }
-    .info { padding: 15px; }
-    .title { font-size: 1.1rem; font-weight: bold; margin-bottom: 5px; color: #fff; }
-    .category { font-size: 0.8rem; color: #66fcf1; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+    :root {
+      --bg-dark: #0b1120;
+      --bg-panel: #131c31;
+      --bg-card: #19243d;
+      --accent: #00d4ff;
+      --accent-glow: rgba(0, 212, 255, 0.35);
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --border: #263554;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      text-decoration: none;
+      color: var(--text-main);
+    }
+
+    .logo span { color: var(--accent); text-shadow: 0 0 12px var(--accent-glow); }
+
+    .search-box { flex: 1; max-width: 440px; }
+
+    .search-box input {
+      width: 100%;
+      padding: 10px 16px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--bg-dark);
+      color: var(--text-main);
+      font-size: 0.95rem;
+      outline: none;
+    }
+
+    .search-box input:focus { border-color: var(--accent); }
+
+    .categories {
+      background: var(--bg-panel);
+      padding: 12px 24px;
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .cat-btn {
+      background: var(--bg-card);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      padding: 7px 16px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .cat-btn:hover, .cat-btn.active {
+      background: var(--accent);
+      color: #05101f;
+      border-color: var(--accent);
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    main {
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 24px;
+      flex: 1;
+    }
+
+    .section-title {
+      font-size: 1.25rem;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-title::before {
+      content: "";
+      width: 4px;
+      height: 20px;
+      background: var(--accent);
+      border-radius: 2px;
+    }
+
+    .game-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 18px;
+    }
+
+    .game-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .game-card:hover {
+      transform: translateY(-5px);
+      border-color: var(--accent);
+      box-shadow: 0 8px 24px rgba(0, 212, 255, 0.18);
+    }
+
+    .thumb {
+      height: 140px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3.2rem;
+      position: relative;
+    }
+
+    .badge {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      background: rgba(11, 17, 32, 0.85);
+      color: var(--accent);
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--accent);
+    }
+
+    .card-info { padding: 12px; }
+    .card-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 4px; }
+    .card-meta { font-size: 0.78rem; color: var(--text-muted); display: flex; justify-content: space-between; }
+
+    #player-view { display: none; }
+
+    .player-wrapper {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+
+    .canvas-stage {
+      width: 100%;
+      height: 500px;
+      background: #060a14;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    canvas {
+      background: #090f1e;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      max-width: 100%;
+      max-height: 100%;
+    }
+
+    .player-bar {
+      padding: 14px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    .player-controls { display: flex; gap: 10px; }
+
+    .btn {
+      background: var(--bg-card);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+
+    .btn:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-primary { background: var(--accent); color: #05101f; border-color: var(--accent); }
+    .btn-primary:hover { color: #05101f; opacity: 0.9; }
+
+    .game-details {
+      padding: 20px;
+      background: var(--bg-card);
+      border-radius: 12px;
+      line-height: 1.6;
+    }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
   </style>
 </head>
 <body>
 
   <header>
-    <h1>Unblocked Arcade Hub</h1>
-    <p>Select a game to start playing instantly</p>
+    <a class="logo" onclick="showHome()">🏍️ FREEZE<span>NOVA</span> MOTO</a>
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="Search moto & dirt bike games..." oninput="renderGrid()" />
+    </div>
+    <button class="btn btn-primary" onclick="playRandom()">🎲 Random Moto Game</button>
   </header>
 
-  <main class="game-grid">
-    <a href="egghelix.html" class="game-card">
-      <div class="thumbnail">🥚</div>
-      <div class="info">
-        <div class="category">Arcade</div>
-        <div class="title">Egg Helix</div>
-      </div>
-    </a>
+  <nav class="categories">
+    <button class="cat-btn active" onclick="setCategory('All', this)">All Moto Games</button>
+    <button class="cat-btn" onclick="setCategory('Stunt Trials', this)">Stunt & Trials</button>
+    <button class="cat-btn" onclick="setCategory('Traffic Rider', this)">Traffic & Highway</button>
+    <button class="cat-btn" onclick="setCategory('Supercross', this)">Dirt Bike & Supercross</button>
+  </nav>
 
-    <a href="madalinstuntcars.html" class="game-card">
-      <div class="thumbnail">🏎️</div>
-      <div class="info">
-        <div class="category">Driving / 3D</div>
-        <div class="title">Madalin Stunt Cars Pro</div>
+  <main>
+    <section id="player-view">
+      <div class="player-wrapper">
+        <div class="canvas-stage" id="canvasStage">
+          <canvas id="gameCanvas" width="760" height="440"></canvas>
+        </div>
+        <div class="player-bar">
+          <div>
+            <h2 id="activeTitle">Moto Game</h2>
+            <small id="activeControls" style="color: var(--text-muted);">Controls</small>
+          </div>
+          <div class="player-controls">
+            <button class="btn" onclick="likeGame()">👍 <span id="likeCount">218</span></button>
+            <button class="btn" onclick="restartCurrent()">🔄 Restart</button>
+            <button class="btn btn-primary" onclick="toggleFullscreen()">⛶ Fullscreen</button>
+            <button class="btn" onclick="showHome()">✖ Back to Moto Hub</button>
+          </div>
+        </div>
       </div>
-    </a>
 
-    <a href="snaker.html" class="game-card">
-      <div class="thumbnail">🐍</div>
-      <div class="info">
-        <div class="category">.io Games / Action</div>
-        <div class="title">Snaker.io</div>
+      <div class="game-details">
+        <h3>Game Overview</h3>
+        <p id="activeDesc" style="color: var(--text-muted); margin-top: 6px;"></p>
       </div>
-    </a>
+    </section>
 
-    <a href="stickmanragdoll.html" class="game-card">
-      <div class="thumbnail">🧍</div>
-      <div class="info">
-        <div class="category">2D / Physics</div>
-        <div class="title">Stickman Ragdoll</div>
-      </div>
-    </a>
-
-    <a href="snowrider3d.html" class="game-card">
-      <div class="thumbnail">🛷</div>
-      <div class="info">
-        <div class="category">3D / Endless Runner</div>
-        <div class="title">Snow Rider 3D</div>
-      </div>
-    </a>
-
-    <!-- NEW: 3D Obby Card -->
-    <a href="obby3d.html" class="game-card">
-      <div class="thumbnail">🧱</div>
-      <div class="info">
-        <div class="category">3D / Parkour</div>
-        <div class="title">3D Obby Arena</div>
-      </div>
-    </a>
+    <section id="catalog-view">
+      <h2 class="section-title" id="gridHeading">All Moto & Dirt Bike Games</h2>
+      <div class="game-grid" id="gameGrid"></div>
+    </section>
   </main>
 
-</body>
-</html>
+  <footer>
+    FreezeNova Moto Edition • HTML5 Stunt & Racing Portal
+  </footer>
+
+  <script>
+    const MOTO_GAMES = [
+      {
+        id: 'moto-x3m-trials',
+        title: 'Moto X3M Cyber Trials',
+        category: 'Stunt Trials',
+        icon: '🏍️',
+        gradient: 'linear-gradient(135deg, #00d4ff, #0369a1)',
+        rating: '98%',
+        controls: 'Up/W: Gas • Down/S: Brake • Left/Right (A/D): Lean & Flip in mid-air',
+        desc: 'Launch off steep neon ramps, pull off 360 backflips for bonus points, and land flat on both wheels without crashing your rider.',
+        engine: 'trials',
+        themeColor: '#00d4ff'
+      },
+      {
+        id: 'moto-traffic-rider',
+        title: 'Moto Highway Lane Splitter',
+        category: 'Traffic Rider',
+        icon: '🛣️',
+        gradient: 'linear-gradient(135deg, #f97316, #9a3412)',
+        rating: '96%',
+        controls: 'Left / Right Arrows (A/D): Steer • Up Arrow (W): Turbo Boost',
+        desc: 'Weave a superbike through dense multi-lane highway traffic at blistering speeds. Hold Turbo for double score multipliers.',
+        engine: 'traffic',
+        themeColor: '#f97316'
+      },
+      {
+        id: 'supercross-dirt',
+        title: 'Supercross Dirt Jump',
+        category: 'Supercross',
+        icon: '🏁',
+        gradient: 'linear-gradient(135deg, #eab308, #854d0e)',
+        rating: '95%',
+        controls: 'Spacebar / Up Arrow: Bunny Hop & Ramp Launch • Down Arrow: Fast Drop',
+        desc: 'Race a 450cc motocross bike across mud tracks, clearing jagged rock hazards and double-jump barriers.',
+        engine: 'supercross',
+        themeColor: '#eab308'
+      },
+      {
+        id: 'neon-bike-stunts',
+        title: 'Neon Rooftop Stunt Bike',
+        category: 'Stunt Trials',
+        icon: '🔥',
+        gradient: 'linear-gradient(135deg, #ec4899, #831843)',
+        rating: '94%',
+        controls: 'Up/W: Accelerate • Left/Right (A/D): Mid-Air Pitch Control',
+        desc: 'High-gravity night stunt course featuring steeper hills and faster air rotation for multi-flip combos.',
+        engine: 'trials',
+        themeColor: '#ec4899'
+      },
+      {
+        id: 'night-rider-gp',
+        title: 'Midnight GP Speeder',
+        category: 'Traffic Rider',
+        icon: '⚡',
+        gradient: 'linear-gradient(135deg, #8b5cf6, #3b0764)',
