@@ -1,57 +1,96 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Nova Moto</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CYBER MOTO // 2099</title>
 <style>
-  body { margin:0; background:#0b132b; color:#fff; font-family:sans-serif; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; user-select:none; }
-  #hud { width:800px; max-width:95vw; display:flex; justify-content:space-between; padding:10px 16px; background:#1c2541; border:2px solid #3a86ff; border-bottom:none; box-sizing:border-box; font-weight:bold; }
-  span { color:#6fffe9; }
-  canvas { background:#111d3a; border:2px solid #3a86ff; width:800px; max-width:95vw; display:block; }
-  .row { margin-top:10px; display:flex; gap:8px; }
-  button { background:#1c2541; color:#6fffe9; border:1px solid #3a86ff; padding:10px 16px; border-radius:6px; font-weight:bold; cursor:pointer; }
+  * { box-sizing:border-box; margin:0; padding:0; user-select:none; }
+  body {
+    background: radial-gradient(circle at top, #1a0633 0%, #06020d 100%);
+    color: #fff; font-family: 'Courier New', monospace;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100vh; overflow: hidden;
+  }
+  #hud {
+    width: 800px; max-width: 95vw; display: flex; justify-content: space-between;
+    padding: 12px 18px; background: #0d041a;
+    border: 2px solid #ff007f; border-bottom: none;
+    box-shadow: 0 0 18px rgba(255, 0, 127, 0.45);
+    font-weight: bold; letter-spacing: 1px;
+  }
+  .cyan { color: #00f3ff; text-shadow: 0 0 8px #00f3ff; }
+  .pink { color: #ff007f; text-shadow: 0 0 8px #ff007f; }
+  canvas {
+    background: #070212; border: 2px solid #00f3ff;
+    box-shadow: 0 0 25px rgba(0, 243, 255, 0.35);
+    width: 800px; max-width: 95vw; display: block;
+  }
+  .hint { margin-top: 10px; font-size: 0.85rem; color: #b8a3d1; text-align: center; }
+  .row { margin-top: 10px; display: flex; gap: 10px; }
+  button {
+    background: #120524; color: #00f3ff; border: 1px solid #ff007f;
+    padding: 10px 16px; font-family: inherit; font-weight: bold;
+    cursor: pointer; text-transform: uppercase;
+    box-shadow: 0 0 10px rgba(255, 0, 127, 0.3);
+  }
+  button:active { background: #ff007f; color: #fff; }
 </style>
 </head>
 <body>
-<div id="hud"><div>🏍️ NOVA MOTO</div><div>Dist: <span id="d">0m</span></div><div>Flips: <span id="f">0</span></div><div>Best: <span id="b">0m</span></div></div>
-<canvas id="c" width="800" height="450"></canvas>
-<div class="row">
-  <button onmousedown="k.l=1" onmouseup="k.l=0" ontouchstart="k.l=1" ontouchend="k.l=0">↺ Lean Back</button>
-  <button onmousedown="k.r=1" onmouseup="k.r=0" ontouchstart="k.r=1" ontouchend="k.r=0">↻ Lean Fwd</button>
-  <button onmousedown="k.b=1" onmouseup="k.b=0" ontouchstart="k.b=1" ontouchend="k.b=0">Brake</button>
-  <button onmousedown="k.g=1" onmouseup="k.g=0" ontouchstart="k.g=1" ontouchend="k.g=0">Gas</button>
+
+<div id="hud">
+  <div class="pink">⚡ CYBER MOTO 2099</div>
+  <div>DIST: <span id="d" class="cyan">0m</span></div>
+  <div>FLIPS: <span id="f" class="cyan">0</span></div>
+  <div>BEST: <span id="b" class="pink">0m</span></div>
 </div>
+
+<canvas id="c" width="800" height="450"></canvas>
+
+<div class="hint">[W/UP] BOOST &nbsp;|&nbsp; [S/DOWN] BRAKE &nbsp;|&nbsp; [A/D or LEFT/RIGHT] TILT &nbsp;|&nbsp; [R] REBOOT</div>
+
+<div class="row">
+  <button onmousedown="k.l=1" onmouseup="k.l=0" ontouchstart="k.l=1" ontouchend="k.l=0">↺ Tilt Back</button>
+  <button onmousedown="k.r=1" onmouseup="k.r=0" ontouchstart="k.r=1" ontouchend="k.r=0">↻ Tilt Fwd</button>
+  <button onmousedown="k.b=1" onmouseup="k.b=0" ontouchstart="k.b=1" ontouchend="k.b=0">Brake</button>
+  <button onmousedown="k.g=1" onmouseup="k.g=0" ontouchstart="k.g=1" ontouchend="k.g=0">Boost ⚡</button>
+</div>
+
 <script>
 const c = document.getElementById("c"), x = c.getContext("2d");
 const k = {g:0, b:0, l:0, r:0};
-let best = +localStorage.getItem("nmBest") || 0, bike, cam = 0;
+let best = +localStorage.getItem("cmBest") || 0, bike, cam = 0, trail = [];
 document.getElementById("b").textContent = best + "m";
 
 onkeydown = e => {
   if ("ArrowUp,ArrowDown,ArrowLeft,ArrowRight".includes(e.key)) e.preventDefault();
-  if (e.key=="ArrowUp"||e.key=="w") k.g=1;
-  if (e.key=="ArrowDown"||e.key=="s") k.b=1;
-  if (e.key=="ArrowLeft"||e.key=="a") k.l=1;
-  if (e.key=="ArrowRight"||e.key=="d") k.r=1;
+  if (e.key=="ArrowUp"||e.key=="w"||e.key=="W") k.g=1;
+  if (e.key=="ArrowDown"||e.key=="s"||e.key=="S") k.b=1;
+  if (e.key=="ArrowLeft"||e.key=="a"||e.key=="A") k.l=1;
+  if (e.key=="ArrowRight"||e.key=="d"||e.key=="D") k.r=1;
   if (e.key=="r"||e.key=="R") reset();
 };
 onkeyup = e => {
-  if (e.key=="ArrowUp"||e.key=="w") k.g=0;
-  if (e.key=="ArrowDown"||e.key=="s") k.b=0;
-  if (e.key=="ArrowLeft"||e.key=="a") k.l=0;
-  if (e.key=="ArrowRight"||e.key=="d") k.r=0;
+  if (e.key=="ArrowUp"||e.key=="w"||e.key=="W") k.g=0;
+  if (e.key=="ArrowDown"||e.key=="s"||e.key=="S") k.b=0;
+  if (e.key=="ArrowLeft"||e.key=="a"||e.key=="A") k.l=0;
+  if (e.key=="ArrowRight"||e.key=="d"||e.key=="D") k.r=0;
 };
 
-const hill = p => p < 300 ? 340 : 330 + Math.sin(p*0.0045)*65 + Math.sin(p*0.011)*30;
-const reset = () => { bike = {x:120, y:300, vx:0, vy:0, a:0, av:0, g:0, rot:0, flips:0, dead:0}; document.getElementById("f").textContent=0; };
+const hill = p => p < 300 ? 345 : 335 + Math.sin(p*0.0045)*65 + Math.sin(p*0.011)*30;
+const reset = () => {
+  bike = {x:120, y:300, vx:0, vy:0, a:0, av:0, g:0, rot:0, flips:0, dead:0};
+  trail = []; document.getElementById("f").textContent = 0;
+};
 reset();
 c.onclick = () => { if (bike.dead) reset(); };
 
 setInterval(() => {
   if (!bike.dead) {
-    if (bike.g) { if (k.g) bike.vx+=0.35; if (k.b) bike.vx-=0.3; bike.vx*=0.985; }
-    bike.vx = Math.max(-4, Math.min(16, bike.vx));
-    bike.av = (bike.av + (k.r - k.l) * (bike.g ? 0.004 : 0.007)) * 0.92;
+    if (bike.g) { if (k.g) bike.vx += 0.36; if (k.b) bike.vx -= 0.3; bike.vx *= 0.985; }
+    bike.vx = Math.max(-4, Math.min(17, bike.vx));
+    bike.av = (bike.av + (k.r - k.l) * (bike.g ? 0.0042 : 0.0072)) * 0.92;
     bike.a += bike.av; bike.vy += 0.42; bike.x += bike.vx; bike.y += bike.vy;
     if (bike.x < 60) { bike.x = 60; bike.vx = 0; }
 
@@ -67,29 +106,69 @@ setInterval(() => {
       bike.a += (sl - bike.a) * 0.25; bike.vx += Math.sin(sl) * 0.22;
     } else { bike.g = 0; bike.rot += bike.av; }
 
+    trail.push({x: bike.x, y: bike.y});
+    if (trail.length > 22) trail.shift();
+
     cam = bike.x - 200;
     let m = Math.max(0, Math.floor((bike.x - 120) / 15));
     document.getElementById("d").textContent = m + "m";
-    if (m > best) { best = m; document.getElementById("b").textContent = best + "m"; localStorage.setItem("nmBest", best); }
+    if (m > best) { best = m; document.getElementById("b").textContent = best + "m"; localStorage.setItem("cmBest", best); }
   }
 
-  x.clearRect(0, 0, 800, 450);
+  // Synthwave Sun & Sky
+  let sky = x.createLinearGradient(0, 0, 0, 450);
+  sky.addColorStop(0, "#070212"); sky.addColorStop(0.6, "#1f0638"); sky.addColorStop(1, "#3b0944");
+  x.fillStyle = sky; x.fillRect(0, 0, 800, 450);
+
+  let sun = x.createLinearGradient(0, 60, 0, 240);
+  sun.addColorStop(0, "#ffe600"); sun.addColorStop(1, "#ff007f");
+  x.beginPath(); x.arc(620, 150, 85, 0, 6.29); x.fillStyle = sun; x.fill();
+
+  // Parallax Cyber City Skyline
+  x.fillStyle = "#110424";
+  for (let i = 0; i < 16; i++) {
+    let bx = ((i * 95 - cam * 0.2) % 1520 + 1520) % 1520 - 100;
+    let bh = 70 + (i * 37) % 110;
+    x.fillRect(bx, 360 - bh, 65, bh);
+  }
+
+  // Neon Grid Terrain
   x.beginPath(); x.moveTo(0, 450);
   for (let i = 0; i <= 800; i += 8) x.lineTo(i, hill(i + cam));
-  x.lineTo(800, 450); x.fillStyle = "#1d3557"; x.fill();
-  x.strokeStyle = "#6fffe9"; x.lineWidth = 4; x.stroke();
+  x.lineTo(800, 450); x.fillStyle = "#120428"; x.fill();
 
+  x.save(); x.shadowBlur = 14; x.shadowColor = "#00f3ff";
+  x.strokeStyle = "#00f3ff"; x.lineWidth = 4; x.stroke(); x.restore();
+
+  // Neon Light Trail
+  if (trail.length > 1) {
+    x.beginPath();
+    trail.forEach((p, idx) => idx ? x.lineTo(p.x - cam, p.y) : x.moveTo(p.x - cam, p.y));
+    x.strokeStyle = "rgba(255, 0, 127, 0.55)"; x.lineWidth = 6; x.stroke();
+  }
+
+  // Cyber Lightcycle & Rider
   x.save(); x.translate(bike.x - cam, bike.y); x.rotate(bike.a);
-  [-22, 22].forEach(w => { x.beginPath(); x.arc(w, 10, 13, 0, 6.29); x.fillStyle="#111"; x.fill(); x.stroke(); });
-  x.strokeStyle = "#3a86ff"; x.lineWidth = 5; x.beginPath(); x.moveTo(-22,10); x.lineTo(-4,-6); x.lineTo(14,-6); x.lineTo(22,10); x.stroke();
-  x.strokeStyle = "#fff"; x.lineWidth = 4; x.beginPath(); x.moveTo(-6,-6); x.lineTo(-10,-24); x.lineTo(8,-14); x.stroke();
-  x.beginPath(); x.arc(-10,-31,7,0,6.29); x.fillStyle="#ff006e"; x.fill();
+  x.shadowBlur = 12; x.shadowColor = "#00f3ff";
+  [-22, 22].forEach(w => {
+    x.beginPath(); x.arc(w, 10, 13, 0, 6.29);
+    x.fillStyle = "#070212"; x.fill();
+    x.strokeStyle = "#00f3ff"; x.lineWidth = 3.5; x.stroke();
+  });
+  x.shadowColor = "#ff007f"; x.strokeStyle = "#ff007f"; x.lineWidth = 5;
+  x.beginPath(); x.moveTo(-22,10); x.lineTo(-4,-7); x.lineTo(15,-7); x.lineTo(22,10); x.stroke();
+  x.strokeStyle = "#fff"; x.lineWidth = 3.5;
+  x.beginPath(); x.moveTo(-6,-7); x.lineTo(-10,-24); x.lineTo(8,-14); x.stroke();
+  x.beginPath(); x.arc(-10,-31,7,0,6.29); x.fillStyle = "#00f3ff"; x.fill();
   x.restore();
 
+  // System Crash Screen
   if (bike.dead) {
-    x.fillStyle = "rgba(11,19,43,0.8)"; x.fillRect(0,0,800,450);
-    x.fillStyle = "#ff006e"; x.font = "bold 40px sans-serif"; x.textAlign = "center";
-    x.fillText("WIPEOUT! Click or Press R", 400, 225);
+    x.fillStyle = "rgba(7, 2, 18, 0.84)"; x.fillRect(0, 0, 800, 450);
+    x.fillStyle = "#ff007f"; x.font = "bold 40px 'Courier New', monospace"; x.textAlign = "center";
+    x.fillText("SYSTEM CRASHED", 400, 205);
+    x.fillStyle = "#00f3ff"; x.font = "20px 'Courier New', monospace";
+    x.fillText("[ CLICK OR PRESS R TO REBOOT ]", 400, 248);
   }
 }, 16);
 </script>
