@@ -1,223 +1,328 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Cyber Moto</title>
-<style>
-  body {
-    margin: 0;
-    background: #05010d;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
-    font-family: "Courier New", monospace;
-    color: #0ff;
-    overflow: hidden;
-  }
-  canvas {
-    border: 2px solid #0ff;
-    box-shadow: 0 0 20px #0ff, inset 0 0 20px #f0f;
-    background: #0a0020;
-  }
-  #info {
-    margin-bottom: 10px;
-    text-shadow: 0 0 8px #0ff;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nova Moto Stunt</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body {
+      background: #0b132b;
+      color: #fff;
+      font-family: system-ui, -apple-system, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+    #hud {
+      width: 800px;
+      max-width: 95vw;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 16px;
+      background: #1c2541;
+      border: 2px solid #3a86ff;
+      border-bottom: none;
+      border-radius: 10px 10px 0 0;
+      font-weight: bold;
+    }
+    .stat { color: #6fffe9; font-size: 1.1rem; }
+    canvas {
+      background: linear-gradient(to bottom, #0b132b 0%, #1c2541 75%, #273459 100%);
+      border: 2px solid #3a86ff;
+      border-radius: 0 0 10px 10px;
+      width: 800px;
+      max-width: 95vw;
+      height: auto;
+      display: block;
+    }
+    #controls-hint {
+      margin-top: 10px;
+      font-size: 0.9rem;
+      color: #a8b2d1;
+      text-align: center;
+    }
+    #touch-controls {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .btn {
+      background: #1c2541;
+      color: #6fffe9;
+      border: 1px solid #3a86ff;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .btn:active { background: #3a86ff; color: #fff; }
+  </style>
 </head>
 <body>
-<div id="info">SCORE: 0 | PRESS SPACE OR TAP TO JUMP</div>
-<canvas id="game" width="800" height="400"></canvas>
 
-<script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
-const info = document.getElementById("info");
+  <div id="hud">
+    <div>🏍️ NOVA MOTO</div>
+    <div>Distance: <span id="dist" class="stat">0m</span></div>
+    <div>Flips: <span id="flips" class="stat">0</span></div>
+    <div>Best: <span id="best" class="stat">0m</span></div>
+  </div>
 
-const GROUND = 330;
-const GRAVITY = 0.8;
-const JUMP_POWER = -15;
+  <canvas id="game" width="800" height="450"></canvas>
 
-let bike = { x: 100, y: GROUND - 30, w: 50, h: 30, vy: 0, onGround: true };
-let obstacles = [];
-let speed = 6;
-let score = 0;
-let frame = 0;
-let gameOver = false;
-let gridOffset = 0;
+  <div id="controls-hint">
+    <b>W / Up</b>: Gas &nbsp;|&nbsp; <b>S / Down</b>: Brake &nbsp;|&nbsp;
+    <b>A / Left</b>: Lean Back &nbsp;|&nbsp; <b>D / Right</b>: Lean Forward &nbsp;|&nbsp; <b>R</b>: Restart
+  </div>
 
-function jump() {
-  if (gameOver) {
-    resetGame();
-    return;
-  }
-  if (bike.onGround) {
-    bike.vy = JUMP_POWER;
-    bike.onGround = false;
-  }
-}
+  <div id="touch-controls">
+    <button class="btn" id="btnBack">↺ Lean Back</button>
+    <button class="btn" id="btnFwd">↻ Lean Fwd</button>
+    <button class="btn" id="btnBrake">Brake</button>
+    <button class="btn" id="btnGas">Gas ⛽</button>
+  </div>
 
-document.addEventListener("keydown", e => {
-  if (e.code === "Space" || e.code === "ArrowUp") {
-    e.preventDefault();
-    jump();
-  }
-});
-canvas.addEventListener("touchstart", e => {
-  e.preventDefault();
-  jump();
-});
-canvas.addEventListener("mousedown", jump);
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
 
-function resetGame() {
-  bike.y = GROUND - bike.h;
-  bike.vy = 0;
-  bike.onGround = true;
-  obstacles = [];
-  speed = 6;
-  score = 0;
-  frame = 0;
-  gameOver = false;
-}
+    const distEl = document.getElementById("dist");
+    const flipsEl = document.getElementById("flips");
+    const bestEl = document.getElementById("best");
 
-function spawnObstacle() {
-  const type = Math.random() < 0.5 ? "block" : "spike";
-  const h = type === "block" ? 40 + Math.random() * 30 : 30;
-  obstacles.push({ x: canvas.width, y: GROUND - h, w: 30 + Math.random() * 20, h: h, type: type });
-}
+    let bestScore = Number(localStorage.getItem("novaMotoBest") || 0);
+    bestEl.textContent = bestScore + "m";
 
-function drawGrid() {
-  ctx.strokeStyle = "rgba(255, 0, 255, 0.35)";
-  ctx.lineWidth = 1;
-  for (let x = -gridOffset % 40; x < canvas.width; x += 40) {
-    ctx.beginPath();
-    ctx.moveTo(x, GROUND);
-    ctx.lineTo(canvas.width / 2 + (x - canvas.width / 2) * 3, canvas.height);
-    ctx.stroke();
-  }
-  for (let y = GROUND + 20; y < canvas.height; y += 20) {
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(canvas.width, y);
-    ctx.stroke();
-  }
-}
+    // Input state
+    const keys = { gas: false, brake: false, left: false, right: false };
 
-function drawBike() {
-  ctx.save();
-  ctx.shadowColor = "#0ff";
-  ctx.shadowBlur = 15;
-  ctx.fillStyle = "#0ff";
-  ctx.beginPath();
-  ctx.arc(bike.x + 10, bike.y + bike.h, 12, 0, Math.PI * 2);
-  ctx.arc(bike.x + bike.w - 10, bike.y + bike.h, 12, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#f0f";
-  ctx.fillRect(bike.x, bike.y, bike.w, bike.h - 8);
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(bike.x + bike.w - 8, bike.y + 4, 8, 6);
-  ctx.restore();
-}
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") keys.gas = true;
+      if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") keys.brake = true;
+      if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") keys.left = true;
+      if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") keys.right = true;
+      if (e.key === "r" || e.key === "R") resetGame();
+    });
 
-function drawObstacle(o) {
-  ctx.save();
-  ctx.shadowColor = "#f0f";
-  ctx.shadowBlur = 12;
-  ctx.fillStyle = o.type === "block" ? "#f0f" : "#ff0";
-  if (o.type === "block") {
-    ctx.fillRect(o.x, o.y, o.w, o.h);
-  } else {
-    ctx.beginPath();
-    ctx.moveTo(o.x, GROUND);
-    ctx.lineTo(o.x + o.w / 2, o.y);
-    ctx.lineTo(o.x + o.w, GROUND);
-    ctx.fill();
-  }
-  ctx.restore();
-}
+    window.addEventListener("keyup", (e) => {
+      if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") keys.gas = false;
+      if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") keys.brake = false;
+      if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") keys.left = false;
+      if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") keys.right = false;
+    });
 
-function collides(a, o) {
-  return a.x < o.x + o.w && a.x + a.w > o.x && a.y < o.y + o.h && a.y + a.h > o.y;
-}
-
-function update() {
-  if (gameOver) return;
-  frame++;
-  gridOffset += speed;
-
-  bike.vy += GRAVITY;
-  bike.y += bike.vy;
-  if (bike.y >= GROUND - bike.h) {
-    bike.y = GROUND - bike.h;
-    bike.vy = 0;
-    bike.onGround = true;
-  }
-
-  if (frame % Math.max(60 - Math.floor(score / 5), 35) === 0) spawnObstacle();
-
-  obstacles.forEach(o => o.x -= speed);
-  obstacles = obstacles.filter(o => o.x + o.w > 0);
-
-  for (const o of obstacles) {
-    if (collides(bike, o)) {
-      gameOver = true;
-      break;
+    // Touch / Button bindings
+    function bindBtn(id, prop) {
+      const el = document.getElementById(id);
+      el.addEventListener("mousedown", () => keys[prop] = true);
+      el.addEventListener("mouseup", () => keys[prop] = false);
+      el.addEventListener("mouseleave", () => keys[prop] = false);
+      el.addEventListener("touchstart", (e) => { e.preventDefault(); keys[prop] = true; });
+      el.addEventListener("touchend", (e) => { e.preventDefault(); keys[prop] = false; });
     }
-  }
+    bindBtn("btnGas", "gas");
+    bindBtn("btnBrake", "brake");
+    bindBtn("btnBack", "left");
+    bindBtn("btnFwd", "right");
 
-  if (frame % 6 === 0) score++;
-  speed = 6 + Math.floor(score / 100);
-}
+    // Terrain generator (smooth procedural hills that get steeper over distance)
+    function getTerrainHeight(x) {
+      if (x < 300) return 340; // Flat starting runway
+      const difficulty = Math.min(2.2, 1 + (x - 300) / 18000);
+      const h1 = Math.sin(x * 0.0045) * 55 * difficulty;
+      const h2 = Math.sin(x * 0.011 + 1.5) * 28 * difficulty;
+      const h3 = Math.cos(x * 0.002) * 40;
+      return 330 + h1 + h2 + h3;
+    }
 
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+    function getTerrainSlope(x) {
+      const dx = 4;
+      return Math.atan2(getTerrainHeight(x + dx) - getTerrainHeight(x - dx), dx * 2);
+    }
 
-  const sky = ctx.createLinearGradient(0, 0, 0, GROUND);
-  sky.addColorStop(0, "#05010d");
-  sky.addColorStop(1, "#2a0050");
-  ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, canvas.width, GROUND);
+    // Bike state
+    let bike = {};
+    let cameraX = 0;
 
-  ctx.fillStyle = "#0a0020";
-  ctx.fillRect(0, GROUND, canvas.width, canvas.height - GROUND);
+    function resetGame() {
+      bike = {
+        x: 120,
+        y: 300,
+        vx: 0,
+        vy: 0,
+        angle: 0,
+        angVel: 0,
+        grounded: false,
+        airRotation: 0,
+        flips: 0,
+        crashed: false
+      };
+      cameraX = 0;
+      flipsEl.textContent = "0";
+    }
 
-  ctx.strokeStyle = "#0ff";
-  ctx.lineWidth = 3;
-  ctx.shadowColor = "#0ff";
-  ctx.shadowBlur = 10;
-  ctx.beginPath();
-  ctx.moveTo(0, GROUND);
-  ctx.lineTo(canvas.width, GROUND);
-  ctx.stroke();
-  ctx.shadowBlur = 0;
+    resetGame();
 
-  drawGrid();
-  obstacles.forEach(drawObstacle);
-  drawBike();
+    function update() {
+      if (bike.crashed) return;
 
-  info.textContent = `SCORE: ${score} | ${gameOver ? "GAME OVER - PRESS SPACE TO RESTART" : "PRESS SPACE OR TAP TO JUMP"}`;
+      const gravity = 0.42;
+      const wheelOffset = 22;
 
-  if (gameOver) {
-    ctx.save();
-    ctx.fillStyle = "#f0f";
-    ctx.shadowColor = "#f0f";
-    ctx.shadowBlur = 20;
-    ctx.font = "bold 40px Courier New";
-    ctx.textAlign = "center";
-    ctx.fillText("SYSTEM FAILURE", canvas.width / 2, canvas.height / 2);
-    ctx.restore();
-  }
-}
+      // Acceleration & braking
+      if (bike.grounded) {
+        if (keys.gas) bike.vx += 0.32;
+        if (keys.brake) bike.vx -= 0.28;
+        bike.vx *= 0.985; // Ground friction
+      } else {
+        bike.vx *= 0.996; // Air drag
+      }
 
-function loop() {
-  update();
-  draw();
-  requestAnimationFrame(loop);
-}
+      // Clamp max speed
+      bike.vx = Math.max(-4, Math.min(16, bike.vx));
 
-loop();
-</script>
-</body>
-</html>
+      // Rotation / Lean controls
+      const spinPower = bike.grounded ? 0.004 : 0.0065;
+      if (keys.left) bike.angVel -= spinPower;
+      if (keys.right) bike.angVel += spinPower;
+      bike.angVel *= 0.92;
+      bike.angle += bike.angVel;
+
+      // Apply gravity & velocity
+      bike.vy += gravity;
+      bike.x += bike.vx;
+      bike.y += bike.vy;
+
+      // Prevent reversing off left edge
+      if (bike.x < 60) {
+        bike.x = 60;
+        bike.vx = 0;
+      }
+
+      // Ground collision check
+      const groundY = getTerrainHeight(bike.x);
+      const slope = getTerrainSlope(bike.x);
+
+      if (bike.y + wheelOffset >= groundY) {
+        // Check if landing upside down (crash condition)
+        let normAngle = ((bike.angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+        if (normAngle > Math.PI * 0.62 && normAngle < Math.PI * 1.38) {
+          bike.crashed = true;
+        }
+
+        // Count completed flips on clean landing
+        if (!bike.grounded && !bike.crashed) {
+          const completedFlips = Math.floor(Math.abs(bike.airRotation) / (Math.PI * 1.75));
+          if (completedFlips > 0) {
+            bike.flips += completedFlips;
+            flipsEl.textContent = bike.flips;
+          }
+        }
+
+        bike.y = groundY - wheelOffset;
+        bike.vy = 0;
+        bike.grounded = true;
+        bike.airRotation = 0;
+
+        // Align bike smoothly to hill slope
+        const angleDiff = slope - bike.angle;
+        bike.angle += angleDiff * 0.25;
+
+        // Slope physics boost/drag
+        bike.vx += Math.sin(slope) * 0.22;
+      } else {
+        if (bike.grounded) bike.airRotation = 0;
+        bike.grounded = false;
+        bike.airRotation += bike.angVel;
+      }
+
+      // Update camera & score
+      cameraX = bike.x - 200;
+      const meters = Math.max(0, Math.floor((bike.x - 120) / 15));
+      distEl.textContent = meters + "m";
+
+      if (meters > bestScore) {
+        bestScore = meters;
+        bestEl.textContent = bestScore + "m";
+        localStorage.setItem("novaMotoBest", bestScore);
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw background stars/grid lines
+      ctx.strokeStyle = "rgba(58, 134, 255, 0.12)";
+      ctx.lineWidth = 1;
+      const gridOffset = -(cameraX * 0.5) % 80;
+      for (let gx = gridOffset; gx < canvas.width; gx += 80) {
+        ctx.beginPath();
+        ctx.moveTo(gx, 0);
+        ctx.lineTo(gx, canvas.height);
+        ctx.stroke();
+      }
+
+      // Draw Terrain
+      ctx.beginPath();
+      ctx.moveTo(0, canvas.height);
+      for (let sx = 0; sx <= canvas.width; sx += 6) {
+        const worldX = sx + cameraX;
+        ctx.lineTo(sx, getTerrainHeight(worldX));
+      }
+      ctx.lineTo(canvas.width, canvas.height);
+      ctx.closePath();
+
+      const grad = ctx.createLinearGradient(0, 220, 0, canvas.height);
+      grad.addColorStop(0, "#1d3557");
+      grad.addColorStop(1, "#0b132b");
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // Neon ground top edge
+      ctx.beginPath();
+      for (let sx = 0; sx <= canvas.width; sx += 6) {
+        const worldX = sx + cameraX;
+        const wy = getTerrainHeight(worldX);
+        if (sx === 0) ctx.moveTo(sx, wy);
+        else ctx.lineTo(sx, wy);
+      }
+      ctx.strokeStyle = "#6fffe9";
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+      // Draw Motorcycle & Rider
+      ctx.save();
+      ctx.translate(bike.x - cameraX, bike.y);
+      ctx.rotate(bike.angle);
+
+      // Rear & Front Wheels
+      const drawWheel = (wx, wy) => {
+        ctx.beginPath();
+        ctx.arc(wx, wy, 13, 0, Math.PI * 2);
+        ctx.fillStyle = "#111";
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = "#6fffe9";
+        ctx.stroke();
+      };
+      drawWheel(-22, 10);
+      drawWheel(22, 10);
+
+      // Bike Frame
+      ctx.strokeStyle = "#3a86ff";
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(-22, 10);
+      ctx.lineTo(-4, -6);
+      ctx.lineTo(14, -6);
+      ctx.lineTo(22, 10);
+      ctx.stroke();
+
+      // Rider Body & Helmet
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
