@@ -1,322 +1,97 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Nova Moto Stunt</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
-    body {
-      background: #0b132b;
-      color: #fff;
-      font-family: system-ui, -apple-system, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      overflow: hidden;
-    }
-    #hud {
-      width: 800px;
-      max-width: 95vw;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 16px;
-      background: #1c2541;
-      border: 2px solid #3a86ff;
-      border-bottom: none;
-      border-radius: 10px 10px 0 0;
-      font-weight: bold;
-    }
-    .stat { color: #6fffe9; font-size: 1.1rem; }
-    canvas {
-      background: linear-gradient(to bottom, #0b132b 0%, #1c2541 75%, #273459 100%);
-      border: 2px solid #3a86ff;
-      border-radius: 0 0 10px 10px;
-      width: 800px;
-      max-width: 95vw;
-      height: auto;
-      display: block;
-    }
-    #controls-hint {
-      margin-top: 10px;
-      font-size: 0.9rem;
-      color: #a8b2d1;
-      text-align: center;
-    }
-    #touch-controls {
-      display: flex;
-      gap: 10px;
-      margin-top: 10px;
-    }
-    .btn {
-      background: #1c2541;
-      color: #6fffe9;
-      border: 1px solid #3a86ff;
-      padding: 10px 16px;
-      border-radius: 8px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    .btn:active { background: #3a86ff; color: #fff; }
-  </style>
+<meta charset="UTF-8">
+<title>Nova Moto</title>
+<style>
+  body { margin:0; background:#0b132b; color:#fff; font-family:sans-serif; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; user-select:none; }
+  #hud { width:800px; max-width:95vw; display:flex; justify-content:space-between; padding:10px 16px; background:#1c2541; border:2px solid #3a86ff; border-bottom:none; box-sizing:border-box; font-weight:bold; }
+  span { color:#6fffe9; }
+  canvas { background:#111d3a; border:2px solid #3a86ff; width:800px; max-width:95vw; display:block; }
+  .row { margin-top:10px; display:flex; gap:8px; }
+  button { background:#1c2541; color:#6fffe9; border:1px solid #3a86ff; padding:10px 16px; border-radius:6px; font-weight:bold; cursor:pointer; }
+</style>
 </head>
 <body>
+<div id="hud"><div>🏍️ NOVA MOTO</div><div>Dist: <span id="d">0m</span></div><div>Flips: <span id="f">0</span></div><div>Best: <span id="b">0m</span></div></div>
+<canvas id="c" width="800" height="450"></canvas>
+<div class="row">
+  <button onmousedown="k.l=1" onmouseup="k.l=0" ontouchstart="k.l=1" ontouchend="k.l=0">↺ Lean Back</button>
+  <button onmousedown="k.r=1" onmouseup="k.r=0" ontouchstart="k.r=1" ontouchend="k.r=0">↻ Lean Fwd</button>
+  <button onmousedown="k.b=1" onmouseup="k.b=0" ontouchstart="k.b=1" ontouchend="k.b=0">Brake</button>
+  <button onmousedown="k.g=1" onmouseup="k.g=0" ontouchstart="k.g=1" ontouchend="k.g=0">Gas</button>
+</div>
+<script>
+const c = document.getElementById("c"), x = c.getContext("2d");
+const k = {g:0, b:0, l:0, r:0};
+let best = +localStorage.getItem("nmBest") || 0, bike, cam = 0;
+document.getElementById("b").textContent = best + "m";
 
-  <div id="hud">
-    <div>🏍️ NOVA MOTO</div>
-    <div>Distance: <span id="dist" class="stat">0m</span></div>
-    <div>Flips: <span id="flips" class="stat">0</span></div>
-    <div>Best: <span id="best" class="stat">0m</span></div>
-  </div>
+onkeydown = e => {
+  if ("ArrowUp,ArrowDown,ArrowLeft,ArrowRight".includes(e.key)) e.preventDefault();
+  if (e.key=="ArrowUp"||e.key=="w") k.g=1;
+  if (e.key=="ArrowDown"||e.key=="s") k.b=1;
+  if (e.key=="ArrowLeft"||e.key=="a") k.l=1;
+  if (e.key=="ArrowRight"||e.key=="d") k.r=1;
+  if (e.key=="r"||e.key=="R") reset();
+};
+onkeyup = e => {
+  if (e.key=="ArrowUp"||e.key=="w") k.g=0;
+  if (e.key=="ArrowDown"||e.key=="s") k.b=0;
+  if (e.key=="ArrowLeft"||e.key=="a") k.l=0;
+  if (e.key=="ArrowRight"||e.key=="d") k.r=0;
+};
 
-  <canvas id="game" width="800" height="450"></canvas>
+const hill = p => p < 300 ? 340 : 330 + Math.sin(p*0.0045)*65 + Math.sin(p*0.011)*30;
+const reset = () => { bike = {x:120, y:300, vx:0, vy:0, a:0, av:0, g:0, rot:0, flips:0, dead:0}; document.getElementById("f").textContent=0; };
+reset();
+c.onclick = () => { if (bike.dead) reset(); };
 
-  <div id="controls-hint">
-    <b>W / Up</b>: Gas &nbsp;|&nbsp; <b>S / Down</b>: Brake &nbsp;|&nbsp;
-    <b>A / Left</b>: Lean Back &nbsp;|&nbsp; <b>D / Right</b>: Lean Forward &nbsp;|&nbsp; <b>R</b>: Restart
-  </div>
+setInterval(() => {
+  if (!bike.dead) {
+    if (bike.g) { if (k.g) bike.vx+=0.35; if (k.b) bike.vx-=0.3; bike.vx*=0.985; }
+    bike.vx = Math.max(-4, Math.min(16, bike.vx));
+    bike.av = (bike.av + (k.r - k.l) * (bike.g ? 0.004 : 0.007)) * 0.92;
+    bike.a += bike.av; bike.vy += 0.42; bike.x += bike.vx; bike.y += bike.vy;
+    if (bike.x < 60) { bike.x = 60; bike.vx = 0; }
 
-  <div id="touch-controls">
-    <button class="btn" id="btnBack">↺ Lean Back</button>
-    <button class="btn" id="btnFwd">↻ Lean Fwd</button>
-    <button class="btn" id="btnBrake">Brake</button>
-    <button class="btn" id="btnGas">Gas ⛽</button>
-  </div>
-
-  <script>
-    window.addEventListener("DOMContentLoaded", () => {
-      const canvas = document.getElementById("game");
-      const ctx = canvas.getContext("2d");
-      const distEl = document.getElementById("dist");
-      const flipsEl = document.getElementById("flips");
-      const bestEl = document.getElementById("best");
-
-      let bestScore = 0;
-      try {
-        bestScore = Number(localStorage.getItem("novaMotoBest") || 0);
-      } catch (e) {}
-      bestEl.textContent = bestScore + "m";
-
-      const keys = { gas: false, brake: false, left: false, right: false };
-
-      window.addEventListener("keydown", (e) => {
-        if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "].includes(e.key)) {
-          e.preventDefault();
-        }
-        if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") keys.gas = true;
-        if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") keys.brake = true;
-        if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") keys.left = true;
-        if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") keys.right = true;
-        if (e.key === "r" || e.key === "R") resetGame();
-      });
-
-      window.addEventListener("keyup", (e) => {
-        if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") keys.gas = false;
-        if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") keys.brake = false;
-        if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") keys.left = false;
-        if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") keys.right = false;
-      });
-
-      function bindBtn(id, prop) {
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.addEventListener("mousedown", () => keys[prop] = true);
-        el.addEventListener("mouseup", () => keys[prop] = false);
-        el.addEventListener("mouseleave", () => keys[prop] = false);
-        el.addEventListener("touchstart", (e) => { e.preventDefault(); keys[prop] = true; });
-        el.addEventListener("touchend", (e) => { e.preventDefault(); keys[prop] = false; });
+    let gy = hill(bike.x), sl = Math.atan2(hill(bike.x+4)-hill(bike.x-4), 8);
+    if (bike.y + 22 >= gy) {
+      let na = ((bike.a % 6.283) + 6.283) % 6.283;
+      if (na > 1.9 && na < 4.3) bike.dead = 1;
+      if (!bike.g && !bike.dead) {
+        let fl = Math.floor(Math.abs(bike.rot) / 5.5);
+        if (fl > 0) { bike.flips += fl; document.getElementById("f").textContent = bike.flips; }
       }
-      bindBtn("btnGas", "gas");
-      bindBtn("btnBrake", "brake");
-      bindBtn("btnBack", "left");
-      bindBtn("btnFwd", "right");
+      bike.y = gy - 22; bike.vy = 0; bike.g = 1; bike.rot = 0;
+      bike.a += (sl - bike.a) * 0.25; bike.vx += Math.sin(sl) * 0.22;
+    } else { bike.g = 0; bike.rot += bike.av; }
 
-      function getTerrainHeight(x) {
-        if (x < 300) return 340;
-        const difficulty = Math.min(2.2, 1 + (x - 300) / 18000);
-        const h1 = Math.sin(x * 0.0045) * 55 * difficulty;
-        const h2 = Math.sin(x * 0.011 + 1.5) * 28 * difficulty;
-        const h3 = Math.cos(x * 0.002) * 40;
-        return 330 + h1 + h2 + h3;
-      }
+    cam = bike.x - 200;
+    let m = Math.max(0, Math.floor((bike.x - 120) / 15));
+    document.getElementById("d").textContent = m + "m";
+    if (m > best) { best = m; document.getElementById("b").textContent = best + "m"; localStorage.setItem("nmBest", best); }
+  }
 
-      function getTerrainSlope(x) {
-        const dx = 4;
-        return Math.atan2(getTerrainHeight(x + dx) - getTerrainHeight(x - dx), dx * 2);
-      }
+  x.clearRect(0, 0, 800, 450);
+  x.beginPath(); x.moveTo(0, 450);
+  for (let i = 0; i <= 800; i += 8) x.lineTo(i, hill(i + cam));
+  x.lineTo(800, 450); x.fillStyle = "#1d3557"; x.fill();
+  x.strokeStyle = "#6fffe9"; x.lineWidth = 4; x.stroke();
 
-      let bike = {};
-      let cameraX = 0;
+  x.save(); x.translate(bike.x - cam, bike.y); x.rotate(bike.a);
+  [-22, 22].forEach(w => { x.beginPath(); x.arc(w, 10, 13, 0, 6.29); x.fillStyle="#111"; x.fill(); x.stroke(); });
+  x.strokeStyle = "#3a86ff"; x.lineWidth = 5; x.beginPath(); x.moveTo(-22,10); x.lineTo(-4,-6); x.lineTo(14,-6); x.lineTo(22,10); x.stroke();
+  x.strokeStyle = "#fff"; x.lineWidth = 4; x.beginPath(); x.moveTo(-6,-6); x.lineTo(-10,-24); x.lineTo(8,-14); x.stroke();
+  x.beginPath(); x.arc(-10,-31,7,0,6.29); x.fillStyle="#ff006e"; x.fill();
+  x.restore();
 
-      function resetGame() {
-        bike = {
-          x: 120,
-          y: 300,
-          vx: 0,
-          vy: 0,
-          angle: 0,
-          angVel: 0,
-          grounded: false,
-          airRotation: 0,
-          flips: 0,
-          crashed: false
-        };
-        cameraX = 0;
-        flipsEl.textContent = "0";
-      }
-
-      resetGame();
-
-      function update() {
-        if (bike.crashed) return;
-
-        const gravity = 0.42;
-        const wheelOffset = 22;
-
-        if (bike.grounded) {
-          if (keys.gas) bike.vx += 0.32;
-          if (keys.brake) bike.vx -= 0.28;
-          bike.vx *= 0.985;
-        } else {
-          bike.vx *= 0.996;
-        }
-
-        bike.vx = Math.max(-4, Math.min(16, bike.vx));
-
-        const spinPower = bike.grounded ? 0.004 : 0.0065;
-        if (keys.left) bike.angVel -= spinPower;
-        if (keys.right) bike.angVel += spinPower;
-        bike.angVel *= 0.92;
-        bike.angle += bike.angVel;
-
-        bike.vy += gravity;
-        bike.x += bike.vx;
-        bike.y += bike.vy;
-
-        if (bike.x < 60) {
-          bike.x = 60;
-          bike.vx = 0;
-        }
-
-        const groundY = getTerrainHeight(bike.x);
-        const slope = getTerrainSlope(bike.x);
-
-        if (bike.y + wheelOffset >= groundY) {
-          let normAngle = ((bike.angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-          if (normAngle > Math.PI * 0.62 && normAngle < Math.PI * 1.38) {
-            bike.crashed = true;
-          }
-
-          if (!bike.grounded && !bike.crashed) {
-            const completedFlips = Math.floor(Math.abs(bike.airRotation) / (Math.PI * 1.75));
-            if (completedFlips > 0) {
-              bike.flips += completedFlips;
-              flipsEl.textContent = bike.flips;
-            }
-          }
-
-          bike.y = groundY - wheelOffset;
-          bike.vy = 0;
-          bike.grounded = true;
-          bike.airRotation = 0;
-
-          const angleDiff = slope - bike.angle;
-          bike.angle += angleDiff * 0.25;
-          bike.vx += Math.sin(slope) * 0.22;
-        } else {
-          if (bike.grounded) bike.airRotation = 0;
-          bike.grounded = false;
-          bike.airRotation += bike.angVel;
-        }
-
-        cameraX = bike.x - 200;
-        const meters = Math.max(0, Math.floor((bike.x - 120) / 15));
-        distEl.textContent = meters + "m";
-
-        if (meters > bestScore) {
-          bestScore = meters;
-          bestEl.textContent = bestScore + "m";
-          try {
-            localStorage.setItem("novaMotoBest", bestScore);
-          } catch (e) {}
-        }
-      }
-
-      function draw() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        ctx.strokeStyle = "rgba(58, 134, 255, 0.12)";
-        ctx.lineWidth = 1;
-        const gridOffset = -(cameraX * 0.5) % 80;
-        for (let gx = gridOffset; gx < canvas.width; gx += 80) {
-          ctx.beginPath();
-          ctx.moveTo(gx, 0);
-          ctx.lineTo(gx, canvas.height);
-          ctx.stroke();
-        }
-
-        ctx.beginPath();
-        ctx.moveTo(0, canvas.height);
-        for (let sx = 0; sx <= canvas.width; sx += 6) {
-          const worldX = sx + cameraX;
-          ctx.lineTo(sx, getTerrainHeight(worldX));
-        }
-        ctx.lineTo(canvas.width, canvas.height);
-        ctx.closePath();
-
-        const grad = ctx.createLinearGradient(0, 220, 0, canvas.height);
-        grad.addColorStop(0, "#1d3557");
-        grad.addColorStop(1, "#0b132b");
-        ctx.fillStyle = grad;
-        ctx.fill();
-
-        ctx.beginPath();
-        for (let sx = 0; sx <= canvas.width; sx += 6) {
-          const worldX = sx + cameraX;
-          const wy = getTerrainHeight(worldX);
-          if (sx === 0) ctx.moveTo(sx, wy);
-          else ctx.lineTo(sx, wy);
-        }
-        ctx.strokeStyle = "#6fffe9";
-        ctx.lineWidth = 4;
-        ctx.stroke();
-
-        ctx.save();
-        ctx.translate(bike.x - cameraX, bike.y);
-        ctx.rotate(bike.angle);
-
-        const drawWheel = (wx, wy) => {
-          ctx.beginPath();
-          ctx.arc(wx, wy, 13, 0, Math.PI * 2);
-          ctx.fillStyle = "#111";
-          ctx.fill();
-          ctx.lineWidth = 3;
-          ctx.strokeStyle = "#6fffe9";
-          ctx.stroke();
-        };
-        drawWheel(-22, 10);
-        drawWheel(22, 10);
-
-        ctx.strokeStyle = "#3a86ff";
-        ctx.lineWidth = 5;
-        ctx.beginPath();
-        ctx.moveTo(-22, 10);
-        ctx.lineTo(-4, -6);
-        ctx.lineTo(14, -6);
-        ctx.lineTo(22, 10);
-        ctx.stroke();
-
-        ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.moveTo(-6, -6);
-        ctx.lineTo(-10, -24);
-        ctx.lineTo(8, -14);
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.arc(-10, -31, 7, 0, Math.PI * 2);
-        ctx.fillStyle = "#ff006e";
+  if (bike.dead) {
+    x.fillStyle = "rgba(11,19,43,0.8)"; x.fillRect(0,0,800,450);
+    x.fillStyle = "#ff006e"; x.font = "bold 40px sans-serif"; x.textAlign = "center";
+    x.fillText("WIPEOUT! Click or Press R", 400, 225);
+  }
+}, 16);
+</script>
+</body>
+</html>
