@@ -13,164 +13,239 @@
     min-height: 100vh; overflow: hidden;
   }
   #hud {
-    width: 800px; max-width: 95vw; display: flex; justify-content: space-between;
-    padding: 12px 18px; background: #0d041a;
+    width: 800px; max-width: 95vw; display: flex; flex-wrap: wrap; gap: 8px;
+    justify-content: space-between; align-items: center;
+    padding: 10px 16px; background: #0d041a;
     border: 2px solid #ff007f; border-bottom: none;
     box-shadow: 0 0 18px rgba(255, 0, 127, 0.45);
-    font-weight: bold; letter-spacing: 1px;
+    font-weight: bold; font-size: 0.92rem;
   }
   .cyan { color: #00f3ff; text-shadow: 0 0 8px #00f3ff; }
   .pink { color: #ff007f; text-shadow: 0 0 8px #ff007f; }
+  .gold { color: #ffe600; text-shadow: 0 0 8px #ffe600; }
   canvas {
     background: #070212; border: 2px solid #00f3ff;
     box-shadow: 0 0 25px rgba(0, 243, 255, 0.35);
     width: 800px; max-width: 95vw; display: block;
   }
-  .hint { margin-top: 10px; font-size: 0.85rem; color: #b8a3d1; text-align: center; }
-  .row { margin-top: 10px; display: flex; gap: 10px; }
+  .bar { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
   button {
     background: #120524; color: #00f3ff; border: 1px solid #ff007f;
-    padding: 10px 16px; font-family: inherit; font-weight: bold;
+    padding: 8px 14px; font-family: inherit; font-weight: bold;
     cursor: pointer; text-transform: uppercase;
-    box-shadow: 0 0 10px rgba(255, 0, 127, 0.3);
   }
-  button:active { background: #ff007f; color: #fff; }
+  button:active, button.active { background: #ff007f; color: #fff; }
+  .hint { margin-top: 8px; font-size: 0.8rem; color: #b8a3d1; text-align: center; }
 </style>
 </head>
 <body>
 
 <div id="hud">
-  <div class="pink">⚡ CYBER MOTO 2099</div>
-  <div>DIST: <span id="d" class="cyan">0m</span></div>
+  <div class="pink" id="lvlName">LVL 1: NEON SLUMS</div>
+  <div>GOAL: <span id="d" class="cyan">0 / 400m</span></div>
+  <div>ORBS: <span id="o" class="gold">0</span></div>
   <div>FLIPS: <span id="f" class="cyan">0</span></div>
-  <div>BEST: <span id="b" class="pink">0m</span></div>
+  <div>NITRO: <span id="n" class="pink">100%</span></div>
 </div>
 
 <canvas id="c" width="800" height="450"></canvas>
 
-<div class="hint">[W/UP] BOOST &nbsp;|&nbsp; [S/DOWN] BRAKE &nbsp;|&nbsp; [A/D or LEFT/RIGHT] TILT &nbsp;|&nbsp; [R] REBOOT</div>
+<div class="bar">
+  <button id="b0" onclick="loadLvl(0)">Lvl 1</button>
+  <button id="b1" onclick="loadLvl(1)">Lvl 2</button>
+  <button id="b2" onclick="loadLvl(2)">Lvl 3</button>
+  <button id="b3" onclick="loadLvl(3)">Lvl 4</button>
+  <button onclick="sfxOn=!sfxOn;this.textContent='SFX: '+(sfxOn?'ON':'OFF')">SFX: ON</button>
+</div>
 
-<div class="row">
+<div class="bar">
   <button onmousedown="k.l=1" onmouseup="k.l=0" ontouchstart="k.l=1" ontouchend="k.l=0">↺ Tilt Back</button>
   <button onmousedown="k.r=1" onmouseup="k.r=0" ontouchstart="k.r=1" ontouchend="k.r=0">↻ Tilt Fwd</button>
   <button onmousedown="k.b=1" onmouseup="k.b=0" ontouchstart="k.b=1" ontouchend="k.b=0">Brake</button>
-  <button onmousedown="k.g=1" onmouseup="k.g=0" ontouchstart="k.g=1" ontouchend="k.g=0">Boost ⚡</button>
+  <button onmousedown="k.g=1" onmouseup="k.g=0" ontouchstart="k.g=1" ontouchend="k.g=0">Gas</button>
+  <button onmousedown="k.t=1" onmouseup="k.t=0" ontouchstart="k.t=1" ontouchend="k.t=0">🔥 Nitro</button>
 </div>
+
+<div class="hint">[W/UP] GAS &nbsp;|&nbsp; [SHIFT/SPACE] NITRO &nbsp;|&nbsp; [S/DOWN] BRAKE &nbsp;|&nbsp; [A/D] TILT &nbsp;|&nbsp; [R] REBOOT</div>
 
 <script>
 const c = document.getElementById("c"), x = c.getContext("2d");
-const k = {g:0, b:0, l:0, r:0};
-let best = +localStorage.getItem("cmBest") || 0, bike, cam = 0, trail = [];
-document.getElementById("b").textContent = best + "m";
+const k = {g:0, b:0, l:0, r:0, t:0};
+let sfxOn = true, actx = null;
+
+function beep(freq, dur, type="sawtooth", vol=0.06) {
+  if (!sfxOn) return;
+  try {
+    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, actx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + dur);
+    o.connect(g); g.connect(actx.destination);
+    o.start(); o.stop(actx.currentTime + dur);
+  } catch(e) {}
+}
+
+const LEVELS = [
+  { name: "LVL 1: NEON SLUMS", goal: 400, amp1: 55, amp2: 25, sky: ["#070212","#1f0638","#3b0944"], line: "#00f3ff", spikes: 0 },
+  { name: "LVL 2: CHROME CANYON", goal: 600, amp1: 80, amp2: 38, sky: ["#04121f","#082f49","#0e7490"], line: "#ffe600", spikes: 4 },
+  { name: "LVL 3: DATA REACTOR", goal: 800, amp1: 95, amp2: 45, sky: ["#1f0412","#4c0519","#881337"], line: "#ff007f", spikes: 7 },
+  { name: "LVL 4: ORBITAL SKYWAY", goal: 1000, amp1: 115, amp2: 52, sky: ["#020617","#1e1b4b","#4338ca"], line: "#39ff14", spikes: 10 }
+];
+
+let curLvl = 0, bike, cam = 0, trail = [], orbs = [], pads = [], hazards = [];
+
+function hill(p) {
+  if (p < 320) return 345;
+  const L = LEVELS[curLvl];
+  return 330 + Math.sin(p * 0.0045) * L.amp1 + Math.sin(p * 0.011 + curLvl) * L.amp2;
+}
+
+function loadLvl(idx) {
+  curLvl = idx;
+  document.querySelectorAll(".bar button").forEach((b, i) => { if (i < 4) b.classList.toggle("active", i === idx); });
+  document.getElementById("lvlName").textContent = LEVELS[idx].name;
+  bike = { x:120, y:300, vx:0, vy:0, a:0, av:0, g:0, rot:0, flips:0, orbs:0, nitro:100, dead:0, win:0 };
+  trail = []; orbs = []; pads = []; hazards = [];
+  const goalPx = 120 + LEVELS[idx].goal * 15;
+
+  for (let px = 500; px < goalPx - 200; px += 260) {
+    orbs.push({ x: px, y: hill(px) - 45, got: false });
+  }
+  for (let px = 850; px < goalPx - 300; px += 950) {
+    pads.push({ x: px });
+  }
+  for (let i = 0; i < LEVELS[idx].spikes; i++) {
+    let hx = 900 + i * ((goalPx - 1200) / Math.max(1, LEVELS[idx].spikes));
+    hazards.push({ x: hx });
+  }
+  document.getElementById("f").textContent = 0;
+  document.getElementById("o").textContent = 0;
+}
+loadLvl(0);
 
 onkeydown = e => {
-  if ("ArrowUp,ArrowDown,ArrowLeft,ArrowRight".includes(e.key)) e.preventDefault();
+  if ("ArrowUp,ArrowDown,ArrowLeft,ArrowRight, ".includes(e.key)) e.preventDefault();
   if (e.key=="ArrowUp"||e.key=="w"||e.key=="W") k.g=1;
   if (e.key=="ArrowDown"||e.key=="s"||e.key=="S") k.b=1;
   if (e.key=="ArrowLeft"||e.key=="a"||e.key=="A") k.l=1;
   if (e.key=="ArrowRight"||e.key=="d"||e.key=="D") k.r=1;
-  if (e.key=="r"||e.key=="R") reset();
+  if (e.key=="Shift"||e.key==" ") k.t=1;
+  if (e.key=="r"||e.key=="R") loadLvl(curLvl);
+  if (e.key=="Enter" && bike.win) loadLvl((curLvl + 1) % LEVELS.length);
 };
 onkeyup = e => {
   if (e.key=="ArrowUp"||e.key=="w"||e.key=="W") k.g=0;
   if (e.key=="ArrowDown"||e.key=="s"||e.key=="S") k.b=0;
   if (e.key=="ArrowLeft"||e.key=="a"||e.key=="A") k.l=0;
   if (e.key=="ArrowRight"||e.key=="d"||e.key=="D") k.r=0;
+  if (e.key=="Shift"||e.key==" ") k.t=0;
 };
 
-const hill = p => p < 300 ? 345 : 335 + Math.sin(p*0.0045)*65 + Math.sin(p*0.011)*30;
-const reset = () => {
-  bike = {x:120, y:300, vx:0, vy:0, a:0, av:0, g:0, rot:0, flips:0, dead:0};
-  trail = []; document.getElementById("f").textContent = 0;
+c.onclick = () => {
+  if (bike.dead) loadLvl(curLvl);
+  else if (bike.win) loadLvl((curLvl + 1) % LEVELS.length);
 };
-reset();
-c.onclick = () => { if (bike.dead) reset(); };
 
 setInterval(() => {
-  if (!bike.dead) {
-    if (bike.g) { if (k.g) bike.vx += 0.36; if (k.b) bike.vx -= 0.3; bike.vx *= 0.985; }
-    bike.vx = Math.max(-4, Math.min(17, bike.vx));
-    bike.av = (bike.av + (k.r - k.l) * (bike.g ? 0.0042 : 0.0072)) * 0.92;
+  const L = LEVELS[curLvl];
+  const goalPx = 120 + L.goal * 15;
+
+  if (!bike.dead && !bike.win) {
+    let boosting = k.t && bike.nitro > 1;
+    if (boosting) {
+      bike.nitro = Math.max(0, bike.nitro - 1.2);
+      bike.vx += 0.45;
+      if (Math.random() < 0.3) beep(140, 0.08, "sawtooth", 0.03);
+    } else {
+      bike.nitro = Math.min(100, bike.nitro + 0.18);
+    }
+    document.getElementById("n").textContent = Math.round(bike.nitro) + "%";
+
+    if (bike.g) {
+      if (k.g) bike.vx += 0.36;
+      if (k.b) bike.vx -= 0.3;
+      bike.vx *= 0.985;
+    }
+    bike.vx = Math.max(-4, Math.min(boosting ? 23 : 17, bike.vx));
+    bike.av = (bike.av + (k.r - k.l) * (bike.g ? 0.0044 : 0.0075)) * 0.92;
     bike.a += bike.av; bike.vy += 0.42; bike.x += bike.vx; bike.y += bike.vy;
     if (bike.x < 60) { bike.x = 60; bike.vx = 0; }
 
     let gy = hill(bike.x), sl = Math.atan2(hill(bike.x+4)-hill(bike.x-4), 8);
     if (bike.y + 22 >= gy) {
       let na = ((bike.a % 6.283) + 6.283) % 6.283;
-      if (na > 1.9 && na < 4.3) bike.dead = 1;
+      if (na > 1.9 && na < 4.3) { bike.dead = 1; beep(90, 0.4, "sawtooth", 0.12); }
       if (!bike.g && !bike.dead) {
         let fl = Math.floor(Math.abs(bike.rot) / 5.5);
-        if (fl > 0) { bike.flips += fl; document.getElementById("f").textContent = bike.flips; }
+        if (fl > 0) {
+          bike.flips += fl; bike.nitro = Math.min(100, bike.nitro + fl * 35);
+          document.getElementById("f").textContent = bike.flips;
+          beep(520, 0.18, "triangle", 0.09);
+        }
       }
       bike.y = gy - 22; bike.vy = 0; bike.g = 1; bike.rot = 0;
       bike.a += (sl - bike.a) * 0.25; bike.vx += Math.sin(sl) * 0.22;
     } else { bike.g = 0; bike.rot += bike.av; }
 
-    trail.push({x: bike.x, y: bike.y});
-    if (trail.length > 22) trail.shift();
+    orbs.forEach(o => {
+      if (!o.got && Math.hypot(bike.x - o.x, bike.y - o.y) < 34) {
+        o.got = true; bike.orbs++; bike.nitro = Math.min(100, bike.nitro + 15);
+        document.getElementById("o").textContent = bike.orbs;
+        beep(780, 0.1, "sine", 0.08);
+      }
+    });
+
+    pads.forEach(p => {
+      if (Math.abs(bike.x - p.x) < 28 && bike.g) {
+        bike.vx = 23; bike.vy = -7; bike.g = 0;
+        beep(420, 0.22, "square", 0.08);
+      }
+    });
+
+    hazards.forEach(h => {
+      if (Math.abs(bike.x - h.x) < 22 && bike.y + 22 >= hill(h.x) - 18) {
+        bike.dead = 1; beep(80, 0.45, "sawtooth", 0.14);
+      }
+    });
+
+    if (bike.x >= goalPx) {
+      bike.win = 1;
+      beep(660, 0.35, "triangle", 0.1);
+    }
+
+    trail.push({x: bike.x, y: bike.y, boost: boosting});
+    if (trail.length > 24) trail.shift();
 
     cam = bike.x - 200;
-    let m = Math.max(0, Math.floor((bike.x - 120) / 15));
-    document.getElementById("d").textContent = m + "m";
-    if (m > best) { best = m; document.getElementById("b").textContent = best + "m"; localStorage.setItem("cmBest", best); }
+    let m = Math.min(L.goal, Math.max(0, Math.floor((bike.x - 120) / 15)));
+    document.getElementById("d").textContent = m + " / " + L.goal + "m";
   }
 
-  // Synthwave Sun & Sky
+  // Sky & Synthwave Sun
   let sky = x.createLinearGradient(0, 0, 0, 450);
-  sky.addColorStop(0, "#070212"); sky.addColorStop(0.6, "#1f0638"); sky.addColorStop(1, "#3b0944");
+  sky.addColorStop(0, L.sky[0]); sky.addColorStop(0.6, L.sky[1]); sky.addColorStop(1, L.sky[2]);
   x.fillStyle = sky; x.fillRect(0, 0, 800, 450);
 
   let sun = x.createLinearGradient(0, 60, 0, 240);
   sun.addColorStop(0, "#ffe600"); sun.addColorStop(1, "#ff007f");
-  x.beginPath(); x.arc(620, 150, 85, 0, 6.29); x.fillStyle = sun; x.fill();
+  x.beginPath(); x.arc(620, 145, 80, 0, 6.29); x.fillStyle = sun; x.fill();
 
-  // Parallax Cyber City Skyline
-  x.fillStyle = "#110424";
+  // City Skyline
+  x.fillStyle = "rgba(10, 4, 24, 0.85)";
   for (let i = 0; i < 16; i++) {
     let bx = ((i * 95 - cam * 0.2) % 1520 + 1520) % 1520 - 100;
     let bh = 70 + (i * 37) % 110;
     x.fillRect(bx, 360 - bh, 65, bh);
   }
 
-  // Neon Grid Terrain
+  // Terrain
   x.beginPath(); x.moveTo(0, 450);
   for (let i = 0; i <= 800; i += 8) x.lineTo(i, hill(i + cam));
-  x.lineTo(800, 450); x.fillStyle = "#120428"; x.fill();
+  x.lineTo(800, 450); x.fillStyle = "#0e041f"; x.fill();
+  x.save(); x.shadowBlur = 14; x.shadowColor = L.line;
+  x.strokeStyle = L.line; x.lineWidth = 4; x.stroke(); x.restore();
 
-  x.save(); x.shadowBlur = 14; x.shadowColor = "#00f3ff";
-  x.strokeStyle = "#00f3ff"; x.lineWidth = 4; x.stroke(); x.restore();
-
-  // Neon Light Trail
-  if (trail.length > 1) {
-    x.beginPath();
-    trail.forEach((p, idx) => idx ? x.lineTo(p.x - cam, p.y) : x.moveTo(p.x - cam, p.y));
-    x.strokeStyle = "rgba(255, 0, 127, 0.55)"; x.lineWidth = 6; x.stroke();
-  }
-
-  // Cyber Lightcycle & Rider
-  x.save(); x.translate(bike.x - cam, bike.y); x.rotate(bike.a);
-  x.shadowBlur = 12; x.shadowColor = "#00f3ff";
-  [-22, 22].forEach(w => {
-    x.beginPath(); x.arc(w, 10, 13, 0, 6.29);
-    x.fillStyle = "#070212"; x.fill();
-    x.strokeStyle = "#00f3ff"; x.lineWidth = 3.5; x.stroke();
-  });
-  x.shadowColor = "#ff007f"; x.strokeStyle = "#ff007f"; x.lineWidth = 5;
-  x.beginPath(); x.moveTo(-22,10); x.lineTo(-4,-7); x.lineTo(15,-7); x.lineTo(22,10); x.stroke();
-  x.strokeStyle = "#fff"; x.lineWidth = 3.5;
-  x.beginPath(); x.moveTo(-6,-7); x.lineTo(-10,-24); x.lineTo(8,-14); x.stroke();
-  x.beginPath(); x.arc(-10,-31,7,0,6.29); x.fillStyle = "#00f3ff"; x.fill();
-  x.restore();
-
-  // System Crash Screen
-  if (bike.dead) {
-    x.fillStyle = "rgba(7, 2, 18, 0.84)"; x.fillRect(0, 0, 800, 450);
-    x.fillStyle = "#ff007f"; x.font = "bold 40px 'Courier New', monospace"; x.textAlign = "center";
-    x.fillText("SYSTEM CRASHED", 400, 205);
-    x.fillStyle = "#00f3ff"; x.font = "20px 'Courier New', monospace";
-    x.fillText("[ CLICK OR PRESS R TO REBOOT ]", 400, 248);
-  }
-}, 16);
-</script>
-</body>
-</html>
+  // Finish Gate
+  let gx = goalPx - cam;
+  if (gx > -50 && gx < 850) {
