@@ -87,254 +87,236 @@
   </div>
 
   <script>
-    const canvas = document.getElementById("game");
-    const ctx = canvas.getContext("2d");
+    window.addEventListener("DOMContentLoaded", () => {
+      const canvas = document.getElementById("game");
+      const ctx = canvas.getContext("2d");
+      const distEl = document.getElementById("dist");
+      const flipsEl = document.getElementById("flips");
+      const bestEl = document.getElementById("best");
 
-    const distEl = document.getElementById("dist");
-    const flipsEl = document.getElementById("flips");
-    const bestEl = document.getElementById("best");
+      let bestScore = 0;
+      try {
+        bestScore = Number(localStorage.getItem("novaMotoBest") || 0);
+      } catch (e) {}
+      bestEl.textContent = bestScore + "m";
 
-    let bestScore = Number(localStorage.getItem("novaMotoBest") || 0);
-    bestEl.textContent = bestScore + "m";
+      const keys = { gas: false, brake: false, left: false, right: false };
 
-    const keys = { gas: false, brake: false, left: false, right: false };
+      window.addEventListener("keydown", (e) => {
+        if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "].includes(e.key)) {
+          e.preventDefault();
+        }
+        if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") keys.gas = true;
+        if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") keys.brake = true;
+        if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") keys.left = true;
+        if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") keys.right = true;
+        if (e.key === "r" || e.key === "R") resetGame();
+      });
 
-    window.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") keys.gas = true;
-      if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") keys.brake = true;
-      if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") keys.left = true;
-      if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") keys.right = true;
-      if (e.key === "r" || e.key === "R") resetGame();
-    });
+      window.addEventListener("keyup", (e) => {
+        if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") keys.gas = false;
+        if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") keys.brake = false;
+        if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") keys.left = false;
+        if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") keys.right = false;
+      });
 
-    window.addEventListener("keyup", (e) => {
-      if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") keys.gas = false;
-      if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") keys.brake = false;
-      if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") keys.left = false;
-      if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") keys.right = false;
-    });
+      function bindBtn(id, prop) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener("mousedown", () => keys[prop] = true);
+        el.addEventListener("mouseup", () => keys[prop] = false);
+        el.addEventListener("mouseleave", () => keys[prop] = false);
+        el.addEventListener("touchstart", (e) => { e.preventDefault(); keys[prop] = true; });
+        el.addEventListener("touchend", (e) => { e.preventDefault(); keys[prop] = false; });
+      }
+      bindBtn("btnGas", "gas");
+      bindBtn("btnBrake", "brake");
+      bindBtn("btnBack", "left");
+      bindBtn("btnFwd", "right");
 
-    function bindBtn(id, prop) {
-      const el = document.getElementById(id);
-      el.addEventListener("mousedown", () => keys[prop] = true);
-      el.addEventListener("mouseup", () => keys[prop] = false);
-      el.addEventListener("mouseleave", () => keys[prop] = false);
-      el.addEventListener("touchstart", (e) => { e.preventDefault(); keys[prop] = true; });
-      el.addEventListener("touchend", (e) => { e.preventDefault(); keys[prop] = false; });
-    }
-    bindBtn("btnGas", "gas");
-    bindBtn("btnBrake", "brake");
-    bindBtn("btnBack", "left");
-    bindBtn("btnFwd", "right");
-
-    function getTerrainHeight(x) {
-      if (x < 300) return 340;
-      const difficulty = Math.min(2.2, 1 + (x - 300) / 18000);
-      const h1 = Math.sin(x * 0.0045) * 55 * difficulty;
-      const h2 = Math.sin(x * 0.011 + 1.5) * 28 * difficulty;
-      const h3 = Math.cos(x * 0.002) * 40;
-      return 330 + h1 + h2 + h3;
-    }
-
-    function getTerrainSlope(x) {
-      const dx = 4;
-      return Math.atan2(getTerrainHeight(x + dx) - getTerrainHeight(x - dx), dx * 2);
-    }
-
-    let bike = {};
-    let cameraX = 0;
-
-    function resetGame() {
-      bike = {
-        x: 120,
-        y: 300,
-        vx: 0,
-        vy: 0,
-        angle: 0,
-        angVel: 0,
-        grounded: false,
-        airRotation: 0,
-        flips: 0,
-        crashed: false
-      };
-      cameraX = 0;
-      flipsEl.textContent = "0";
-    }
-
-    resetGame();
-
-    function update() {
-      if (bike.crashed) return;
-
-      const gravity = 0.42;
-      const wheelOffset = 22;
-
-      if (bike.grounded) {
-        if (keys.gas) bike.vx += 0.32;
-        if (keys.brake) bike.vx -= 0.28;
-        bike.vx *= 0.985;
-      } else {
-        bike.vx *= 0.996;
+      function getTerrainHeight(x) {
+        if (x < 300) return 340;
+        const difficulty = Math.min(2.2, 1 + (x - 300) / 18000);
+        const h1 = Math.sin(x * 0.0045) * 55 * difficulty;
+        const h2 = Math.sin(x * 0.011 + 1.5) * 28 * difficulty;
+        const h3 = Math.cos(x * 0.002) * 40;
+        return 330 + h1 + h2 + h3;
       }
 
-      bike.vx = Math.max(-4, Math.min(16, bike.vx));
-
-      const spinPower = bike.grounded ? 0.004 : 0.0065;
-      if (keys.left) bike.angVel -= spinPower;
-      if (keys.right) bike.angVel += spinPower;
-      bike.angVel *= 0.92;
-      bike.angle += bike.angVel;
-
-      bike.vy += gravity;
-      bike.x += bike.vx;
-      bike.y += bike.vy;
-
-      if (bike.x < 60) {
-        bike.x = 60;
-        bike.vx = 0;
+      function getTerrainSlope(x) {
+        const dx = 4;
+        return Math.atan2(getTerrainHeight(x + dx) - getTerrainHeight(x - dx), dx * 2);
       }
 
-      const groundY = getTerrainHeight(bike.x);
-      const slope = getTerrainSlope(bike.x);
+      let bike = {};
+      let cameraX = 0;
 
-      if (bike.y + wheelOffset >= groundY) {
-        let normAngle = ((bike.angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-        if (normAngle > Math.PI * 0.62 && normAngle < Math.PI * 1.38) {
-          bike.crashed = true;
+      function resetGame() {
+        bike = {
+          x: 120,
+          y: 300,
+          vx: 0,
+          vy: 0,
+          angle: 0,
+          angVel: 0,
+          grounded: false,
+          airRotation: 0,
+          flips: 0,
+          crashed: false
+        };
+        cameraX = 0;
+        flipsEl.textContent = "0";
+      }
+
+      resetGame();
+
+      function update() {
+        if (bike.crashed) return;
+
+        const gravity = 0.42;
+        const wheelOffset = 22;
+
+        if (bike.grounded) {
+          if (keys.gas) bike.vx += 0.32;
+          if (keys.brake) bike.vx -= 0.28;
+          bike.vx *= 0.985;
+        } else {
+          bike.vx *= 0.996;
         }
 
-        if (!bike.grounded && !bike.crashed) {
-          const completedFlips = Math.floor(Math.abs(bike.airRotation) / (Math.PI * 1.75));
-          if (completedFlips > 0) {
-            bike.flips += completedFlips;
-            flipsEl.textContent = bike.flips;
+        bike.vx = Math.max(-4, Math.min(16, bike.vx));
+
+        const spinPower = bike.grounded ? 0.004 : 0.0065;
+        if (keys.left) bike.angVel -= spinPower;
+        if (keys.right) bike.angVel += spinPower;
+        bike.angVel *= 0.92;
+        bike.angle += bike.angVel;
+
+        bike.vy += gravity;
+        bike.x += bike.vx;
+        bike.y += bike.vy;
+
+        if (bike.x < 60) {
+          bike.x = 60;
+          bike.vx = 0;
+        }
+
+        const groundY = getTerrainHeight(bike.x);
+        const slope = getTerrainSlope(bike.x);
+
+        if (bike.y + wheelOffset >= groundY) {
+          let normAngle = ((bike.angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+          if (normAngle > Math.PI * 0.62 && normAngle < Math.PI * 1.38) {
+            bike.crashed = true;
           }
+
+          if (!bike.grounded && !bike.crashed) {
+            const completedFlips = Math.floor(Math.abs(bike.airRotation) / (Math.PI * 1.75));
+            if (completedFlips > 0) {
+              bike.flips += completedFlips;
+              flipsEl.textContent = bike.flips;
+            }
+          }
+
+          bike.y = groundY - wheelOffset;
+          bike.vy = 0;
+          bike.grounded = true;
+          bike.airRotation = 0;
+
+          const angleDiff = slope - bike.angle;
+          bike.angle += angleDiff * 0.25;
+          bike.vx += Math.sin(slope) * 0.22;
+        } else {
+          if (bike.grounded) bike.airRotation = 0;
+          bike.grounded = false;
+          bike.airRotation += bike.angVel;
         }
 
-        bike.y = groundY - wheelOffset;
-        bike.vy = 0;
-        bike.grounded = true;
-        bike.airRotation = 0;
+        cameraX = bike.x - 200;
+        const meters = Math.max(0, Math.floor((bike.x - 120) / 15));
+        distEl.textContent = meters + "m";
 
-        const angleDiff = slope - bike.angle;
-        bike.angle += angleDiff * 0.25;
-
-        bike.vx += Math.sin(slope) * 0.22;
-      } else {
-        if (bike.grounded) bike.airRotation = 0;
-        bike.grounded = false;
-        bike.airRotation += bike.angVel;
+        if (meters > bestScore) {
+          bestScore = meters;
+          bestEl.textContent = bestScore + "m";
+          try {
+            localStorage.setItem("novaMotoBest", bestScore);
+          } catch (e) {}
+        }
       }
 
-      cameraX = bike.x - 200;
-      const meters = Math.max(0, Math.floor((bike.x - 120) / 15));
-      distEl.textContent = meters + "m";
+      function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      if (meters > bestScore) {
-        bestScore = meters;
-        bestEl.textContent = bestScore + "m";
-        localStorage.setItem("novaMotoBest", bestScore);
-      }
-    }
+        ctx.strokeStyle = "rgba(58, 134, 255, 0.12)";
+        ctx.lineWidth = 1;
+        const gridOffset = -(cameraX * 0.5) % 80;
+        for (let gx = gridOffset; gx < canvas.width; gx += 80) {
+          ctx.beginPath();
+          ctx.moveTo(gx, 0);
+          ctx.lineTo(gx, canvas.height);
+          ctx.stroke();
+        }
 
-    function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      ctx.strokeStyle = "rgba(58, 134, 255, 0.12)";
-      ctx.lineWidth = 1;
-      const gridOffset = -(cameraX * 0.5) % 80;
-      for (let gx = gridOffset; gx < canvas.width; gx += 80) {
         ctx.beginPath();
-        ctx.moveTo(gx, 0);
-        ctx.lineTo(gx, canvas.height);
-        ctx.stroke();
-      }
+        ctx.moveTo(0, canvas.height);
+        for (let sx = 0; sx <= canvas.width; sx += 6) {
+          const worldX = sx + cameraX;
+          ctx.lineTo(sx, getTerrainHeight(worldX));
+        }
+        ctx.lineTo(canvas.width, canvas.height);
+        ctx.closePath();
 
-      ctx.beginPath();
-      ctx.moveTo(0, canvas.height);
-      for (let sx = 0; sx <= canvas.width; sx += 6) {
-        const worldX = sx + cameraX;
-        ctx.lineTo(sx, getTerrainHeight(worldX));
-      }
-      ctx.lineTo(canvas.width, canvas.height);
-      ctx.closePath();
-
-      const grad = ctx.createLinearGradient(0, 220, 0, canvas.height);
-      grad.addColorStop(0, "#1d3557");
-      grad.addColorStop(1, "#0b132b");
-      ctx.fillStyle = grad;
-      ctx.fill();
-
-      ctx.beginPath();
-      for (let sx = 0; sx <= canvas.width; sx += 6) {
-        const worldX = sx + cameraX;
-        const wy = getTerrainHeight(worldX);
-        if (sx === 0) ctx.moveTo(sx, wy);
-        else ctx.lineTo(sx, wy);
-      }
-      ctx.strokeStyle = "#6fffe9";
-      ctx.lineWidth = 4;
-      ctx.stroke();
-
-      ctx.save();
-      ctx.translate(bike.x - cameraX, bike.y);
-      ctx.rotate(bike.angle);
-
-      const drawWheel = (wx, wy) => {
-        ctx.beginPath();
-        ctx.arc(wx, wy, 13, 0, Math.PI * 2);
-        ctx.fillStyle = "#111";
+        const grad = ctx.createLinearGradient(0, 220, 0, canvas.height);
+        grad.addColorStop(0, "#1d3557");
+        grad.addColorStop(1, "#0b132b");
+        ctx.fillStyle = grad;
         ctx.fill();
-        ctx.lineWidth = 3;
+
+        ctx.beginPath();
+        for (let sx = 0; sx <= canvas.width; sx += 6) {
+          const worldX = sx + cameraX;
+          const wy = getTerrainHeight(worldX);
+          if (sx === 0) ctx.moveTo(sx, wy);
+          else ctx.lineTo(sx, wy);
+        }
         ctx.strokeStyle = "#6fffe9";
+        ctx.lineWidth = 4;
         ctx.stroke();
-      };
-      drawWheel(-22, 10);
-      drawWheel(22, 10);
 
-      ctx.strokeStyle = "#3a86ff";
-      ctx.lineWidth = 5;
-      ctx.beginPath();
-      ctx.moveTo(-22, 10);
-      ctx.lineTo(-4, -6);
-      ctx.lineTo(14, -6);
-      ctx.lineTo(22, 10);
-      ctx.stroke();
+        ctx.save();
+        ctx.translate(bike.x - cameraX, bike.y);
+        ctx.rotate(bike.angle);
 
-      ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.moveTo(-6, -6);
-      ctx.lineTo(-10, -24);
-      ctx.lineTo(8, -14);
-      ctx.stroke();
+        const drawWheel = (wx, wy) => {
+          ctx.beginPath();
+          ctx.arc(wx, wy, 13, 0, Math.PI * 2);
+          ctx.fillStyle = "#111";
+          ctx.fill();
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = "#6fffe9";
+          ctx.stroke();
+        };
+        drawWheel(-22, 10);
+        drawWheel(22, 10);
 
-      ctx.beginPath();
-      ctx.arc(-10, -31, 7, 0, Math.PI * 2);
-      ctx.fillStyle = "#ff006e";
-      ctx.fill();
+        ctx.strokeStyle = "#3a86ff";
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(-22, 10);
+        ctx.lineTo(-4, -6);
+        ctx.lineTo(14, -6);
+        ctx.lineTo(22, 10);
+        ctx.stroke();
 
-      ctx.restore();
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(-6, -6);
+        ctx.lineTo(-10, -24);
+        ctx.lineTo(8, -14);
+        ctx.stroke();
 
-      if (bike.crashed) {
-        ctx.fillStyle = "rgba(11, 19, 43, 0.78)";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
+        ctx.beginPath();
+        ctx.arc(-10, -31, 7, 0, Math.PI * 2);
         ctx.fillStyle = "#ff006e";
-        ctx.font = "bold 42px system-ui";
-        ctx.textAlign = "center";
-        ctx.fillText("WIPEOUT!", canvas.width / 2, 195);
-
-        ctx.fillStyle = "#ffffff";
-        ctx.font = "20px system-ui";
-        ctx.fillText("Press R or Click to Ride Again", canvas.width / 2, 240);
-      }
-    }
-
-    canvas.addEventListener("click", () => {
-      if (bike.crashed) resetGame();
-    });
-
-    function loop() {
-      update();
-      draw();
