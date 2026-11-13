@@ -97,7 +97,6 @@
     let bestScore = Number(localStorage.getItem("novaMotoBest") || 0);
     bestEl.textContent = bestScore + "m";
 
-    // Input state
     const keys = { gas: false, brake: false, left: false, right: false };
 
     window.addEventListener("keydown", (e) => {
@@ -115,7 +114,6 @@
       if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") keys.right = false;
     });
 
-    // Touch / Button bindings
     function bindBtn(id, prop) {
       const el = document.getElementById(id);
       el.addEventListener("mousedown", () => keys[prop] = true);
@@ -129,9 +127,8 @@
     bindBtn("btnBack", "left");
     bindBtn("btnFwd", "right");
 
-    // Terrain generator (smooth procedural hills that get steeper over distance)
     function getTerrainHeight(x) {
-      if (x < 300) return 340; // Flat starting runway
+      if (x < 300) return 340;
       const difficulty = Math.min(2.2, 1 + (x - 300) / 18000);
       const h1 = Math.sin(x * 0.0045) * 55 * difficulty;
       const h2 = Math.sin(x * 0.011 + 1.5) * 28 * difficulty;
@@ -144,7 +141,6 @@
       return Math.atan2(getTerrainHeight(x + dx) - getTerrainHeight(x - dx), dx * 2);
     }
 
-    // Bike state
     let bike = {};
     let cameraX = 0;
 
@@ -173,48 +169,40 @@
       const gravity = 0.42;
       const wheelOffset = 22;
 
-      // Acceleration & braking
       if (bike.grounded) {
         if (keys.gas) bike.vx += 0.32;
         if (keys.brake) bike.vx -= 0.28;
-        bike.vx *= 0.985; // Ground friction
+        bike.vx *= 0.985;
       } else {
-        bike.vx *= 0.996; // Air drag
+        bike.vx *= 0.996;
       }
 
-      // Clamp max speed
       bike.vx = Math.max(-4, Math.min(16, bike.vx));
 
-      // Rotation / Lean controls
       const spinPower = bike.grounded ? 0.004 : 0.0065;
       if (keys.left) bike.angVel -= spinPower;
       if (keys.right) bike.angVel += spinPower;
       bike.angVel *= 0.92;
       bike.angle += bike.angVel;
 
-      // Apply gravity & velocity
       bike.vy += gravity;
       bike.x += bike.vx;
       bike.y += bike.vy;
 
-      // Prevent reversing off left edge
       if (bike.x < 60) {
         bike.x = 60;
         bike.vx = 0;
       }
 
-      // Ground collision check
       const groundY = getTerrainHeight(bike.x);
       const slope = getTerrainSlope(bike.x);
 
       if (bike.y + wheelOffset >= groundY) {
-        // Check if landing upside down (crash condition)
         let normAngle = ((bike.angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
         if (normAngle > Math.PI * 0.62 && normAngle < Math.PI * 1.38) {
           bike.crashed = true;
         }
 
-        // Count completed flips on clean landing
         if (!bike.grounded && !bike.crashed) {
           const completedFlips = Math.floor(Math.abs(bike.airRotation) / (Math.PI * 1.75));
           if (completedFlips > 0) {
@@ -228,11 +216,9 @@
         bike.grounded = true;
         bike.airRotation = 0;
 
-        // Align bike smoothly to hill slope
         const angleDiff = slope - bike.angle;
         bike.angle += angleDiff * 0.25;
 
-        // Slope physics boost/drag
         bike.vx += Math.sin(slope) * 0.22;
       } else {
         if (bike.grounded) bike.airRotation = 0;
@@ -240,7 +226,6 @@
         bike.airRotation += bike.angVel;
       }
 
-      // Update camera & score
       cameraX = bike.x - 200;
       const meters = Math.max(0, Math.floor((bike.x - 120) / 15));
       distEl.textContent = meters + "m";
@@ -255,7 +240,6 @@
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Draw background stars/grid lines
       ctx.strokeStyle = "rgba(58, 134, 255, 0.12)";
       ctx.lineWidth = 1;
       const gridOffset = -(cameraX * 0.5) % 80;
@@ -266,7 +250,6 @@
         ctx.stroke();
       }
 
-      // Draw Terrain
       ctx.beginPath();
       ctx.moveTo(0, canvas.height);
       for (let sx = 0; sx <= canvas.width; sx += 6) {
@@ -282,7 +265,6 @@
       ctx.fillStyle = grad;
       ctx.fill();
 
-      // Neon ground top edge
       ctx.beginPath();
       for (let sx = 0; sx <= canvas.width; sx += 6) {
         const worldX = sx + cameraX;
@@ -294,12 +276,10 @@
       ctx.lineWidth = 4;
       ctx.stroke();
 
-      // Draw Motorcycle & Rider
       ctx.save();
       ctx.translate(bike.x - cameraX, bike.y);
       ctx.rotate(bike.angle);
 
-      // Rear & Front Wheels
       const drawWheel = (wx, wy) => {
         ctx.beginPath();
         ctx.arc(wx, wy, 13, 0, Math.PI * 2);
@@ -312,7 +292,6 @@
       drawWheel(-22, 10);
       drawWheel(22, 10);
 
-      // Bike Frame
       ctx.strokeStyle = "#3a86ff";
       ctx.lineWidth = 5;
       ctx.beginPath();
@@ -322,7 +301,40 @@
       ctx.lineTo(22, 10);
       ctx.stroke();
 
-      // Rider Body & Helmet
       ctx.strokeStyle = "#ffffff";
       ctx.lineWidth = 4;
       ctx.beginPath();
+      ctx.moveTo(-6, -6);
+      ctx.lineTo(-10, -24);
+      ctx.lineTo(8, -14);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(-10, -31, 7, 0, Math.PI * 2);
+      ctx.fillStyle = "#ff006e";
+      ctx.fill();
+
+      ctx.restore();
+
+      if (bike.crashed) {
+        ctx.fillStyle = "rgba(11, 19, 43, 0.78)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = "#ff006e";
+        ctx.font = "bold 42px system-ui";
+        ctx.textAlign = "center";
+        ctx.fillText("WIPEOUT!", canvas.width / 2, 195);
+
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "20px system-ui";
+        ctx.fillText("Press R or Click to Ride Again", canvas.width / 2, 240);
+      }
+    }
+
+    canvas.addEventListener("click", () => {
+      if (bike.crashed) resetGame();
+    });
+
+    function loop() {
+      update();
+      draw();
